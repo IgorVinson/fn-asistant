@@ -1,6 +1,7 @@
 import {authorize} from "./auth.js";
 import {getLastUnreadEmail} from "./utils/getLastUnreadEmail.js";
-import { getLinkToLastOrder } from './utils/getLinkToLastOrder.js'; // Функція для отримання посилання
+import { getLinkToLastOrder } from './utils/getLinkToLastOrder.js';
+import {applyForJob} from "./utils/applyForJob.js"; // Функція для отримання посилання
 
 
 (async () => {
@@ -20,3 +21,5 @@ import { getLinkToLastOrder } from './utils/getLinkToLastOrder.js'; // Функ�
         console.error('Помилка:', error);
     }
 })();
+
+applyForJob('https://app.fieldnation.com/')
