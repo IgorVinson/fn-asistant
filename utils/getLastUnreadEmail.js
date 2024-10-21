@@ -1,10 +1,10 @@
 import { google } from 'googleapis';
-import { authorize } from './auth.js';
 
 /**
- * Отримати останній непрочитаний лист і вивести його вміст
+ * Отримати останній непрочитаний лист і повернути його вміст
  *
  * @param {google.auth.OAuth2} auth An authorized OAuth2 client.
+ * @returns {Promise<string|null>} - Вміст останнього листа або null, якщо немає нових листів
  */
 export async function getLastUnreadEmail(auth) {
     const gmail = google.gmail({ version: 'v1', auth });
@@ -21,7 +21,7 @@ export async function getLastUnreadEmail(auth) {
 
     if (!messages || messages.length === 0) {
         console.log('Немає нових непрочитаних листів.');
-        return;
+        return null;
     }
 
     // Отримати деталі листа за його ID
@@ -31,21 +31,22 @@ export async function getLastUnreadEmail(auth) {
         id: messageId,
     });
 
-    // Вивести інформацію про лист
-    const headers = msg.data.payload.headers;
-    const subjectHeader = headers.find(header => header.name === 'Subject');
-    const fromHeader = headers.find(header => header.name === 'From');
+    // Отримати текст листа
     const body = getMessageBody(msg.data.payload);
 
-    console.log(`Від: ${fromHeader.value}`);
-    console.log(`Тема: ${subjectHeader.value}`);
-    console.log(`Вміст листа: \n${body}`);
+    if (body) {
+        console.log(`Вміст останнього листа: \n${body}`);
+        return body; // Повертаємо вміст листа
+    } else {
+        console.log('Не вдалося отримати вміст листа.');
+        return null;
+    }
 }
 
 /**
  * Функція для отримання текстового вмісту листа
  * @param {Object} payload
- * @returns {string}
+ * @returns {string|null}
  */
 function getMessageBody(payload) {
     let body = '';
@@ -61,7 +62,5 @@ function getMessageBody(payload) {
         body = Buffer.from(payload.body.data, 'base64').toString('utf8');
     }
 
-    return body;
+    return body ? body : null;
 }
-
-

@@ -1,6 +1,22 @@
 import {authorize} from "./auth.js";
-import {listUnreadEmailsFromFieldNation} from "./listUnreadEmails.js";
-import {getLastUnreadEmail} from "./getLastUnreadEmail.js";
+import {getLastUnreadEmail} from "./utils/getLastUnreadEmail.js";
+import { getLinkToLastOrder } from './utils/getLinkToLastOrder.js'; // Функція для отримання посилання
 
-// Запускаємо авторизацію і виклик функції для виведення заголовків листів
-authorize().then(getLastUnreadEmail).catch(console.error);
+
+(async () => {
+    try {
+        // Авторизуємо користувача
+        const auth = await authorize();
+
+        // Отримуємо вміст останнього непрочитаного листа
+        const lastEmailBody = await getLastUnreadEmail(auth);
+
+        if (lastEmailBody) {
+            // Виводимо посилання з листа
+            const orderLink = getLinkToLastOrder(lastEmailBody);
+            console.log('Посилання на замовлення:', orderLink);
+        }
+    } catch (error) {
+        console.error('Помилка:', error);
+    }
+})();
