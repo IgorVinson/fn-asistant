@@ -1,16 +1,16 @@
-import {authorize} from "./auth.js";
-import {getLastUnreadEmail} from "./utils/getLastUnreadEmail.js";
-import { getLinkToLastOrder } from './utils/getLinkToLastOrder.js';
-import {applyForJob} from "./utils/applyForJob.js"; // Функція для отримання посилання
+import {authorize as authorizeAtGmail} from "./gmailAuth.js";
+import {getLastUnreadEmail} from "./utils/gmail/getLastUnreadEmail.js";
+import { getLinkToLastOrder } from './utils/gmail/getLinkToLastOrder.js';
+import {loginToFieldNation} from "./utils/loginToFieldNation.js"; // Функція для отримання посилання
 
 
 (async () => {
     try {
         // Авторизуємо користувача
-        const auth = await authorize();
+        const clientInGmail = await authorizeAtGmail();
 
         // Отримуємо вміст останнього непрочитаного листа
-        const lastEmailBody = await getLastUnreadEmail(auth);
+        const lastEmailBody = await getLastUnreadEmail(clientInGmail);
 
         if (lastEmailBody) {
             // Виводимо посилання з листа
@@ -22,4 +22,4 @@ import {applyForJob} from "./utils/applyForJob.js"; // Функція для о�
     }
 })();
 
-applyForJob('https://app.fieldnation.com/')
+loginToFieldNation('https://app.fieldnation.com/')
