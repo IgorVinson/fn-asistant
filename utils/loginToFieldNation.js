@@ -4,18 +4,18 @@ import puppeteer from 'puppeteer';
  * Автоматизація подачі заявки через Puppeteer
  * @param {string} url - Посилання на замовлення
  */
-export async function applyForJob(url) {
+export async function loginToFieldNation(url) {
     // Запуск браузера Puppeteer
-    const browser = await puppeteer.launch({ headless: false }); // headless: false дозволить бачити браузер
+    const browser = await puppeteer.launch({headless: false}); // headless: false дозволить бачити браузер
     const page = await browser.newPage();
 
     try {
         // Переходимо на сторінку замовлення
-        await page.goto(url, { waitUntil: 'networkidle2' });
+        await page.goto(url, {waitUntil: 'networkidle2'});
 
         // Введення username
         await page.waitForSelector('#username'); // Чекаємо на появу поля username
-        await page.type('#username', 'igorvinson@gmail.com', { delay: Math.random() * 100 }); // Вводимо username (емейл)
+        await page.type('#username', 'igorvinson@gmail.com', {delay: Math.random() * 100}); // Вводимо username (емейл)
         await page.click('button[type="submit"]'); // Натискаємо кнопку "Submit" після введення username
         // Чекаємо на навігацію або оновлення
 
@@ -49,8 +49,6 @@ export async function applyForJob(url) {
     } catch (error) {
         console.error('Помилка при подачі заявки:', error);
     }
-    // finally {
-    //     // Закриття браузера
-    //     await browser.close();
-    // }
 }
+
+

@@ -1,4 +1,4 @@
-import { authorize } from '../auth.js'; // Імпортуємо авторизацію
+import { authorize } from '../../gmailAuth.js'; // Імпортуємо авторизацію
 import { getLastUnreadEmail } from './getLastUnreadEmail.js'; // Приклад імпорту функції
 
 /**
