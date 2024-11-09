@@ -23,3 +23,7 @@ import {loginToFieldNation} from "./utils/loginToFieldNation.js"; // Функц�
 })();
 
 loginToFieldNation('https://app.fieldnation.com/')
+
+// const page = await loginToFieldNation('https://app.fieldnation.com/')
+// const notifyButton = await page.waitForSelector('.IconButton__3SE5w')[4];
+// await notifyButton.click();

@@ -11,7 +11,7 @@ export async function loginToFieldNation(url) {
 
     try {
         // Переходимо на сторінку замовлення
-        await page.goto(url, {waitUntil: 'networkidle2'});
+        await page.goto(url, {waitUntil: 'load'});
 
         // Введення username
         await page.waitForSelector('#username'); // Чекаємо на появу поля username
@@ -24,31 +24,11 @@ export async function loginToFieldNation(url) {
         await page.click('button[type="submit"]'); // Натискаємо кнопку "Submit" після введення пароля
         await page.waitForNavigation(); // Чекаємо на навігацію після входу
 
-
-        // Пошук усіх кнопок на сторінці
-        const buttons = await page.$$('button'); // Знаходимо всі кнопки
-        let requestButton = null;
-
-        // Перебираємо всі кнопки і шукаємо ту, яка містить текст "Request"
-        for (const button of buttons) {
-            const text = await page.evaluate(el => el.textContent, button);
-            if (text.includes('Request')) {
-                requestButton = button;
-                break;
-            }
-        }
-
-        // Натискаємо кнопку, якщо її знайдено
-        if (requestButton) {
-            await requestButton.click();
-            console.log('Кнопка "Request" успішно натиснута!');
-        } else {
-            console.log('Кнопку "Request" не знайдено.');
-        }
-
     } catch (error) {
         console.error('Помилка при подачі заявки:', error);
     }
+
+    return page
 }
 
 
