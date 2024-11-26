@@ -76,11 +76,56 @@ async function runActions() {
 
 async function performActions(page) {
     try {
-        console.log('Performing actions on the page');
-        // Ваші дії на сторінці (можна додати код для взаємодії з елементами на сторінці)
-        console.log('Action performed');
-        console.log('what sup 123');
-        console.log('what sup 123');
+        // goto notifications
+        await page.goto('https://app.fieldnation.com/users/983643/notifications')
+        //click Unread
+        await page.evaluate(() => {
+            Array.from(document.querySelectorAll('span')).filter(span => {
+                return span.innerText == 'Unread' // filter il for specific text
+            }).forEach(element => {
+                if (element) element.click(); // click on il with specific text
+            });
+
+        });
+
+        await page.evaluate(() => {
+            // Отримуємо всі span елементи на сторінці
+            const spans = Array.from(document.querySelectorAll('span'));
+
+            // Фільтруємо елементи, які містять текст 'WO'
+            const filteredSpans = spans.filter(span => span.innerText.includes('WO'));
+
+            // Повертаємо HTML-код знайдених елементів назад у Node.js контекст
+            return filteredSpans.map(span => span.outerHTML);
+        }).then(filteredSpans => {
+            // Виводимо знайдені елементи в Node.js консоль
+            if (filteredSpans.length > 0) {
+                console.log('Знайдені елементи:');
+                filteredSpans.forEach((element, index) => {
+                    console.log(`Елемент ${index + 1}:`, element);
+                });
+            } else {
+                console.log('Елементи не знайдені');
+            }
+        }).catch((error) => {
+            console.error('Помилка при виконанні evaluate:', error);
+        });
+
+
+
+        await page.evaluate(() => {
+            Array.from(document.querySelectorAll('span')).filter(span => {
+                return span.innerText.includes('WO') // filter il for specific text
+            }).forEach(element => {
+                console.log(element);
+                // if (element) element.click(); // click on il with specific text
+            });
+        }).catch(() => {
+                console.log('Element not found');
+            }
+        );
+
+
     } catch (error) {
         console.error('Error during action execution:', error);
     }
