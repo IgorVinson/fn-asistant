@@ -1,4 +1,4 @@
-import { authorize } from '../../gmailAuth.js'; // Імпортуємо авторизацію
+import { authorize } from './login.js'; // Імпортуємо авторизацію
 import { getLastUnreadEmail } from './getLastUnreadEmail.js'; // Приклад імпорту функції
 
 /**
@@ -6,14 +6,18 @@ import { getLastUnreadEmail } from './getLastUnreadEmail.js'; // Приклад 
  * @param {string} emailBody - Текстовий вміст листа
  * @returns {string|null} - Посилання на замовлення або null, якщо не знайдено
  */
-export function getLinkToLastOrder(emailBody) {
+export function getOrderLink(emailBody) {
     // Регулярний вираз для пошуку посилання на замовлення
-    const link = emailBody.match(/https:\/\/app\.fieldnation\.com\/workorders\/\d+\?t=ActionNewWorkOrder&src=Email/);
+    const fnLink = emailBody.match(/https:\/\/app\.fieldnation\.com\/workorders\/\d+\?t=ActionNewWorkOrder&src=Email/);
+    const wmLink = emailBody.match(/https:\/\/sendgrid\.workmarket\.com\/uni\/ls\/click\?upn=[^ ]+/);
 
-    if (link) {
-        console.log(`Знайдено посилання на замовлення: ${link[0]}`);
-        return link[0]; // Повертаємо перше знайдене посилання
-    } else {
+    if (fnLink) {
+        return fnLink[0]; // Повертаємо перше знайдене посилання
+    }
+    if(wmLink) {
+        return wmLink[0];
+    }
+    else {
         console.log('Посилання на замовлення не знайдено.');
         return null;
     }
@@ -25,7 +29,7 @@ export function getLinkToLastOrder(emailBody) {
         const lastEmailBody = await getLastUnreadEmail(auth);  // Отримуємо вміст останнього листа
 
         if (lastEmailBody) {
-            const orderLink = getLinkToLastOrder(lastEmailBody);  // Шукаємо посилання на замовлення
+            const orderLink = getOrderLink(lastEmailBody);  // Шукаємо посилання на замовлення
             console.log('Посилання на останнє замовлення:', orderLink);
         }
     } catch (error) {

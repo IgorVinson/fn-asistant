@@ -1,6 +1,6 @@
 import { google } from 'googleapis';
 
-export async function listUnreadEmailsFromFieldNation(auth) {
+export async function listUnreadEmails(auth) {
     const gmail = google.gmail({ version: 'v1', auth });
 
     // Запит на отримання непрочитаних листів від support@fieldnation.com
