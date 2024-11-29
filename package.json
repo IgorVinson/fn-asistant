@@ -2,13 +2,15 @@
   "name": "field-nation-assist",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
+  "main": "oldIndex.js",
   "scripts": {
+    "dev": "nodemon oldIndex.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "private": true,
   "dependencies": {
     "@google-cloud/local-auth": "^2.1.0",
+    "express": "^4.21.1",
     "googleapis": "^105.0.0",
     "imap": "^0.8.19",
     "puppeteer": "^23.6.0"

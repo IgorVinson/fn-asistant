@@ -1,25 +1,64 @@
-import {authorize as authorizeAtGmail} from "./gmailAuth.js";
+import express from 'express';
 import {getLastUnreadEmail} from "./utils/gmail/getLastUnreadEmail.js";
-import { getLinkToLastOrder } from './utils/gmail/getLinkToLastOrder.js';
-import {loginToFieldNation} from "./utils/loginToFieldNation.js"; // Функція для отримання посилання
+import {authorize} from "./utils/gmail/login.js";
+import {getOrderLink} from "./utils/gmail/getOrderLink.js";
+import {google} from "googleapis";
+import {loginToFieldNation} from "./utils/FieldNation/loginToFieldNation.js";
+import puppeteer from "puppeteer";
 
+// Налаштовуємо сервер
+const app = express();
+const port = 3000;
 
-(async () => {
+// Перевірка листів кожні 1 хвилину
+
+const browser = await puppeteer.launch({headless: false}); // headless: false дозволить бачити браузер
+const pageFN = await browser.newPage();
+
+loginToFieldNation(browser, pageFN);
+const pageWM = await browser.newPage();
+await pageWM.goto('https://www.workmarket.com/login')
+
+async function periodicCheck() {
+    const auth = await authorize();
+    const gmail = await google.gmail({ version: 'v1', auth });
     try {
-        // Авторизуємо користувача
-        const clientInGmail = await authorizeAtGmail();
 
-        // Отримуємо вміст останнього непрочитаного листа
-        const lastEmailBody = await getLastUnreadEmail(clientInGmail);
+        setInterval(async () => {
+            const lastEmailBody = await getLastUnreadEmail(auth, gmail);
 
-        if (lastEmailBody) {
-            // Виводимо посилання з листа
-            const orderLink = getLinkToLastOrder(lastEmailBody);
-            console.log('Посилання на замовлення:', orderLink);
-        }
+            if (lastEmailBody) {
+                // Виводимо посилання з листа
+                const orderLink = getOrderLink(lastEmailBody);
+
+                if(orderLink?.includes('fieldnation')) {
+                    const page = await browser.newPage();
+                    await page.goto(orderLink, {waitUntil: 'load'});
+                }
+                else {
+                    try {
+                        const encodedOrderLink = encodeURI(orderLink);
+                        const page = await browser.newPage();
+                        await page.goto(encodedOrderLink, { waitUntil: 'load' });
+                    } catch (error) {
+                        console.error('Error during navigation:', error);
+                    }
+                }
+
+
+
+                console.log('Посилання на замовлення:', orderLink);
+
+            }
+        }, 5000); // Перевіряємо кожну 1 хвилин
     } catch (error) {
-        console.error('Помилка:', error);
+        console.error('Error during authorization or email check:', error);
     }
-})();
+}
 
-loginToFieldNation('https://app.fieldnation.com/')
+
+// Старт сервера
+app.listen(port, async () => {
+    console.log(`Сервер запущено на порту ${port}`);
+    periodicCheck(); // Починаємо перевірку листів
+});
