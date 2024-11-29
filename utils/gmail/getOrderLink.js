@@ -9,7 +9,7 @@ import { getLastUnreadEmail } from './getLastUnreadEmail.js'; // Приклад 
 export function getOrderLink(emailBody) {
     // Регулярний вираз для пошуку посилання на замовлення
     const fnLink = emailBody.match(/https:\/\/app\.fieldnation\.com\/workorders\/\d+\?t=ActionNewWorkOrder&src=Email/);
-    const wmLink = emailBody.match(/https:\/\/sendgrid\.workmarket\.com\/uni\/ls\/click\?upn=[^ ]+/);
+    const wmLink = emailBody.match(/https?:\/\/sendgrid\.workmarket\.com\/uni\/ls\/click\?upn=[^"]+/);
 
     if (fnLink) {
         return fnLink[0]; // Повертаємо перше знайдене посилання
