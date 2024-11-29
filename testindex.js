@@ -1,4 +1,4 @@
-import {loginToFieldNation} from "./utils/loginToFieldNation.js";
+import {loginToFieldNation} from "./utils/FieldNation/loginToFieldNation.js";
 
 const page = await loginToFieldNation('https://app.fieldnation.com/')
 const notifyButtons = await page.$$('.IconButton__3SE5w');

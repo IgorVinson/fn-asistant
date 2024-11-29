@@ -1,13 +1,9 @@
 import puppeteer from 'puppeteer';
 
-/**
- * Автоматизація подачі заявки через Puppeteer
- * @param {string} url - Посилання на замовлення
- */
-export async function loginToFieldNation(url) {
-    // Запуск браузера Puppeteer
-    const browser = await puppeteer.launch({headless: false}); // headless: false дозволить бачити браузер
-    const page = await browser.newPage();
+
+export async function loginToFieldNation(browser, page) {
+
+    const url = 'https://app.fieldnation.com/';
 
     try {
         // Переходимо на сторінку замовлення
@@ -28,7 +24,6 @@ export async function loginToFieldNation(url) {
         console.error('Помилка при подачі заявки:', error);
     }
 
-    return page
 }
 
 
