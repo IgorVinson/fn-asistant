@@ -3,14 +3,14 @@ import { google } from 'googleapis';
 /**
  * Отримати останній непрочитаний лист і повернути його вміст
  *
- * @param {google.auth.OAuth2} auth An authorized OAuth2 client.
+ * @param {OAuth2Client|OAuth2Client} auth An authorized OAuth2 client.
+ * @param gmail Object for Gmail API interaction
  * @returns {Promise<string|null>} - Вміст останнього листа або null, якщо немає нових листів
  */
-export async function getLastUnreadEmail(auth) {
-    const gmail = google.gmail({ version: 'v1', auth });
+export async function getLastUnreadEmail(auth, gmail) {
 
     // Отримати останній непрочитаний лист
-    const res = await gmail.users.messages.list({
+    const res = await gmail.users?.messages.list({
         userId: 'me',
         labelIds: ['INBOX'], // Шукаємо тільки вхідні
         q: 'is:unread', // Тільки непрочитані листи
@@ -26,16 +26,25 @@ export async function getLastUnreadEmail(auth) {
 
     // Отримати деталі листа за його ID
     const messageId = messages[0].id;
-    const msg = await gmail.users.messages.get({
+    const msg = await gmail.users?.messages.get({
         userId: 'me',
         id: messageId,
+    });
+
+    // Змінити статус листа на прочитаний
+    await gmail.users?.messages.modify({
+        userId: 'me',
+        id: messageId,
+        resource: {
+            removeLabelIds: ['UNREAD'],
+        },
     });
 
     // Отримати текст листа
     const body = getMessageBody(msg.data.payload);
 
     if (body) {
-        console.log(`Вміст останнього листа: \n${body}`);
+        // console.log(`Вміст останнього листа: \n${body}`);
         return body; // Повертаємо вміст листа
     } else {
         console.log('Не вдалося отримати вміст листа.');
