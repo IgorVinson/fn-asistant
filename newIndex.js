@@ -3,6 +3,7 @@ import {getLastUnreadEmail} from "./utils/gmail/getLastUnreadEmail.js";
 import {authorize} from "./utils/gmail/login.js";
 import {getOrderLink} from "./utils/gmail/getOrderLink.js";
 import {google} from "googleapis";
+import {loginToFieldNation} from "./utils/loginToFieldNation.js";
 
 // Налаштовуємо сервер
 const app = express();
@@ -20,6 +21,9 @@ async function periodicCheck() {
             if (lastEmailBody) {
                 // Виводимо посилання з листа
                 const orderLink = getOrderLink(lastEmailBody);
+                if(orderLink?.includes('fieldnation')) {
+                 await loginToFieldNation(orderLink)
+                }
                 console.log('Посилання на замовлення:', orderLink);
 
             }
