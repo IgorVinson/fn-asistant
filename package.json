@@ -2,9 +2,9 @@
   "name": "field-nation-assist",
   "version": "1.0.0",
   "description": "",
-  "main": "oldIndex.js",
+  "main": "other/oldIndex.js",
   "scripts": {
-    "dev": "nodemon oldIndex.js",
+    "dev": "nodemon other/oldIndex.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "private": true,
