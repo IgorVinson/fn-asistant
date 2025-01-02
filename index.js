@@ -58,7 +58,6 @@ async function periodicCheck() {
                 //     }
                 // }
 
-                console.log('Посилання на замовлення:', orderLink);
                 const data = await fetchWorkOrderData(orderLink);
                 console.log(data);
 
