@@ -5,7 +5,8 @@ import {getOrderLink} from "./utils/gmail/getOrderLink.js";
 import {google} from "googleapis";
 import {loginToFieldNation} from "./utils/FieldNation/loginToFieldNation.js";
 import puppeteer from "puppeteer";
-import {fetchWorkOrderData} from "./utils/fetchWorkOrderData.js";
+import {getWorkOrderData} from "./utils/getWorkOrderData.js";
+import {postWorOrderRequest} from "./utils/postWorOrderRequest.js";
 
 // Налаштовуємо сервер
 const app = express();
@@ -58,11 +59,17 @@ async function periodicCheck() {
                 //     }
                 // }
 
-                const data = await fetchWorkOrderData(orderLink);
+                console.log("order`s link", orderLink);
+
+                const data = await getWorkOrderData(orderLink);
+                const time = data.startDateAndTime.local;
+                const estHours = data.estLaborHours;
                 console.log(data);
 
+                await postWorOrderRequest(orderLink, time, estHours);
+
             }
-        }, 10000); // Перевіряємо кожні 5 секунд
+        }, 15000); // Перевіряємо кожні 5 секунд
     } catch (error) {
         console.error('Error during authorization or email check:', error);
     }

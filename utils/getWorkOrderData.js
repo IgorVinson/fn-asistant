@@ -14,7 +14,7 @@ function getCookies() {
 }
 
 // Функція для виконання запиту і аналізу даних
-export async function fetchWorkOrderData(url) {
+export async function getWorkOrderData(url) {
     try {
         // Отримуємо куки
         const cookies = getCookies();
