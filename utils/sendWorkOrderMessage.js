@@ -24,7 +24,7 @@ export async function sendWorkOrderMessage(url) {
             'I’m ready to assist with your project and have extensive experience in this field. Please find a link to my portfolio for your review. \n' +
             'https://drive.google.com/drive/folders/1p_7aGla27KgB4GVIPRjf6wb7t7RN6AE7?usp=sharing\n' +
             'If selected, I will ensure the highest quality work and your satisfaction.\n' +
-            ' Thank you for your time and consideration!!';
+            'Thank you for your time and consideration!!';
 
         // Виконуємо запит
         await fetch(`https://app.fieldnation.com/v2/workorders/${workOrderId}/messages`, {
