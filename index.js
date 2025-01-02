@@ -7,6 +7,7 @@ import {loginToFieldNation} from "./utils/FieldNation/loginToFieldNation.js";
 import puppeteer from "puppeteer";
 import {getWorkOrderData} from "./utils/getWorkOrderData.js";
 import {postWorOrderRequest} from "./utils/postWorOrderRequest.js";
+import {sendWorkOrderMessage} from "./utils/sendWorkOrderMessage.js";
 
 // Налаштовуємо сервер
 const app = express();
@@ -67,6 +68,7 @@ async function periodicCheck() {
                 console.log(data);
 
                 await postWorOrderRequest(orderLink, time, estHours);
+                await sendWorkOrderMessage(orderLink);
 
             }
         }, 15000); // Перевіряємо кожні 5 секунд
