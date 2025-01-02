@@ -1,0 +1,1878 @@
+<script type="text/javascript">window.work_order = {
+    "id": 16323276,
+    "networks": {
+        "metadata": {"total": 1, "per_page": 1, "pages": 1, "page": 1}, "actions": [], "results": [{
+            "id": 1,
+            "name": "Field Nation",
+            "type": "marketplace",
+            "options": [{
+                "id": 5,
+                "name": "Buyer Flat Fee",
+                "type": "decimal",
+                "description": "Flat fee per job (buyer fee)",
+                "category": "payment_fees",
+                "visibility": "all",
+                "editable": "staff_admin",
+                "value": "0",
+                "default_value": "0",
+                "network_option_role": "provider",
+                "actions": []
+            }, {
+                "id": 3,
+                "name": "Service Fee Rate",
+                "type": "decimal",
+                "description": "Percentage of job total (provider fee)",
+                "category": "payment_fees",
+                "visibility": "all",
+                "editable": "staff_admin",
+                "value": "10",
+                "default_value": "10",
+                "network_option_role": "provider",
+                "actions": []
+            }, {
+                "id": 2,
+                "name": "Buyer Percentage of Service Fee",
+                "type": "percent",
+                "description": "Buyer share of % fee",
+                "category": "payment_fees",
+                "visibility": "all",
+                "editable": "staff_admin",
+                "value": "0",
+                "default_value": "0",
+                "network_option_role": "provider",
+                "actions": []
+            }, {
+                "id": 19,
+                "name": "Buyer Service Fee Cap",
+                "type": "decimal",
+                "description": "Buyer service fee cap",
+                "category": "payment_fees",
+                "visibility": "all",
+                "editable": "staff_admin",
+                "value": "0",
+                "default_value": "0",
+                "network_option_role": "provider",
+                "actions": []
+            }, {
+                "id": 20,
+                "name": "Provider Service Fee Cap",
+                "type": "decimal",
+                "description": "Provider service fee cap",
+                "category": "payment_fees",
+                "visibility": "all",
+                "editable": "staff_admin",
+                "value": "0",
+                "default_value": "0",
+                "network_option_role": "provider",
+                "actions": []
+            }, {
+                "id": 8,
+                "name": "Field Nation Processes Payments",
+                "type": "checkbox",
+                "description": "Process provider payments through Field Nation",
+                "category": "settings",
+                "visibility": "all",
+                "editable": "staff_admin",
+                "value": "1",
+                "default_value": "1",
+                "network_option_role": "provider",
+                "actions": []
+            }, {
+                "id": 26,
+                "name": "Constant Hourly Rate",
+                "type": "decimal",
+                "description": "Use constant hourly rate",
+                "category": "settings",
+                "visibility": "all",
+                "editable": "staff_admin",
+                "value": "0",
+                "default_value": "0",
+                "network_option_role": "provider",
+                "actions": []
+            }, {
+                "id": 4,
+                "name": "FN Insurance Program",
+                "type": "checkbox",
+                "description": "Apply Field Nation insurance fee if provider does not have insurance",
+                "category": "settings",
+                "visibility": "all",
+                "editable": "staff_admin",
+                "value": "1",
+                "default_value": "1",
+                "network_option_role": "provider",
+                "actions": []
+            }, {
+                "id": 24,
+                "name": "Insurance Required",
+                "type": "checkbox",
+                "description": "Insurance is required to become eligible (this option works in tandem with FN Insurance Program)",
+                "category": "settings",
+                "visibility": "all",
+                "editable": "staff,staff_admin",
+                "value": "1",
+                "default_value": "1",
+                "network_option_role": "provider",
+                "actions": []
+            }, {
+                "id": 30,
+                "name": "Work order pay types",
+                "type": "text",
+                "description": "Work order pay types",
+                "category": "settings",
+                "visibility": "all",
+                "editable": "staff_admin",
+                "value": "blended,fixed,hourly,per_device",
+                "default_value": "blended,fixed,hourly,per_device",
+                "network_option_role": "provider",
+                "actions": []
+            }, {
+                "id": 31,
+                "name": "Work order minimum hourly pay rate",
+                "type": "decimal",
+                "description": "Work order minimum hourly pay rate",
+                "category": "settings",
+                "visibility": "all",
+                "editable": "staff_admin",
+                "value": "",
+                "default_value": "",
+                "network_option_role": "provider",
+                "actions": []
+            }, {
+                "id": 6,
+                "name": "Hide Ratings",
+                "type": "checkbox",
+                "description": "Disable providers from seeing and providing ratings",
+                "category": "permissions",
+                "visibility": "all",
+                "editable": "staff,buyer,staff_admin",
+                "value": "0",
+                "default_value": "0",
+                "network_option_role": "provider",
+                "actions": []
+            }, {
+                "id": 7,
+                "name": "Direct Assign",
+                "type": "checkbox",
+                "description": "Allow direct assignment of providers",
+                "category": "permissions",
+                "visibility": "all",
+                "editable": "staff,buyer,staff_admin",
+                "value": "0",
+                "default_value": "0",
+                "network_option_role": "provider",
+                "actions": []
+            }, {
+                "id": 14,
+                "name": "Allow Auto Swap",
+                "type": "checkbox",
+                "description": "Disable provider swap confirmation",
+                "category": "permissions",
+                "visibility": "all",
+                "editable": "staff,buyer,staff_admin",
+                "value": "0",
+                "default_value": "0",
+                "network_option_role": "provider",
+                "actions": []
+            }, {
+                "id": 15,
+                "name": "Disable PQAP",
+                "type": "checkbox",
+                "description": "Disable Provider Quality Assurance Program (PQAP) processes",
+                "category": "permissions",
+                "visibility": "all",
+                "editable": "staff,staff_admin",
+                "value": "0",
+                "default_value": "0",
+                "network_option_role": "provider",
+                "actions": []
+            }, {
+                "id": 13,
+                "name": "Join Other Networks",
+                "type": "checkbox",
+                "description": "Allow providers to join other networks.",
+                "category": "permissions",
+                "visibility": "all",
+                "editable": "staff,buyer,staff_admin",
+                "value": "1",
+                "default_value": "1",
+                "network_option_role": "provider",
+                "actions": []
+            }, {
+                "id": 27,
+                "name": "Must be used as the exclusive network on work orders",
+                "type": "checkbox",
+                "description": "Must be used as the exclusive network on work orders",
+                "category": "permissions",
+                "visibility": "all",
+                "editable": "staff,staff_admin",
+                "value": "0",
+                "default_value": "0",
+                "network_option_role": "provider",
+                "actions": []
+            }, {
+                "id": 28,
+                "name": "Restrict access for newly added users",
+                "type": "checkbox",
+                "description": "Restrict access for newly added users",
+                "category": "permissions",
+                "visibility": "all",
+                "editable": "staff,staff_admin",
+                "value": "0",
+                "default_value": "0",
+                "network_option_role": "provider",
+                "actions": []
+            }, {
+                "id": 32,
+                "name": "Timesheet Tracking",
+                "type": "checkbox",
+                "description": "Hours on the work orders are tracked for timesheet",
+                "category": "permissions",
+                "visibility": "all",
+                "editable": "staff_admin",
+                "value": "0",
+                "default_value": "0",
+                "network_option_role": "provider",
+                "actions": []
+            }, {
+                "id": 29,
+                "name": "Use specific onboarding flow",
+                "type": "text",
+                "description": "Use specific onboarding flow",
+                "category": "permissions",
+                "visibility": "all",
+                "editable": "staff,staff_admin",
+                "value": "none",
+                "default_value": "none",
+                "network_option_role": "provider",
+                "actions": []
+            }, {
+                "id": 21,
+                "name": "Buy from Network",
+                "type": "checkbox",
+                "description": "Allow company to buy from network",
+                "category": "company_permissions",
+                "visibility": "all",
+                "editable": "staff,buyer,staff_admin",
+                "value": "1",
+                "default_value": "1",
+                "network_option_role": "provider",
+                "actions": []
+            }, {
+                "id": 22,
+                "name": "Perform Work",
+                "type": "checkbox",
+                "description": "Allow company to complete work in network",
+                "category": "company_permissions",
+                "visibility": "all",
+                "editable": "staff,buyer,staff_admin",
+                "value": "1",
+                "default_value": "1",
+                "network_option_role": "provider",
+                "actions": []
+            }, {
+                "id": 23,
+                "name": "Invite Talent",
+                "type": "checkbox",
+                "description": "Allow company to invite talent to network",
+                "category": "company_permissions",
+                "visibility": "all",
+                "editable": "staff,buyer,staff_admin",
+                "value": "1",
+                "default_value": "1",
+                "network_option_role": "provider",
+                "actions": []
+            }],
+            "company_options": [],
+            "sourced_providers": [],
+            "actions": []
+        }]
+    },
+    "attachments": {
+        "correlation_id": "7f1eca49cad7b8731754283320011995f3e02522",
+        "actions": [],
+        "sum": {"unreviewed": 0},
+        "metadata": {"total": 2, "per_page": 2, "pages": 1, "page": 1},
+        "results": [{
+            "id": 1,
+            "name": "Documents",
+            "type": "document",
+            "task": {"id": 0, "type": {"id": 0}},
+            "actions": [],
+            "metadata": {"total": 0, "per_page": 0, "pages": 1, "page": 1},
+            "results": []
+        }, {
+            "id": 38835023,
+            "name": "Misc",
+            "min_files": 0,
+            "max_files": 999,
+            "min_bytes": 1,
+            "max_bytes": 104857600,
+            "type": "slot",
+            "task": {"id": 0},
+            "expense": false,
+            "actions": [],
+            "metadata": {"total": 0, "per_page": 0, "pages": 1, "page": 1},
+            "results": []
+        }]
+    },
+    "shipments": {
+        "metadata": {"total": 0, "per_page": 0, "pages": 1, "page": 1},
+        "results": [],
+        "correlation_id": "372b90a09da9e029005fd2f0a04aee8a17dbc6a6",
+        "actions": []
+    },
+    "signatures": {
+        "metadata": {"total": 0, "per_page": 1, "page": 1, "pages": 1},
+        "correlation_id": "424e56a322326ae1c632e728d5b40eee5d310a66",
+        "actions": [],
+        "results": []
+    },
+    "time_logs": {
+        "actions": [],
+        "hours": 0,
+        "metadata": {"total": 0, "pages": 1, "per_page": 0, "page": 1},
+        "results": [],
+        "correlation_id": "524c5dbe1688346ffb5ca0d20b00bc606392f9fa"
+    },
+    "problems": {
+        "metadata": {"total": 0, "per_page": 1, "page": 1, "pages": 1},
+        "sum": {"active": 0, "resolved": 0},
+        "correlation_id": "d39c70356a1ca2136816f8587ec081e33839fcc2",
+        "actions": ["add"],
+        "types": [{
+            "id": 48,
+            "name": "How to\/Technical assistance",
+            "performance_event": false,
+            "show_pqap_warning": false,
+            "reportable": true,
+            "message": "",
+            "support_ticket": true,
+            "send_to_buyer": false,
+            "send_to_provider": true,
+            "send_to_support": true,
+            "send_to_accounting": false,
+            "children": [],
+            "has_other": false
+        }, {
+            "id": 49,
+            "name": "Work order clarification needed",
+            "performance_event": false,
+            "show_pqap_warning": false,
+            "reportable": true,
+            "message": "",
+            "support_ticket": false,
+            "send_to_buyer": true,
+            "send_to_provider": true,
+            "send_to_support": false,
+            "send_to_accounting": false,
+            "children": [],
+            "has_other": false
+        }],
+        "results": []
+    },
+    "pay": {
+        "work_order_id": 16323276,
+        "type": "fixed",
+        "base": {"units": 1, "amount": 85},
+        "additional": {"units": 0, "amount": 0},
+        "fees": [{
+            "name": "cancellation",
+            "id": 0,
+            "amount": 0,
+            "queued": false,
+            "charged": false,
+            "hours24_applicable": false,
+            "calculation": "fixed",
+            "at_risk": false
+        }, {
+            "name": "provider",
+            "amount": 8.5,
+            "calculation": "percent",
+            "modifier": 0.1,
+            "charged": false,
+            "min_amount": 8.5,
+            "max_amount": 8.5,
+            "display_name": "Field Nation Service Fee",
+            "description": "Field Nation Service Charge of 10%. This service charge helps us operate Field Nation.",
+            "breakdown": null
+        }, {
+            "name": "Provider Fee Pro",
+            "display_name": "Field Nation Service Fee",
+            "amount": 3.32,
+            "max_amount": 3.32,
+            "calculation": "percent",
+            "description": "Field Nation Service Charge of 10% and additional Service Charge of 3.9% with Field Nation Pro. This service charge helps us operate Field Nation.",
+            "modifier": 0.039,
+            "breakdown": null
+        }],
+        "payment": {
+            "id": 62850348,
+            "amount": 85,
+            "charged": false,
+            "date": {"utc": "", "local": {"date": "", "time": ""}}
+        },
+        "client_payment_enabled": true,
+        "client_payment_terms": 7,
+        "hours": 1,
+        "buyer_overall_jobs": 52164,
+        "can_view": true,
+        "buyer_approval_time_days": 2,
+        "client_payment_terms_copy": "7-day payment terms are processed on the second Friday after Work Order approval",
+        "client_payment_terms_updated_copy": "(processed on the second Friday after Work Order approval)",
+        "target_review_period": 3,
+        "client_payment_requires_check": false,
+        "reported_hours": 0,
+        "number_of_devices": 0,
+        "hold": {"id": 62850348, "amount": 90.95, "charged": true},
+        "minimum_payment": 20,
+        "range": {"min": 85, "max": 85},
+        "actions": [],
+        "labor_sum": 85,
+        "fees_cancellation_pending": false,
+        "passive_cancellation_amount": 30,
+        "fee_cancellation_queued": "0",
+        "fee_cancellation_charged": "0",
+        "status_id": "2",
+        "correlation_id": "0b6cecd06f5e96effafb45f07f60e1b9d21feaaa",
+        "bonuses": {
+            "metadata": {"total": 1, "per_page": 1, "page": 1, "pages": 1},
+            "sum": {"all": 8.5, "charged": 0, "uncharged": 8.5},
+            "results": [{
+                "id": 996,
+                "charged": false,
+                "calculation": "percent",
+                "modifier": 10,
+                "name": "Above & Beyond",
+                "description": "A bonus for Providers that go above and beyond to provide a golden customer experience, often deriving from direct customer feedback. Bonus will be added at buyer's discretion.",
+                "amount": 8.5,
+                "actions": [],
+                "selected": true
+            }],
+            "actions": []
+        },
+        "expenses": {
+            "metadata": {"total": 0, "per_page": 0, "page": 1, "pages": 1},
+            "sum": {
+                "all": 0,
+                "charged": 0,
+                "uncharged": 0,
+                "pending": 0,
+                "approved": 0,
+                "approved_amount": 0,
+                "denied": 0
+            },
+            "results": [],
+            "actions": []
+        },
+        "penalties": {
+            "metadata": {"total": 4, "per_page": 4, "page": 1, "pages": 1},
+            "sum": {"all": 131.75, "charged": 0, "uncharged": 131.75},
+            "results": [{
+                "id": 2847,
+                "charged": false,
+                "calculation": "percent",
+                "modifier": 25,
+                "name": "Incomplete Reduction - 25%",
+                "description": "Phone could not be installed in full after reasonable and verifiable attempt and a tracked phone return is required:\r\ne.g.  no active internet service, insufficient connectivity or speeds, phone not operational after troubleshooting with ClearCaptions Support, customer refuses to provide consent or required documentation for ID validation, customer no longer interested in service, phone not delivered on time or missing part, phone damaged, unqualified customer",
+                "status_reason": "",
+                "updated_by": "",
+                "updated_at": {"local": {"date": "", "time": ""}, "utc": ""},
+                "amount": 21.25,
+                "selected": true,
+                "actions": []
+            }, {
+                "id": 2848,
+                "charged": false,
+                "calculation": "percent",
+                "modifier": 45,
+                "name": "Incomplete Reduction - 45%",
+                "description": "Phone installation could not be started after arrival and a phone return is not required:\r\ne.g. customer not on site and tech released by ClearCaptions following customer outreach attempt, improper registration (non-POA completed on customer\u2019s behalf) or mis-registration (registered to wrong customer)",
+                "status_reason": "",
+                "updated_by": "",
+                "updated_at": {"local": {"date": "", "time": ""}, "utc": ""},
+                "amount": 38.25,
+                "selected": true,
+                "actions": []
+            }, {
+                "id": 2849,
+                "charged": false,
+                "calculation": "percent",
+                "modifier": 75,
+                "name": "Incomplete Reduction - 75%",
+                "description": "Tech did not complete job due to their failure to perform:\r\ne.g. no \u2018Welcome Call\u2019, incomplete ID validation and\/or consent requirements, phone pair failure, insufficient customer training, tech on site other than assignee",
+                "status_reason": "",
+                "updated_by": "",
+                "updated_at": {"local": {"date": "", "time": ""}, "utc": ""},
+                "amount": 63.75,
+                "selected": true,
+                "actions": []
+            }, {
+                "id": 2846,
+                "charged": false,
+                "calculation": "percent",
+                "modifier": 10,
+                "name": "Minor Infractions Reduction - 10%",
+                "description": "Minor infractions in executing installation: \r\n\r\ne.g. GPS check-in\/out off site, ? 30 mins late arrival, failure to garner approval to leave site, missing a \u201croutine\u201d task",
+                "status_reason": "",
+                "updated_by": "",
+                "updated_at": {"local": {"date": "", "time": ""}, "utc": ""},
+                "amount": 8.5,
+                "selected": true,
+                "actions": []
+            }],
+            "actions": []
+        },
+        "discounts": {
+            "metadata": {"total": 0, "per_page": 0, "page": 1, "pages": 1},
+            "sum": {"all": 0},
+            "results": [],
+            "actions": []
+        },
+        "increases": {
+            "metadata": {"total": 0, "per_page": 0, "page": 1, "pages": 1},
+            "minimum": 20,
+            "sum": {"all": 0},
+            "results": [],
+            "actions": []
+        },
+        "positive": true,
+        "currency_style": "positive",
+        "max_pay": 85,
+        "total": 76.5,
+        "max_pay_limit": 73.18,
+        "fn_process_payment": "1",
+        "total_by_role": 85,
+        "total_before_fees_by_role": 85,
+        "calculated_total": {"total": {"min": 73.18, "max": 73.18}},
+        "is_taxable_location": true
+    },
+    "pay_old": {
+        "work_order_id": 16323276,
+        "type": "fixed",
+        "base": {"units": 1, "amount": 85},
+        "additional": {"units": 0, "amount": 0},
+        "fees": [{
+            "name": "cancellation",
+            "id": 0,
+            "amount": 0,
+            "queued": false,
+            "charged": false,
+            "hours24_applicable": false,
+            "calculation": "fixed",
+            "at_risk": false
+        }, {
+            "name": "provider",
+            "amount": 8.5,
+            "calculation": "percent",
+            "modifier": 0.1,
+            "charged": false,
+            "min_amount": 8.5,
+            "max_amount": 8.5,
+            "display_name": "Field Nation Service Fee"
+        }],
+        "payment": {
+            "id": 62850348,
+            "amount": 85,
+            "charged": false,
+            "date": {"utc": "", "local": {"date": "", "time": ""}}
+        },
+        "finance": {
+            "id": 809,
+            "terms": "7",
+            "description": "Installation - Net 7 ACH - Pull CPT",
+            "limit": 1250000,
+            "invoiced_account": true
+        },
+        "client_payment_enabled": true,
+        "client_payment_terms": 7,
+        "hours": 1,
+        "buyer_overall_jobs": 52164,
+        "can_view": true,
+        "buyer_approval_time_days": 2,
+        "client_payment_terms_copy": "7-day payment terms are processed on the second Friday after Work Order approval",
+        "client_payment_terms_updated_copy": "(processed on the second Friday after Work Order approval)",
+        "target_review_period": 3,
+        "client_payment_requires_check": false,
+        "reported_hours": 0,
+        "number_of_devices": 0,
+        "hold": {"id": 62850348, "amount": 90.95, "charged": true},
+        "minimum_payment": 20,
+        "range": {"min": 85, "max": 85},
+        "actions": [],
+        "labor_sum": 85,
+        "fees_cancellation_pending": false,
+        "passive_cancellation_amount": 30,
+        "fee_cancellation_queued": "0",
+        "fee_cancellation_charged": "0",
+        "status_id": "2",
+        "correlation_id": "0b6cecd06f5e96effafb45f07f60e1b9d21feaaa",
+        "bonuses": {
+            "metadata": {"total": 1, "per_page": 1, "page": 1, "pages": 1},
+            "sum": {"all": 8.5, "charged": 0, "uncharged": 8.5},
+            "results": [{
+                "id": 996,
+                "charged": false,
+                "calculation": "percent",
+                "modifier": 10,
+                "name": "Above & Beyond",
+                "description": "A bonus for Providers that go above and beyond to provide a golden customer experience, often deriving from direct customer feedback. Bonus will be added at buyer's discretion.",
+                "amount": 8.5,
+                "actions": [],
+                "selected": true
+            }],
+            "actions": []
+        },
+        "expenses": {
+            "metadata": {"total": 0, "per_page": 0, "page": 1, "pages": 1},
+            "sum": {
+                "all": 0,
+                "charged": 0,
+                "uncharged": 0,
+                "pending": 0,
+                "approved": 0,
+                "approved_amount": 0,
+                "denied": 0
+            },
+            "results": [],
+            "actions": []
+        },
+        "penalties": {
+            "metadata": {"total": 4, "per_page": 4, "page": 1, "pages": 1},
+            "sum": {"all": 131.75, "charged": 0, "uncharged": 131.75},
+            "results": [{
+                "id": 2847,
+                "charged": false,
+                "calculation": "percent",
+                "modifier": 25,
+                "name": "Incomplete Reduction - 25%",
+                "description": "Phone could not be installed in full after reasonable and verifiable attempt and a tracked phone return is required:\r\ne.g.  no active internet service, insufficient connectivity or speeds, phone not operational after troubleshooting with ClearCaptions Support, customer refuses to provide consent or required documentation for ID validation, customer no longer interested in service, phone not delivered on time or missing part, phone damaged, unqualified customer",
+                "status_reason": "",
+                "updated_by": "",
+                "updated_at": {"local": {"date": "", "time": ""}, "utc": ""},
+                "amount": 21.25,
+                "selected": true,
+                "actions": []
+            }, {
+                "id": 2848,
+                "charged": false,
+                "calculation": "percent",
+                "modifier": 45,
+                "name": "Incomplete Reduction - 45%",
+                "description": "Phone installation could not be started after arrival and a phone return is not required:\r\ne.g. customer not on site and tech released by ClearCaptions following customer outreach attempt, improper registration (non-POA completed on customer\u2019s behalf) or mis-registration (registered to wrong customer)",
+                "status_reason": "",
+                "updated_by": "",
+                "updated_at": {"local": {"date": "", "time": ""}, "utc": ""},
+                "amount": 38.25,
+                "selected": true,
+                "actions": []
+            }, {
+                "id": 2849,
+                "charged": false,
+                "calculation": "percent",
+                "modifier": 75,
+                "name": "Incomplete Reduction - 75%",
+                "description": "Tech did not complete job due to their failure to perform:\r\ne.g. no \u2018Welcome Call\u2019, incomplete ID validation and\/or consent requirements, phone pair failure, insufficient customer training, tech on site other than assignee",
+                "status_reason": "",
+                "updated_by": "",
+                "updated_at": {"local": {"date": "", "time": ""}, "utc": ""},
+                "amount": 63.75,
+                "selected": true,
+                "actions": []
+            }, {
+                "id": 2846,
+                "charged": false,
+                "calculation": "percent",
+                "modifier": 10,
+                "name": "Minor Infractions Reduction - 10%",
+                "description": "Minor infractions in executing installation: \r\n\r\ne.g. GPS check-in\/out off site, ? 30 mins late arrival, failure to garner approval to leave site, missing a \u201croutine\u201d task",
+                "status_reason": "",
+                "updated_by": "",
+                "updated_at": {"local": {"date": "", "time": ""}, "utc": ""},
+                "amount": 8.5,
+                "selected": true,
+                "actions": []
+            }],
+            "actions": []
+        },
+        "discounts": {
+            "metadata": {"total": 0, "per_page": 0, "page": 1, "pages": 1},
+            "sum": {"all": 0},
+            "results": [],
+            "actions": []
+        },
+        "increases": {
+            "metadata": {"total": 0, "per_page": 0, "page": 1, "pages": 1},
+            "minimum": 20,
+            "sum": {"all": 0},
+            "results": [],
+            "actions": []
+        },
+        "positive": true,
+        "currency_style": "positive",
+        "max_pay": 85,
+        "total": 76.5,
+        "max_pay_limit": 85,
+        "fn_process_payment": "1",
+        "total_by_role": 85,
+        "total_before_fees_by_role": 85,
+        "calculated_total": {"total": {"min": 76.5, "max": 76.5}}
+    },
+    "pay_service": {
+        "workOrderId": 16323276,
+        "userId": 983643,
+        "lineItems": [{
+            "name": "labor",
+            "amount": 85,
+            "description": "",
+            "accounting_code": 518,
+            "key": "labor"
+        }, {
+            "name": "expenses",
+            "amount": 0,
+            "description": "",
+            "accounting_code": 0,
+            "key": "expenses"
+        }, {
+            "name": "discounts",
+            "amount": 0,
+            "description": "",
+            "accounting_code": 518,
+            "key": "discounts"
+        }, {
+            "name": "bonuses",
+            "amount": 0,
+            "description": "",
+            "accounting_code": 518,
+            "key": "bonuses"
+        }, {
+            "name": "penalties",
+            "amount": 0,
+            "description": "",
+            "accounting_code": 518,
+            "key": "penalties"
+        }, {
+            "name": "Field Nation Service Fee",
+            "amount": 8.5,
+            "description": "",
+            "accounting_code": 434,
+            "key": "service_fee"
+        }, {
+            "name": "Provider Fee Pro",
+            "amount": 3.32,
+            "description": "",
+            "accounting_code": 435,
+            "key": "service_fee_pro"
+        }, {
+            "name": "General Liability Liaison",
+            "amount": 0,
+            "description": "",
+            "accounting_code": 459,
+            "key": "general_liability_liaison"
+        }, {
+            "name": "Transaction Value Tax",
+            "amount": 5.95,
+            "description": "",
+            "accounting_code": 535,
+            "key": "gtv_state_tax"
+        }],
+        "fees": {
+            "buyer": [{
+                "name": "General Liability Liaison",
+                "key": "general_liability_liaison",
+                "description": "Work orders that have General Liability Liaison insurance include an additional 0% charge on the total value of the work order.",
+                "attributes": [],
+                "percentCharge": 0,
+                "actual": 0,
+                "maximum": 0,
+                "guarantee": 0
+            }, {
+                "name": "Transaction Value Tax",
+                "key": "gtv_state_tax",
+                "attributes": [],
+                "percentCharge": 7,
+                "breakdown": [{"percent": 4.75, "name": "NC STATE TAX", "amount": 4.04}, {
+                    "percent": 2.25,
+                    "name": "NC COUNTY TAX",
+                    "amount": 1.91
+                }],
+                "taxableAmount": 85,
+                "serviceRef": "gtv",
+                "actual": 5.95,
+                "maximum": 5.95,
+                "guarantee": 5.95,
+                "taxCalculated": 5.95,
+                "exemptAmount": 0,
+                "exemptCertId": 0,
+                "isExemptOverride": false
+            }],
+            "provider": [{
+                "name": "Field Nation Service Fee",
+                "key": "service_fee",
+                "description": "Field Nation Service Charge of 10%. This service charge helps us operate Field Nation.",
+                "attributes": [],
+                "percentCharge": 10,
+                "actual": 8.5,
+                "maximum": 8.5,
+                "guarantee": 8.5
+            }, {
+                "name": "Provider Fee Pro",
+                "key": "service_fee_pro",
+                "description": "Field Nation Service Charge of 10% and additional Service Charge of 3.9% with Field Nation Pro. This service charge helps us operate Field Nation.",
+                "attributes": [],
+                "percentCharge": 3.9,
+                "actual": 3.32,
+                "maximum": 3.32,
+                "guarantee": 3.32
+            }]
+        },
+        "totals": {
+            "buyer": {"minimum": 90.95, "maximum": 90.95, "actual": 90.95, "guarantee": 90.95},
+            "provider": {"minimum": 73.18, "maximum": 73.18, "actual": 73.18, "guarantee": 73.18}
+        },
+        "ledger": [{
+            "note": "Labor item is added with code 518",
+            "buyer": {"minimum": 0, "maximum": 0, "actual": 0, "guarantee": 0},
+            "provider": {"minimum": 0, "maximum": 0, "actual": 0, "guarantee": 0}
+        }, {
+            "note": "Labor $85.00 fixed",
+            "buyer": {"minimum": 0, "maximum": 0, "actual": 85, "guarantee": 0},
+            "provider": {"minimum": 0, "maximum": 0, "actual": 85, "guarantee": 0}
+        }, {
+            "note": "Labor minimum $85.00 fixed",
+            "buyer": {"minimum": 85, "maximum": 0, "actual": 85, "guarantee": 0},
+            "provider": {"minimum": 85, "maximum": 0, "actual": 85, "guarantee": 0}
+        }, {
+            "note": "Labor guarantee $85.00 fixed",
+            "buyer": {"minimum": 85, "maximum": 0, "actual": 85, "guarantee": 85},
+            "provider": {"minimum": 85, "maximum": 0, "actual": 85, "guarantee": 85}
+        }, {
+            "note": "Labor maximum $85.00 fixed",
+            "buyer": {"minimum": 85, "maximum": 85, "actual": 85, "guarantee": 85},
+            "provider": {"minimum": 85, "maximum": 85, "actual": 85, "guarantee": 85}
+        }, {
+            "note": "Minimum of all expenses against minimum possible labor",
+            "buyer": {"minimum": 85, "maximum": 85, "actual": 85, "guarantee": 85},
+            "provider": {"minimum": 85, "maximum": 85, "actual": 85, "guarantee": 85}
+        }, {
+            "note": "Maximum of all applied expenses against guaranteed labor",
+            "buyer": {"minimum": 85, "maximum": 85, "actual": 85, "guarantee": 85},
+            "provider": {"minimum": 85, "maximum": 85, "actual": 85, "guarantee": 85}
+        }, {
+            "note": "Maximum of all expenses against maximum possible labor",
+            "buyer": {"minimum": 85, "maximum": 85, "actual": 85, "guarantee": 85},
+            "provider": {"minimum": 85, "maximum": 85, "actual": 85, "guarantee": 85}
+        }, {
+            "note": "Approved 0\/0 expenses for $0.00",
+            "buyer": {"minimum": 85, "maximum": 85, "actual": 85, "guarantee": 85},
+            "provider": {"minimum": 85, "maximum": 85, "actual": 85, "guarantee": 85}
+        }, {
+            "note": "Deduct discount $0.00 actual",
+            "buyer": {"minimum": 85, "maximum": 85, "actual": 85, "guarantee": 85},
+            "provider": {"minimum": 85, "maximum": 85, "actual": 85, "guarantee": 85}
+        }, {
+            "note": "Possible discounts reduce minimum for labor from $85.00 to $85.00",
+            "buyer": {"minimum": 85, "maximum": 85, "actual": 85, "guarantee": 85},
+            "provider": {"minimum": 85, "maximum": 85, "actual": 85, "guarantee": 85}
+        }, {
+            "note": "Possible discounts reduce maximum for labor from $85.00 to $85.00",
+            "buyer": {"minimum": 85, "maximum": 85, "actual": 85, "guarantee": 85},
+            "provider": {"minimum": 85, "maximum": 85, "actual": 85, "guarantee": 85}
+        }, {
+            "note": "Applied 0\/1 bonuses for $0.00",
+            "buyer": {"minimum": 85, "maximum": 85, "actual": 85, "guarantee": 85},
+            "provider": {"minimum": 85, "maximum": 85, "actual": 85, "guarantee": 85}
+        }, {
+            "note": "Guarantee of bonuses against maximum possible labor (only in approved\/paid status)",
+            "buyer": {"minimum": 85, "maximum": 85, "actual": 85, "guarantee": 85},
+            "provider": {"minimum": 85, "maximum": 85, "actual": 85, "guarantee": 85}
+        }, {
+            "note": "Maximum of all applied bonuses against maximum possible labor",
+            "buyer": {"minimum": 85, "maximum": 85, "actual": 85, "guarantee": 85},
+            "provider": {"minimum": 85, "maximum": 85, "actual": 85, "guarantee": 85}
+        }, {
+            "note": "Applied 0\/4 penalties for $0.00",
+            "buyer": {"minimum": 85, "maximum": 85, "actual": 85, "guarantee": 85},
+            "provider": {"minimum": 85, "maximum": 85, "actual": 85, "guarantee": 85}
+        }, {
+            "note": "Maximum of all applied penalties reduces minimum pay",
+            "buyer": {"minimum": 85, "maximum": 85, "actual": 85, "guarantee": 85},
+            "provider": {"minimum": 85, "maximum": 85, "actual": 85, "guarantee": 85}
+        }, {
+            "note": "Maximum of all applied penalties against maximum possible labor",
+            "buyer": {"minimum": 85, "maximum": 85, "actual": 85, "guarantee": 85},
+            "provider": {"minimum": 85, "maximum": 85, "actual": 85, "guarantee": 85}
+        }, {
+            "note": "Cancellation fee is not applicable for the work order",
+            "buyer": {"minimum": 85, "maximum": 85, "actual": 85, "guarantee": 85},
+            "provider": {"minimum": 85, "maximum": 85, "actual": 85, "guarantee": 85}
+        }, {
+            "note": "Provider contract is enabled. Adding provider service fee of 3.9% to current network fee",
+            "buyer": {"minimum": 85, "maximum": 85, "actual": 85, "guarantee": 85},
+            "provider": {"minimum": 85, "maximum": 85, "actual": 85, "guarantee": 85}
+        }, {
+            "note": "Provider pays 10% service fee",
+            "buyer": {"minimum": 85, "maximum": 85, "actual": 85, "guarantee": 85},
+            "provider": {"minimum": 85, "maximum": 85, "actual": 85, "guarantee": 85}
+        }, {
+            "note": "Provider pays 3.9% pro service fee",
+            "buyer": {"minimum": 85, "maximum": 85, "actual": 85, "guarantee": 85},
+            "provider": {"minimum": 85, "maximum": 85, "actual": 85, "guarantee": 85}
+        }, {
+            "note": "No buyer service fee applied on this work order",
+            "buyer": {"minimum": 85, "maximum": 85, "actual": 85, "guarantee": 85},
+            "provider": {"minimum": 85, "maximum": 85, "actual": 85, "guarantee": 85}
+        }, {
+            "note": "Provider service fee of $8.50 applied from gross $85.00",
+            "buyer": {"minimum": 85, "maximum": 85, "actual": 85, "guarantee": 85},
+            "provider": {"minimum": 85, "maximum": 85, "actual": 85, "guarantee": 85}
+        }, {
+            "note": "Maximum provider service fee of $8.50 applied from maximum amount $85.00",
+            "buyer": {"minimum": 85, "maximum": 85, "actual": 85, "guarantee": 85},
+            "provider": {"minimum": 85, "maximum": 85, "actual": 85, "guarantee": 85}
+        }, {
+            "note": "Guarantee provider service fee of $8.50 applied from guarantee amount $85.00",
+            "buyer": {"minimum": 85, "maximum": 85, "actual": 85, "guarantee": 85},
+            "provider": {"minimum": 85, "maximum": 85, "actual": 85, "guarantee": 85}
+        }, {
+            "note": "Guarantee provider service fee of $8.50 applied from guarantee amount $85.00",
+            "buyer": {"minimum": 85, "maximum": 85, "actual": 85, "guarantee": 85},
+            "provider": {"minimum": 85, "maximum": 85, "actual": 85, "guarantee": 85}
+        }, {
+            "note": "Maximum provider service fee of $8.50 applied from maximum amount $85.00",
+            "buyer": {"minimum": 85, "maximum": 85, "actual": 85, "guarantee": 85},
+            "provider": {"minimum": 85, "maximum": 85, "actual": 85, "guarantee": 85}
+        }, {
+            "note": "Provider service fee of $8.50 applied from gross $85.00",
+            "buyer": {"minimum": 85, "maximum": 85, "actual": 85, "guarantee": 85},
+            "provider": {"minimum": 85, "maximum": 85, "actual": 85, "guarantee": 85}
+        }, {
+            "note": "Provider pro service fee of $3.32 applied from gross $85.00",
+            "buyer": {"minimum": 85, "maximum": 85, "actual": 85, "guarantee": 85},
+            "provider": {"minimum": 85, "maximum": 85, "actual": 85, "guarantee": 85}
+        }, {
+            "note": "Maximum provider pro service fee of $3.32 applied from maximum amount $85.00",
+            "buyer": {"minimum": 85, "maximum": 85, "actual": 85, "guarantee": 85},
+            "provider": {"minimum": 85, "maximum": 85, "actual": 85, "guarantee": 85}
+        }, {
+            "note": "Guarantee provider pro service fee of $3.32 applied from guarantee amount $85.00",
+            "buyer": {"minimum": 85, "maximum": 85, "actual": 85, "guarantee": 85},
+            "provider": {"minimum": 85, "maximum": 85, "actual": 85, "guarantee": 85}
+        }, {
+            "note": "Guarantee provider pro service fee of $3.32 applied from guarantee amount $85.00",
+            "buyer": {"minimum": 85, "maximum": 85, "actual": 85, "guarantee": 85},
+            "provider": {"minimum": 85, "maximum": 85, "actual": 85, "guarantee": 85}
+        }, {
+            "note": "Maximum provider pro service fee of $3.32 applied from maximum amount $85.00",
+            "buyer": {"minimum": 85, "maximum": 85, "actual": 85, "guarantee": 85},
+            "provider": {"minimum": 85, "maximum": 85, "actual": 85, "guarantee": 85}
+        }, {
+            "note": "Provider pro service fee of $3.32 applied from gross $85.00",
+            "buyer": {"minimum": 85, "maximum": 85, "actual": 85, "guarantee": 85},
+            "provider": {"minimum": 85, "maximum": 85, "actual": 85, "guarantee": 85}
+        }, {
+            "note": "Not applying buyer fee on workorder as contract does not have it enabled or is empty",
+            "buyer": {"minimum": 85, "maximum": 85, "actual": 85, "guarantee": 85},
+            "provider": {"minimum": 85, "maximum": 85, "actual": 85, "guarantee": 85}
+        }, {
+            "note": "No occupational accident insurance on workorder, not applying fee",
+            "buyer": {"minimum": 85, "maximum": 85, "actual": 85, "guarantee": 85},
+            "provider": {"minimum": 85, "maximum": 85, "actual": 85, "guarantee": 85}
+        }, {
+            "note": "No WA workers compensation on this workorder it does not meet the requirements",
+            "buyer": {"minimum": 85, "maximum": 85, "actual": 85, "guarantee": 85},
+            "provider": {"minimum": 85, "maximum": 85, "actual": 85, "guarantee": 85}
+        }, {
+            "note": "No high value supply on workorder, not applying fee.",
+            "buyer": {"minimum": 85, "maximum": 85, "actual": 85, "guarantee": 85},
+            "provider": {"minimum": 85, "maximum": 85, "actual": 85, "guarantee": 85}
+        }, {
+            "note": "Not applying international fees as it is disabled on the platform.",
+            "buyer": {"minimum": 85, "maximum": 85, "actual": 85, "guarantee": 85},
+            "provider": {"minimum": 85, "maximum": 85, "actual": 85, "guarantee": 85}
+        }, {
+            "note": "No general liability charged: provider has verified GL insurance",
+            "buyer": {"minimum": 85, "maximum": 85, "actual": 85, "guarantee": 85},
+            "provider": {"minimum": 85, "maximum": 85, "actual": 85, "guarantee": 85}
+        }, {
+            "note": "Not applying overage fee.",
+            "buyer": {"minimum": 85, "maximum": 85, "actual": 85, "guarantee": 85},
+            "provider": {"minimum": 85, "maximum": 85, "actual": 85, "guarantee": 85}
+        }, {
+            "note": "General Liability Liaison fee (0% of gross) of $0.00 added to buyer total as a charge",
+            "buyer": {"minimum": 85, "maximum": 85, "actual": 85, "guarantee": 85},
+            "provider": {"minimum": 85, "maximum": 85, "actual": 85, "guarantee": 85}
+        }, {
+            "note": "General Liability Liaison fee (0% of gross) of $0.00 added to buyer total as a charge",
+            "buyer": {"minimum": 85, "maximum": 85, "actual": 85, "guarantee": 85},
+            "provider": {"minimum": 85, "maximum": 85, "actual": 85, "guarantee": 85}
+        }, {
+            "note": "General Liability Liaison fee (0% of gross) of $0.00 added to buyer total as a charge",
+            "buyer": {"minimum": 85, "maximum": 85, "actual": 85, "guarantee": 85},
+            "provider": {"minimum": 85, "maximum": 85, "actual": 85, "guarantee": 85}
+        }, {
+            "note": "General Liability Liaison fee (0% of gross) of $0.00 added to buyer total as a charge",
+            "buyer": {"minimum": 85, "maximum": 85, "actual": 85, "guarantee": 85},
+            "provider": {"minimum": 85, "maximum": 85, "actual": 85, "guarantee": 85}
+        }, {
+            "note": "General Liability Liaison fee (0% of gross) of $0.00 added to buyer total as a charge",
+            "buyer": {"minimum": 85, "maximum": 85, "actual": 85, "guarantee": 85},
+            "provider": {"minimum": 85, "maximum": 85, "actual": 85, "guarantee": 85}
+        }, {
+            "note": "General Liability Liaison fee (0% of gross) of $0.00 added to buyer total as a charge",
+            "buyer": {"minimum": 85, "maximum": 85, "actual": 85, "guarantee": 85},
+            "provider": {"minimum": 85, "maximum": 85, "actual": 85, "guarantee": 85}
+        }, {
+            "note": "Transaction value tax from accounting-code 518 has been added to work order",
+            "buyer": {"minimum": 85, "maximum": 85, "actual": 85, "guarantee": 85},
+            "provider": {"minimum": 85, "maximum": 85, "actual": 85, "guarantee": 85}
+        }, {
+            "note": "State tax fee of 7.00% gtv_actual",
+            "buyer": {"minimum": 85, "maximum": 85, "actual": 85, "guarantee": 85},
+            "provider": {"minimum": 85, "maximum": 85, "actual": 85, "guarantee": 85}
+        }, {
+            "note": "Maximum State tax fee of 7.00% gtv_maximum",
+            "buyer": {"minimum": 85, "maximum": 85, "actual": 85, "guarantee": 85},
+            "provider": {"minimum": 85, "maximum": 85, "actual": 85, "guarantee": 85}
+        }, {
+            "note": "Guarantee State tax fee of 7.00% gtv_guarantee",
+            "buyer": {"minimum": 85, "maximum": 85, "actual": 85, "guarantee": 85},
+            "provider": {"minimum": 85, "maximum": 85, "actual": 85, "guarantee": 85}
+        }, {
+            "note": "Guarantee State tax fee of 7.00% gtv_guarantee",
+            "buyer": {"minimum": 85, "maximum": 85, "actual": 85, "guarantee": 85},
+            "provider": {"minimum": 85, "maximum": 85, "actual": 85, "guarantee": 85}
+        }, {
+            "note": "Maximum State tax fee of 7.00% gtv_maximum",
+            "buyer": {"minimum": 85, "maximum": 85, "actual": 85, "guarantee": 85},
+            "provider": {"minimum": 85, "maximum": 85, "actual": 85, "guarantee": 85}
+        }, {
+            "note": "State tax fee of 7.00% gtv_actual",
+            "buyer": {"minimum": 85, "maximum": 85, "actual": 85, "guarantee": 85},
+            "provider": {"minimum": 85, "maximum": 85, "actual": 85, "guarantee": 85}
+        }],
+        "attributes": [{
+            "type": "work_order",
+            "name": "taxable_location",
+            "value": "1"
+        }, {"type": "work_order", "name": "buyer_taxable_location", "value": "1"}],
+        "from_cache": true
+    },
+    "publish_stats": {
+        "has_preferred_requests": false,
+        "has_preferred_counters": false,
+        "requests": 0,
+        "counter_offers": 0,
+        "routes": 9,
+        "declines": 0,
+        "all_requests": 0,
+        "provider_metadata": {
+            "requests": [],
+            "counter_offers": [],
+            "routes": [{"id": 89726}, {"id": 493105}, {"id": 494426}, {"id": 791917}, {"id": 809935}, {"id": 840327}, {"id": 900590}, {"id": 900604}, {"id": 936644}]
+        },
+        "correlation_id": "75c70077f60426849a0e8468e9fb228c040a58f4"
+    },
+    "requests": {
+        "metadata": {"total": 0, "per_page": 0, "page": 1, "pages": 1},
+        "sum": {"all": 0},
+        "results": [],
+        "correlation_id": "970d14c6b2506df215ebf0b231d320ed02cad0f6",
+        "actions": ["add", "counter_offer"]
+    },
+    "allow_counter_offers": true,
+    "is_user_declined": false,
+    "routes": {
+        "metadata": {"total": 0, "per_page": 0, "page": 1, "pages": 1},
+        "sum": {"all": 0},
+        "results": [],
+        "actions": []
+    },
+    "declines": {
+        "metadata": {"total": 0, "per_page": 0, "page": 1, "pages": 1},
+        "sum": {"all": 0},
+        "results": [],
+        "actions": ["add"]
+    },
+    "custom_fields": {
+        "actions": [],
+        "internal": {"id": 0, "name": "", "value": "", "role": ""},
+        "metadata": {"total": 4, "pages": 1, "per_page": 4, "page": 1},
+        "results": [{
+            "id": 4,
+            "name": "General",
+            "order": 6,
+            "role": "buyer",
+            "metadata": {"total": 0, "page": 1, "pages": 1, "per_page": 0},
+            "results": []
+        }],
+        "correlation_id": "3d1d0c47ab370045f426723c3d5539a1f46990ac"
+    },
+    "has_onsite_custom_field": true,
+    "qualifications": {
+        "actions": [],
+        "correlation_id": "a45a4236e2215e805b641c8de3feaa28fd0e2092",
+        "selection_rule": {
+            "id": 202036,
+            "name": "Marketplace - Manual Dispatch",
+            "status": "match",
+            "actions": [],
+            "total_selection_rule": "5",
+            "weight": 31,
+            "sum": {"total": 31, "match": 2, "no_match_optional": 0, "no_match_required": 0},
+            "results": [{
+                "id": 3,
+                "name": "SC_TYPE_OF_WORK",
+                "service": "",
+                "description": "You must have the type of work: Telecom \/ VOIP",
+                "custom_field": {"id": 0},
+                "operation": "equal_to",
+                "order": 0,
+                "extra": "",
+                "required": true,
+                "status": "match",
+                "value": "Telecom \/ VOIP",
+                "weight": 1
+            }, {
+                "id": 803199,
+                "name": "SC_BACKGROUND_CHECK",
+                "service": "SelectionCriteriaLogicBackgroundCheck",
+                "custom_field": {"id": 0},
+                "operation": "equal_to",
+                "order": 0,
+                "extra": "{\"use_company_rating\":0,\"blue_ribbon_check\":0,\"first_advantage_check\":0,\"checkr_check\":1}",
+                "required": true,
+                "weight": 30,
+                "value": "24",
+                "status": "match",
+                "description": "You must have passed a background check"
+            }],
+            "metadata": {"per_page": 2, "pages": 0, "page": 1, "total": 2}
+        },
+        "ignored_missing_qualifications": false
+    },
+    "ratings": {
+        "correlation_id": "0e7aa26fbabaa6803cf9a46d26b05b73b208173d",
+        "buyer": {
+            "actions": [],
+            "overall": {
+                "approval_period": 3,
+                "jobs": 52164,
+                "percent_clear_expectations": 98,
+                "percent_respectful": 98,
+                "approval_days_suffix": "",
+                "stars": 5,
+                "ratings": 160742,
+                "approval_days": 2,
+                "approval_days_percentile": 90,
+                "approval_days_range": 90,
+                "days_90_percent_approval": "1",
+                "percent_approval": [{"days": 3, "percent": 99}]
+            },
+            "work_order": {"remaining_approval_period": false},
+            "company": {"id": 73961},
+            "manager": {"id": 988607}
+        },
+        "assigned_provider": {"actions": [], "user": {"id": 0}}
+    },
+    "bundle": {
+        "id": 0,
+        "company_id": 73961,
+        "metadata": {"total": 0, "per_page": 0},
+        "results": [],
+        "actions": []
+    },
+    "auto_dispatch_stats": {"auto_assigned": false},
+    "schedule": {
+        "work_order_id": 16323276,
+        "service_window": {
+            "mode": "exact",
+            "start": {"local": {"date": "2024-12-16", "time": "10:00:00"}, "utc": "2024-12-16 15:00:00"},
+            "end": {"local": {"date": "", "time": ""}, "utc": ""}
+        },
+        "time_zone": {"id": 5, "name": "America\/New_York", "offset": 1, "short": "EST"},
+        "status_id": 2,
+        "company_id": 73961,
+        "today_tomorrow": "Tomorrow",
+        "est_labor_hours": 1,
+        "updated": {
+            "utc": "2024-12-06 20:30:13",
+            "local": {"date": "2024-12-06", "time": "15:30:13"},
+            "by": {"id": 736596, "name": "Integration User"}
+        },
+        "requests": {
+            "metadata": {"total": 0, "per_page": 0, "page": 1, "pages": 1},
+            "results": [],
+            "actions": []
+        },
+        "correlation_id": "17998a0909cb8dec68a23ad9a38b301b7cf503b8",
+        "actions": []
+    },
+    "conflicts": [],
+    "eta": {
+        "user": {"id": 0},
+        "task": {"id": 128783319},
+        "start": {"local": {"date": "", "time": ""}, "utc": ""},
+        "end": {"local": {"date": "", "time": ""}, "utc": ""},
+        "hour_estimate": 0,
+        "notes": "",
+        "status": {"name": "unconfirmed", "updated": {"utc": "", "local": {"date": "", "time": ""}}},
+        "mode": "exact",
+        "actions": []
+    },
+    "location": {
+        "coordinates": {"latitude": 35.3544, "longitude": -79.1886, "exact": true},
+        "work_order_id": 16323276,
+        "mode": "custom",
+        "address1": "",
+        "address2": "",
+        "city": "CAMERON",
+        "state": "NC",
+        "zip": "28326",
+        "country": "US",
+        "notes": [],
+        "type": {"id": 3, "name": "Residential"},
+        "display_name": "",
+        "status_id": 2,
+        "correlation_id": "03a920adf1ff8f2138e76921b3f015b4346412eb",
+        "zoom": "13z",
+        "map": {
+            "url": "https:\/\/api.maptiler.com\/maps\/streets\/static\/-79.188600,35.354400,11\/320x300@2x.png?key=RZydBF85bkJ7CsJrAl6B&attribution=0&markers=-79.1886,35.3544|,",
+            "href": "https:\/\/www.google.com\/maps\/search\/+CAMERON+NC+28326\/@35.3544,-79.1886,13z"
+        },
+        "actions": ["map"]
+    },
+    "coords": {
+        "distance": 44.91235693955362,
+        "latitude": 35.8888,
+        "longitude": -78.7351,
+        "exact": false,
+        "user_id": 983643
+    },
+    "holds": {
+        "metadata": {"total": 0, "per_page": 0, "pages": 1, "page": 1},
+        "actions": [],
+        "results": [],
+        "categories": [{"id": 4, "name": "Pending Funds"}, {"id": 22, "name": "Pending Parts"}, {
+            "id": 23,
+            "name": "Pending Scope Approval"
+        }, {"id": 24, "name": "Pending Reschedule"}],
+        "correlation_id": "822a970150fb3730ef400e93db15bf2192161cd3"
+    },
+    "company": {
+        "id": 73961,
+        "name": "ClearCaptions Inside Sales",
+        "photo": "\/images\/missing-profile.png",
+        "display_company_offer_setting": true,
+        "check_in_instructions": "",
+        "check_out_instructions": "",
+        "provider_utilization_max_hours": 0,
+        "provider_utilization_max_weekly": 0,
+        "address": {
+            "address1": "3001 Lava Ridge Court",
+            "address2": "Suite 100",
+            "city": "Roseville",
+            "state": "CA",
+            "postalCode": "95661",
+            "country": "US"
+        },
+        "features": [{"id": 11, "name": "Auto Dispatch"}, {"id": 12, "name": "Training Module"}, {
+            "id": 19,
+            "name": "Task List Management"
+        }, {"id": 1, "name": "Technician Search"}, {
+            "id": 25,
+            "name": "Client Request Manager 2.0 Enabled"
+        }, {"id": 26, "name": "Lipo"}, {"id": 27, "name": "eCheck Deposits"}, {
+            "id": 29,
+            "name": "Printable Badges"
+        }, {"id": 2, "name": "Project Management"}, {"id": 39, "name": "UI Microservice"}, {
+            "id": 44,
+            "name": "React Work Order Details"
+        }, {"id": 4, "name": "Buy from marketplace"}, {"id": 7, "name": "Penalty Charges"}]
+    },
+    "manager": {
+        "thumbnail": "\/images\/missing-profile.png",
+        "id": 988607,
+        "username": "salessupport@clearcaptions.com",
+        "first_name": "Field Nation",
+        "last_name": "User",
+        "name": "Field Nation User"
+    },
+    "w2": false,
+    "import_id": 0,
+    "printable": true,
+    "status": {
+        "id": 2,
+        "name": "Published",
+        "display": "Published",
+        "is_routed": false,
+        "code": "",
+        "delay": 0,
+        "ncns": false,
+        "sub_status": "",
+        "confirmed": true,
+        "correlation_id": "f656a677b70be1d205c7c629b460fcd298de0009"
+    },
+    "messages": {
+        "metadata": {"total": 0, "per_page": 0, "pages": 1, "page": 1},
+        "actions": ["add"],
+        "results": [],
+        "correlation_id": "60da046e2591c4b74bdef94a7cd123cd155123f2"
+    },
+    "require_registered_service_companies": false,
+    "assignee": {
+        "user": {
+            "id": 0,
+            "first_name": "",
+            "last_name": "",
+            "address1": "",
+            "address2": "",
+            "city": "",
+            "state": "",
+            "zip": "",
+            "country": "",
+            "coords": {"latitude": 0, "longitude": 0},
+            "cell": "",
+            "phone": "",
+            "phone_ext": "",
+            "thumbnail": "\/images\/missing-profile.png"
+        }, "status_id": 2, "work_order_id": 16323276, "in_confirmation_window": false, "actions": []
+    },
+    "milestones": {
+        "time_to_dispatch": 67260,
+        "time_to_work_done": 69661,
+        "time_alive": 2401,
+        "time_to_approve": 0,
+        "created": {"utc": "2024-12-06 20:30:16", "local": {"date": "2024-12-06", "time": "15:30:16"}},
+        "published": {"utc": "2024-12-07 15:11:16", "local": {"date": "2024-12-07", "time": "10:11:16"}},
+        "routed": {"utc": "2024-12-06 20:30:21", "local": {"date": "2024-12-06", "time": "15:30:21"}},
+        "assigned": {"utc": "", "local": {"date": "", "time": ""}},
+        "workdone": {"utc": "", "local": {"date": "", "time": ""}},
+        "approved": {"utc": "", "local": {"date": "", "time": ""}},
+        "paid": {"utc": "", "local": {"date": "", "time": ""}},
+        "canceled": {"utc": "", "local": {"date": "", "time": ""}}
+    },
+    "contacts": {
+        "metadata": {"total": 0, "per_page": 0, "pages": 1, "page": 1},
+        "results": [],
+        "correlation_id": "02c55c5ef31ab3c20397596044f8de4996840009",
+        "actions": []
+    },
+    "tasks": {
+        "metadata": {
+            "total": 21,
+            "per_page": 21,
+            "pages": 1,
+            "page": 1,
+            "completed": {
+                "confirmassignment": 0,
+                "other": 0,
+                "checkin": 0,
+                "shipmenttracking": 0,
+                "checkout": 0,
+                "closeoutnotes": 0
+            }
+        },
+        "results": [{
+            "id": 128783319,
+            "description": "Set start time",
+            "descriptions": {
+                "task": "Set start time",
+                "first": "",
+                "second": "",
+                "third": "",
+                "fourth": ""
+            },
+            "label": "Set Start Time",
+            "alerts": [],
+            "group": {"label": "Pre visit", "id": "prep"},
+            "type": {"id": 1, "key": "confirmassignment", "name": "Set Start Time"},
+            "created": {"utc": "2024-12-06 20:30:13", "local": {"date": "2024-12-06", "time": "15:30:13"}},
+            "author": {"id": 0, "first_name": "", "last_name": ""},
+            "status": "incomplete",
+            "eta": {
+                "user": {"id": 0},
+                "task": {"id": 128783319},
+                "start": {"local": {"date": "", "time": ""}, "utc": ""},
+                "end": {"local": {"date": "", "time": ""}, "utc": ""},
+                "hour_estimate": 0,
+                "notes": "",
+                "status": {
+                    "name": "unconfirmed",
+                    "updated": {"utc": "", "local": {"date": "", "time": ""}}
+                },
+                "mode": "exact",
+                "actions": []
+            },
+            "actions": []
+        }, {
+            "id": 128783320,
+            "description": "Acknowledge Installation Courtesy Call: I confirm I made a courtesy call to the customer \u226524hrs in advance of the scheduled installation, reminding them of the appointment and my arrival.",
+            "descriptions": {
+                "task": "Acknowledge Installation Courtesy Call: I confirm I made a courtesy call to the customer \u226524hrs in advance of the scheduled installation, reminding them of the appointment and my arrival.",
+                "first": "",
+                "second": "",
+                "third": "",
+                "fourth": ""
+            },
+            "label": "Acknowledge Installation Courtesy Call: I confirm I made a courtesy call to the customer \u226524hrs in advance of the scheduled installation, reminding them of the appointment and my arrival.",
+            "alerts": [],
+            "group": {"label": "Pre visit", "id": "prep"},
+            "type": {"id": 10, "key": "other", "name": "Unique task"},
+            "created": {"utc": "2024-12-06 20:30:13", "local": {"date": "2024-12-06", "time": "15:30:13"}},
+            "author": {"id": 0, "first_name": "", "last_name": ""},
+            "status": "incomplete",
+            "actions": []
+        }, {
+            "id": 128783321,
+            "description": "Review the entire work order and all documents for updates. Details may change!",
+            "descriptions": {
+                "task": "Review the entire work order and all documents for updates. Details may change!",
+                "first": "",
+                "second": "",
+                "third": "",
+                "fourth": ""
+            },
+            "label": "Review the entire work order and all documents for updates. Details may change!",
+            "alerts": [],
+            "group": {"label": "Pre visit", "id": "prep"},
+            "type": {"id": 10, "key": "other", "name": "Unique task"},
+            "created": {"utc": "2024-12-06 20:30:13", "local": {"date": "2024-12-06", "time": "15:30:13"}},
+            "author": {"id": 0, "first_name": "", "last_name": ""},
+            "status": "incomplete",
+            "actions": []
+        }, {
+            "id": 128783322,
+            "description": "Acknowledge CPNI and Compliance Training: I certify that I have reviewed and understand the FCC required \"CPNI and Compliance Training\", under penalty of perjury.",
+            "descriptions": {
+                "task": "Acknowledge CPNI and Compliance Training: I certify that I have reviewed and understand the FCC required \"CPNI and Compliance Training\", under penalty of perjury.",
+                "first": "",
+                "second": "",
+                "third": "",
+                "fourth": ""
+            },
+            "label": "Acknowledge CPNI and Compliance Training: I certify that I have reviewed and understand the FCC required \"CPNI and Compliance Training\", under penalty of perjury.",
+            "alerts": [],
+            "group": {"label": "Pre visit", "id": "prep"},
+            "type": {"id": 10, "key": "other", "name": "Unique task"},
+            "created": {"utc": "2024-12-06 20:30:13", "local": {"date": "2024-12-06", "time": "15:30:13"}},
+            "author": {"id": 0, "first_name": "", "last_name": ""},
+            "status": "incomplete",
+            "actions": []
+        }, {
+            "id": 128783323,
+            "description": "Acknowledge Supplemental Customer Privacy Agreement: I certify that I have reviewed, understand and accept the \"Supplemental Customer Privacy Agreement\".",
+            "descriptions": {
+                "task": "Acknowledge Supplemental Customer Privacy Agreement: I certify that I have reviewed, understand and accept the \"Supplemental Customer Privacy Agreement\".",
+                "first": "",
+                "second": "",
+                "third": "",
+                "fourth": ""
+            },
+            "label": "Acknowledge Supplemental Customer Privacy Agreement: I certify that I have reviewed, understand and accept the \"Supplemental Customer Privacy Agreement\".",
+            "alerts": [],
+            "group": {"label": "Pre visit", "id": "prep"},
+            "type": {"id": 10, "key": "other", "name": "Unique task"},
+            "created": {"utc": "2024-12-06 20:30:13", "local": {"date": "2024-12-06", "time": "15:30:13"}},
+            "author": {"id": 0, "first_name": "", "last_name": ""},
+            "status": "incomplete",
+            "actions": []
+        }, {
+            "id": 128783324,
+            "description": "Acknowledge Scheduling Policy: I certify that I have reviewed, understand and accept the reschedule\/cancellation terms as outlined in work order detail and \"Work Order Scheduling Policy\".",
+            "descriptions": {
+                "task": "Acknowledge Scheduling Policy: I certify that I have reviewed, understand and accept the reschedule\/cancellation terms as outlined in work order detail and \"Work Order Scheduling Policy\".",
+                "first": "",
+                "second": "",
+                "third": "",
+                "fourth": ""
+            },
+            "label": "Acknowledge Scheduling Policy: I certify that I have reviewed, understand and accept the reschedule\/cancellation terms as outlined in work order detail and \"Work Order Scheduling Policy\".",
+            "alerts": [],
+            "group": {"label": "Pre visit", "id": "prep"},
+            "type": {"id": 10, "key": "other", "name": "Unique task"},
+            "created": {"utc": "2024-12-06 20:30:13", "local": {"date": "2024-12-06", "time": "15:30:13"}},
+            "author": {"id": 0, "first_name": "", "last_name": ""},
+            "status": "incomplete",
+            "actions": []
+        }, {
+            "id": 128783325,
+            "description": "Acknowledge Payment Policy: I certify that I have reviewed, understand and accept the payment terms as outlined in work order detail and \"Work Order Payment Policy\".",
+            "descriptions": {
+                "task": "Acknowledge Payment Policy: I certify that I have reviewed, understand and accept the payment terms as outlined in work order detail and \"Work Order Payment Policy\".",
+                "first": "",
+                "second": "",
+                "third": "",
+                "fourth": ""
+            },
+            "label": "Acknowledge Payment Policy: I certify that I have reviewed, understand and accept the payment terms as outlined in work order detail and \"Work Order Payment Policy\".",
+            "alerts": [],
+            "group": {"label": "Pre visit", "id": "prep"},
+            "type": {"id": 10, "key": "other", "name": "Unique task"},
+            "created": {"utc": "2024-12-06 20:30:13", "local": {"date": "2024-12-06", "time": "15:30:13"}},
+            "author": {"id": 0, "first_name": "", "last_name": ""},
+            "status": "incomplete",
+            "actions": []
+        }, {
+            "id": 128783326,
+            "description": "Acknowledge Qualified Provider Install Policy: I certify that I have reviewed, understand and accept the \"Qualified Provider Install Policy\".",
+            "descriptions": {
+                "task": "Acknowledge Qualified Provider Install Policy: I certify that I have reviewed, understand and accept the \"Qualified Provider Install Policy\".",
+                "first": "",
+                "second": "",
+                "third": "",
+                "fourth": ""
+            },
+            "label": "Acknowledge Qualified Provider Install Policy: I certify that I have reviewed, understand and accept the \"Qualified Provider Install Policy\".",
+            "alerts": [],
+            "group": {"label": "Pre visit", "id": "prep"},
+            "type": {"id": 10, "key": "other", "name": "Unique task"},
+            "created": {"utc": "2024-12-06 20:30:13", "local": {"date": "2024-12-06", "time": "15:30:13"}},
+            "author": {"id": 0, "first_name": "", "last_name": ""},
+            "status": "incomplete",
+            "actions": []
+        }, {
+            "id": 128783327,
+            "description": "Watch installation tutorial video attached to the work order. \"ClearCaptions - Internet Phone Install Video\".",
+            "descriptions": {
+                "task": "Watch installation tutorial video attached to the work order. \"ClearCaptions - Internet Phone Install Video\".",
+                "first": "",
+                "second": "",
+                "third": "",
+                "fourth": ""
+            },
+            "label": "Watch installation tutorial video attached to the work order. \"ClearCaptions - Internet Phone Install Video\".",
+            "alerts": [],
+            "group": {"label": "Pre visit", "id": "prep"},
+            "type": {"id": 10, "key": "other", "name": "Unique task"},
+            "created": {"utc": "2024-12-06 20:30:13", "local": {"date": "2024-12-06", "time": "15:30:13"}},
+            "author": {"id": 0, "first_name": "", "last_name": ""},
+            "status": "incomplete",
+            "actions": []
+        }, {
+            "id": 128783328,
+            "description": "Print and review the \"Install Checklist\" attached to the work order. Details may change!",
+            "descriptions": {
+                "task": "Print and review the \"Install Checklist\" attached to the work order. Details may change!",
+                "first": "",
+                "second": "",
+                "third": "",
+                "fourth": ""
+            },
+            "label": "Print and review the \"Install Checklist\" attached to the work order. Details may change!",
+            "alerts": [],
+            "group": {"label": "Pre visit", "id": "prep"},
+            "type": {"id": 10, "key": "other", "name": "Unique task"},
+            "created": {"utc": "2024-12-06 20:30:13", "local": {"date": "2024-12-06", "time": "15:30:13"}},
+            "author": {"id": 0, "first_name": "", "last_name": ""},
+            "status": "incomplete",
+            "actions": []
+        }, {
+            "id": 128783309,
+            "description": "Check in",
+            "descriptions": {"task": "Check in", "first": "", "second": "", "third": "", "fourth": ""},
+            "label": "Check in",
+            "alerts": [],
+            "group": {"label": "On site", "id": "onsite"},
+            "type": {"id": 3, "key": "checkin", "name": "Check in"},
+            "created": {"utc": "2024-12-06 20:30:13", "local": {"date": "2024-12-06", "time": "15:30:13"}},
+            "author": {"id": 0, "first_name": "", "last_name": ""},
+            "status": "incomplete",
+            "time_log": [],
+            "actions": []
+        }, {
+            "id": 128783310,
+            "description": "Confirm intended user of caption phone will be present for appointment. *If customer is not present contact Work Order Support immediately at 888-317-2703.",
+            "descriptions": {
+                "task": "Confirm intended user of caption phone will be present for appointment. *If customer is not present contact Work Order Support immediately at 888-317-2703.",
+                "first": "",
+                "second": "",
+                "third": "",
+                "fourth": ""
+            },
+            "label": "Confirm intended user of caption phone will be present for appointment. *If customer is not present contact Work Order Support immediately at 888-317-2703.",
+            "alerts": [],
+            "group": {"label": "On site", "id": "onsite"},
+            "type": {"id": 10, "key": "other", "name": "Unique task"},
+            "created": {"utc": "2024-12-06 20:30:13", "local": {"date": "2024-12-06", "time": "15:30:13"}},
+            "author": {"id": 0, "first_name": "", "last_name": ""},
+            "status": "incomplete",
+            "actions": []
+        }, {
+            "id": 128783311,
+            "description": "Confirm you are using correct customer login credentials (Username and Password), from the Work Order. *If unable to locate or verify call Work Order Support at 888-317-2703..",
+            "descriptions": {
+                "task": "Confirm you are using correct customer login credentials (Username and Password), from the Work Order. *If unable to locate or verify call Work Order Support at 888-317-2703..",
+                "first": "",
+                "second": "",
+                "third": "",
+                "fourth": ""
+            },
+            "label": "Confirm you are using correct customer login credentials (Username and Password), from the Work Order. *If unable to locate or verify call Work Order Support at 888-317-2703..",
+            "alerts": [],
+            "group": {"label": "On site", "id": "onsite"},
+            "type": {"id": 10, "key": "other", "name": "Unique task"},
+            "created": {"utc": "2024-12-06 20:30:13", "local": {"date": "2024-12-06", "time": "15:30:13"}},
+            "author": {"id": 0, "first_name": "", "last_name": ""},
+            "status": "incomplete",
+            "actions": []
+        }, {
+            "id": 128783312,
+            "description": "Confirm 933 call was placed from caption phone and customers address and phone number are accurately recorded for emergency services.",
+            "descriptions": {
+                "task": "Confirm 933 call was placed from caption phone and customers address and phone number are accurately recorded for emergency services.",
+                "first": "",
+                "second": "",
+                "third": "",
+                "fourth": ""
+            },
+            "label": "Confirm 933 call was placed from caption phone and customers address and phone number are accurately recorded for emergency services.",
+            "alerts": [],
+            "group": {"label": "On site", "id": "onsite"},
+            "type": {"id": 10, "key": "other", "name": "Unique task"},
+            "created": {"utc": "2024-12-06 20:30:13", "local": {"date": "2024-12-06", "time": "15:30:13"}},
+            "author": {"id": 0, "first_name": "", "last_name": ""},
+            "status": "incomplete",
+            "actions": []
+        }, {
+            "id": 128783313,
+            "description": "Confirm you assisted the customer in adding \u2265 5 contacts to their captioning phone.",
+            "descriptions": {
+                "task": "Confirm you assisted the customer in adding \u2265 5 contacts to their captioning phone.",
+                "first": "",
+                "second": "",
+                "third": "",
+                "fourth": ""
+            },
+            "label": "Confirm you assisted the customer in adding \u2265 5 contacts to their captioning phone.",
+            "alerts": [],
+            "group": {"label": "On site", "id": "onsite"},
+            "type": {"id": 10, "key": "other", "name": "Unique task"},
+            "created": {"utc": "2024-12-06 20:30:13", "local": {"date": "2024-12-06", "time": "15:30:13"}},
+            "author": {"id": 0, "first_name": "", "last_name": ""},
+            "status": "incomplete",
+            "actions": []
+        }, {
+            "id": 128783314,
+            "description": "Complete the required Welcome Call with customer by calling 866-992-0089. *If the Welcome Call is not completed correctly and in full the work order is subject to non-payment.",
+            "descriptions": {
+                "task": "Complete the required Welcome Call with customer by calling 866-992-0089. *If the Welcome Call is not completed correctly and in full the work order is subject to non-payment.",
+                "first": "",
+                "second": "",
+                "third": "",
+                "fourth": ""
+            },
+            "label": "Complete the required Welcome Call with customer by calling 866-992-0089. *If the Welcome Call is not completed correctly and in full the work order is subject to non-payment.",
+            "alerts": [],
+            "group": {"label": "On site", "id": "onsite"},
+            "type": {"id": 10, "key": "other", "name": "Unique task"},
+            "created": {"utc": "2024-12-06 20:30:13", "local": {"date": "2024-12-06", "time": "15:30:13"}},
+            "author": {"id": 0, "first_name": "", "last_name": ""},
+            "status": "incomplete",
+            "actions": []
+        }, {
+            "id": 128783315,
+            "description": "Acknowledge \"Test Call\" Policy: I certify I did not make \u201ctest calls\u201d to customer\u2019s caption phone nor did customer place \u201ctest calls\u201d to my phone line(s) from the caption phone during\/after the install appointment.",
+            "descriptions": {
+                "task": "Acknowledge \"Test Call\" Policy: I certify I did not make \u201ctest calls\u201d to customer\u2019s caption phone nor did customer place \u201ctest calls\u201d to my phone line(s) from the caption phone during\/after the install appointment.",
+                "first": "",
+                "second": "",
+                "third": "",
+                "fourth": ""
+            },
+            "label": "Acknowledge \"Test Call\" Policy: I certify I did not make \u201ctest calls\u201d to customer\u2019s caption phone nor did customer place \u201ctest calls\u201d to my phone line(s) from the caption phone during\/after the install appointment.",
+            "alerts": [],
+            "group": {"label": "On site", "id": "onsite"},
+            "type": {"id": 10, "key": "other", "name": "Unique task"},
+            "created": {"utc": "2024-12-06 20:30:13", "local": {"date": "2024-12-06", "time": "15:30:13"}},
+            "author": {"id": 0, "first_name": "", "last_name": ""},
+            "status": "incomplete",
+            "actions": []
+        }, {
+            "id": 128783316,
+            "description": "If the installation has failed for any reason and the device is to be returned to ClearCaptions use the included pre-paid mailing label in the box. Update Return Tracking field with tracking number on the label. *If a return is not needed enter \"NA\".",
+            "descriptions": {
+                "task": "If the installation has failed for any reason and the device is to be returned to ClearCaptions use the included pre-paid mailing label in the box. Update Return Tracking field with tracking number on the label. *If a return is not needed enter \"NA\".",
+                "first": "",
+                "second": "",
+                "third": "",
+                "fourth": ""
+            },
+            "label": "If the installation has failed for any reason and the device is to be returned to ClearCaptions use the included pre-paid mailing label in the box. Update Return Tracking field with tracking number on the label. *If a return is not needed enter \"NA\".",
+            "alerts": [],
+            "group": {"label": "On site", "id": "onsite"},
+            "type": {"id": 10, "key": "other", "name": "Unique task"},
+            "created": {"utc": "2024-12-06 20:30:13", "local": {"date": "2024-12-06", "time": "15:30:13"}},
+            "author": {"id": 0, "first_name": "", "last_name": ""},
+            "status": "incomplete",
+            "actions": []
+        }, {
+            "id": 128783317,
+            "description": "Enter shipping details for Return Tracking (if applicable)",
+            "descriptions": {
+                "task": "Enter shipping details",
+                "first": "for",
+                "second": "Return Tracking (if applicable)",
+                "third": "",
+                "fourth": ""
+            },
+            "label": "Return Tracking (if applicable)",
+            "alerts": [],
+            "group": {"label": "On site", "id": "onsite"},
+            "type": {"id": 12, "key": "shipmenttracking", "name": "Enter shipment tracking"},
+            "created": {"utc": "2024-12-06 20:30:13", "local": {"date": "2024-12-06", "time": "15:30:13"}},
+            "author": {"id": 0, "first_name": "", "last_name": ""},
+            "status": "incomplete",
+            "actions": []
+        }, {
+            "id": 128783318,
+            "description": "Check out",
+            "descriptions": {"task": "Check out", "first": "", "second": "", "third": "", "fourth": ""},
+            "label": "Check out",
+            "alerts": [],
+            "group": {"label": "On site", "id": "onsite"},
+            "type": {"id": 4, "key": "checkout", "name": "Check out"},
+            "created": {"utc": "2024-12-06 20:30:13", "local": {"date": "2024-12-06", "time": "15:30:13"}},
+            "author": {"id": 0, "first_name": "", "last_name": ""},
+            "status": "incomplete",
+            "actions": [],
+            "time_log": []
+        }, {
+            "id": 128783329,
+            "description": "Enter closeout notes",
+            "descriptions": {
+                "task": "Enter closeout notes",
+                "first": "",
+                "second": "",
+                "third": "",
+                "fourth": ""
+            },
+            "label": "Enter close out notes",
+            "alerts": [],
+            "group": {"label": "Post site", "id": "post"},
+            "type": {"id": 2, "key": "closeoutnotes", "name": "Enter close out notes"},
+            "created": {"utc": "2024-12-06 20:30:13", "local": {"date": "2024-12-06", "time": "15:30:13"}},
+            "author": {"id": 0, "first_name": "", "last_name": ""},
+            "status": "incomplete",
+            "actions": [],
+            "closing_notes": "",
+            "closing_notes_internal": []
+        }],
+        "correlation_id": "e42d164a793de7deb9abb3207bdee7a8fac97499",
+        "actions": []
+    },
+    "swaps": {
+        "metadata": {"total": 0, "per_page": 0, "pages": 1, "page": 1},
+        "actions": [],
+        "results": [],
+        "correlation_id": "2d78cba768aa10035bc7dbe57a495d15401670a3"
+    },
+    "equipments": [],
+    "service_types": [{"id": 606, "name": "Installation"}],
+    "service_types_legacy": [{"id": 5, "name": "Installation"}],
+    "site_device": [],
+    "high_potential": false,
+    "special_skill": {
+        "id": 0,
+        "required": false,
+        "certification_id": 0,
+        "dynamic_term_id": 0,
+        "name": "",
+        "feeReduction": 0,
+        "fee": 0,
+        "international": 0
+    },
+    "description": {
+        "html": "<p><strong style=\"color: rgb(0, 112, 192);\">*** PLEASE REVIEW THE WORK ORDER IN FULL AS REQUIREMENTS AND PROTOCOL CAN CHANGE&nbsp;***<\/strong><\/p><p><br><\/p><p><strong>EXPECTATIONS &amp; OBJECTIVE:<\/strong><\/p><ul><li>Approximately 1-2 hours on-site in a <u>residential<\/u> setting, with a customer experiencing hearing loss.<\/li><li><strong><em><u>Phase 1 &ndash; Registration and Phone Install<\/u><\/em><\/strong>: Expect this to take about 20 minutes. Be prepared to troubleshoot as needed to ensure successful phone connectivity and pairing.<\/li><li><strong><em><u>Phase 2 &ndash; Training<\/u><\/em><\/strong>: The remainder of your visit should focus on teaching. This includes guiding the customer through phone use, adding contacts and making a practice call, connecting them to our team via their Welcome Call, and addressing any questions to ensure they\u2019re confident with their new phone before leaving the site.<\/li><li>Patience, empathy, and kindness is paramount!<\/li><\/ul><p>&nbsp;<span style=\"color: black;\">&nbsp;<\/span><\/p><p><strong>SCHEDULING &amp; ARRIVAL:<\/strong><\/p><ul><li>ClearCaptions operates on a Hard Start schedule to ensure the best possible service experience for our customers&nbsp;<u>and<\/u>&nbsp;afford techs (you) the ability to take on and promptly move onto other jobs post installation completion.<\/li><li>Technicians are expected to contact customers \u226524hrs in advance of the scheduled install appointment as a courtesy confirmation call.<\/li><li><strong><em><u>We do not permit Rescheduling or Cancellations, but if\/when it\u2019s required<\/u><\/em><\/strong>: Technician (you) must contact ClearCaptions\u2019 to request at least 48 hrs. in advance of the work order date and time via our Support team at&nbsp;<span style=\"color: white;\"><del>************<\/del><\/span> even if\/when a customer suggests and\/or agrees to a new time.<\/li><li>Check-in\/Check-out must be completed while onsite. If installation cannot start or be completed for any reason, you must garner ClearCaptions' approval prior to exiting site.<\/li><li><strong><em><u>If you arrive \u201clate\u201d<\/u><\/em><\/strong>: Your arrival time will not be adjusted, and when past Field Nation\u2019s 15-minute grace period will impact your timeliness rating. We will not take calls requesting arrival time overrides, so please plan accordingly.<\/li><li>Detailed information regarding contacting customers and Clear Captions\u2019 scheduling protocol can be found within Documents under \u201c<em>Customer Contact and Installation Scheduling Policy<\/em>\u201d.<\/li><\/ul><p><br><\/p><p><strong>REQUISITES:<\/strong><\/p><ul><li><strong><em><u>Customer must be present for entirety of Install (the registered user listed as the Location Contact in the Work Order).<\/u><\/em><\/strong> If customer is not home and not reachable, or to confirm if an approved Power-of-Attorney is on site call&nbsp;<span style=\"color: white;\"><del>************<\/del><\/span><\/li><li>The phone kit will already be on site.&nbsp;<strong><em><u>The kit does&nbsp;NOT&nbsp;include required tools listed<\/u><\/em>. <\/strong>As of December 2024, an RJ11 Splitter will be included with the Phone Kit accessories.<\/li><li><strong><em><u>No agent other than the assigned provider is permitted to be onsite or complete installation even if agent is part of a service company.<\/u><\/em><\/strong><\/li><li>Technicians are prohibited from mounting the caption phone and\/or creating any structural changes to a work site. This is including but not limited to drilling holes and running cable.&nbsp;&nbsp;<\/li><li><strong><em><u>Recording and\/or retaining customer login credentials or personal information is strictly prohibited<\/u>.<\/em><\/strong><\/li><\/ul><p><br><\/p><p><strong style=\"color: black;\">DRESS CODE:<\/strong><span style=\"color: black;\">&nbsp;Our requirement is that providers show up clean and presentable wearing business casual attire. Slacks or jeans (no holes\/patches), closed-toed shoes, and a polo shirt, NO hats during installation.<\/span><\/p><p>&nbsp;<\/p><p><span style=\"color: black;\">&nbsp;<\/span><strong>PRE-INSTALL CALLOUTS:<\/strong><\/p><ul><li>Review the required references designed to help make this installation successful, all located in the Work Order Documents and\/or linked here:&nbsp;<\/li><\/ul><ol><li class=\"ql-indent-1\">\u201cCompliance and CPNI Training\u201d guide&nbsp;<\/li><li class=\"ql-indent-1\">&nbsp;\u201cPhone Installation\u201d video&nbsp;<\/li><li class=\"ql-indent-1\">\u201cBuilding Customer Relationships\u201d video&nbsp;<\/li><li class=\"ql-indent-1\">&nbsp;\u201cDMS Installer Training\u201d video<\/li><\/ol><ul><li>Download and reference \"Installation Checklist\" in Documents for step-by-step instruction.<\/li><li>A full flip through \"<em>Phone Guide<\/em>\" for training the customer can be accessed here:&nbsp;<strong>https:\/\/rb.gy\/ifegij<\/strong>.<\/li><li>End customer's&nbsp;<strong>Username&nbsp;<\/strong>and&nbsp;<strong>Password&nbsp;<\/strong>are located under Buyer Custom Fields in the Work Order.<span style=\"color: rgb(29, 28, 29);\">&nbsp;If this information is not viewable ensure you are correctly checked in onsite and call&nbsp;<\/span><span style=\"color: white;\"><del>************<\/del><\/span><span style=\"color: rgb(29, 28, 29);\">.<\/span><\/li><\/ul><p><br><\/p><p><strong>PAYMENTS:<\/strong><\/p><ul><li><strong><em><u>To be paid in full, Providers must<\/u><\/em><\/strong>: Complete all required job elements in entirety, including but not limited to: processing customer consent and identity verification through the designated portal, \u201cWelcome Call\u201d execution and posting, installed phone that is paired and fully operating while on site, and no reported problems.<\/li><li>All travel must be submitted in a counteroffer and be pre-approved prior to assignment. We do not honor travel pay submitted after Work Order acceptance and\/or completion. Tools\/cables used must have an uploaded receipt for pay out.<\/li><li><strong style=\"color: black;\"><em><u>At no point are technicians permitted to request payment from customers.<\/u><\/em><\/strong><\/li><li><span style=\"color: rgb(29, 28, 29);\">Use of \"Discounts\" feature to adjust pay is prohibited.&nbsp;<\/span>&nbsp;Please document any issues under \u201cReport a Problem\u201d from the Work Order for proper review and adjustments.<\/li><li><span style=\"color: rgb(29, 28, 29);\">Detailed information regarding ClearCaptions\u2019 payment structure can be found within Documents under \"<\/span><em style=\"color: rgb(29, 28, 29);\">Work Order Payment Policy<\/em><span style=\"color: rgb(29, 28, 29);\">\".<\/span><\/li><\/ul><p><br><\/p><p>&nbsp;&nbsp;<strong>TROUBLESHOOTING:<\/strong><\/p><ul><li>Call ClearCaptions at&nbsp;<span style=\"color: white;\"><del>************<\/del><\/span> for issues preventing the installation and\/or for VoIP conversion if applicable.<\/li><li>VoIP Conversion guidance is available in the&nbsp;<em>Attached Files<\/em>&nbsp;link under Additional Information &gt; Client Documents.<\/li><li><strong><em><u>Use of your own \u201chotspot\u201d to connect a customer\u2019s captioning phone is strictly prohibited<\/u>. <\/em><\/strong><\/li><li>If on Software 4.7.0 and phone is not auto-updating to newer software:<\/li><\/ul><ol><li class=\"ql-indent-1\">Run Wizard<\/li><li class=\"ql-indent-1\">Connect to customer's WIFI<\/li><li class=\"ql-indent-1\">Reset the phone via the Red Button on back of device<\/li><li class=\"ql-indent-1\">Run Wizard a second time<\/li><li class=\"ql-indent-1\">&nbsp;Phone should now update to latest software<\/li><\/ol><p><br><\/p>",
+        "markdown": "**\\*\\*\\* PLEASE REVIEW THE WORK ORDER IN FULL AS REQUIREMENTS AND PROTOCOL CAN CHANGE \\*\\*\\***\n\n**EXPECTATIONS & OBJECTIVE:**\n\n- Approximately 1-2 hours on-site in a residential setting, with a customer experiencing hearing loss.\n- ***Phase 1 \u2013 Registration and Phone Install***: Expect this to take about 20 minutes. Be prepared to troubleshoot as needed to ensure successful phone connectivity and pairing.\n- ***Phase 2 \u2013 Training***: The remainder of your visit should focus on teaching. This includes guiding the customer through phone use, adding contacts and making a practice call, connecting them to our team via their Welcome Call, and addressing any questions to ensure they\u2019re confident with their new phone before leaving the site.\n- Patience, empathy, and kindness is paramount!\n\n**SCHEDULING & ARRIVAL:**\n\n- ClearCaptions operates on a Hard Start schedule to ensure the best possible service experience for our customers and afford techs (you) the ability to take on and promptly move onto other jobs post installation completion.\n- Technicians are expected to contact customers \u226524hrs in advance of the scheduled install appointment as a courtesy confirmation call.\n- ***We do not permit Rescheduling or Cancellations, but if\/when it\u2019s required***: Technician (you) must contact ClearCaptions\u2019 to request at least 48 hrs. in advance of the work order date and time via our Support team at \\*\\*\\*\\*\\*\\*\\*\\*\\*\\*\\*\\* even if\/when a customer suggests and\/or agrees to a new time.\n- Check-in\/Check-out must be completed while onsite. If installation cannot start or be completed for any reason, you must garner ClearCaptions' approval prior to exiting site.\n- ***If you arrive \u201clate\u201d***: Your arrival time will not be adjusted, and when past Field Nation\u2019s 15-minute grace period will impact your timeliness rating. We will not take calls requesting arrival time overrides, so please plan accordingly.\n- Detailed information regarding contacting customers and Clear Captions\u2019 scheduling protocol can be found within Documents under \u201c*Customer Contact and Installation Scheduling Policy*\u201d.\n\n**REQUISITES:**\n\n- ***Customer must be present for entirety of Install (the registered user listed as the Location Contact in the Work Order).*** If customer is not home and not reachable, or to confirm if an approved Power-of-Attorney is on site call \\*\\*\\*\\*\\*\\*\\*\\*\\*\\*\\*\\*\n- The phone kit will already be on site. ***The kit does NOT include required tools listed*.** As of December 2024, an RJ11 Splitter will be included with the Phone Kit accessories.\n- ***No agent other than the assigned provider is permitted to be onsite or complete installation even if agent is part of a service company.***\n- Technicians are prohibited from mounting the caption phone and\/or creating any structural changes to a work site. This is including but not limited to drilling holes and running cable.\n- ***Recording and\/or retaining customer login credentials or personal information is strictly prohibited.***\n\n**DRESS CODE:** Our requirement is that providers show up clean and presentable wearing business casual attire. Slacks or jeans (no holes\/patches), closed-toed shoes, and a polo shirt, NO hats during installation.\n\n **PRE-INSTALL CALLOUTS:**\n\n- Review the required references designed to help make this installation successful, all located in the Work Order Documents and\/or linked here:\n\n1. \u201cCompliance and CPNI Training\u201d guide\n2. \u201cPhone Installation\u201d video\n3. \u201cBuilding Customer Relationships\u201d video\n4. \u201cDMS Installer Training\u201d video\n\n- Download and reference \"Installation Checklist\" in Documents for step-by-step instruction.\n- A full flip through \"*Phone Guide*\" for training the customer can be accessed here: **<https:\/\/rb.gy\/ifegij>**.\n- End customer's **Username** and **Password** are located under Buyer Custom Fields in the Work Order. If this information is not viewable ensure you are correctly checked in onsite and call \\*\\*\\*\\*\\*\\*\\*\\*\\*\\*\\*\\*.\n\n**PAYMENTS:**\n\n- ***To be paid in full, Providers must***: Complete all required job elements in entirety, including but not limited to: processing customer consent and identity verification through the designated portal, \u201cWelcome Call\u201d execution and posting, installed phone that is paired and fully operating while on site, and no reported problems.\n- All travel must be submitted in a counteroffer and be pre-approved prior to assignment. We do not honor travel pay submitted after Work Order acceptance and\/or completion. Tools\/cables used must have an uploaded receipt for pay out.\n- ***At no point are technicians permitted to request payment from customers.***\n- Use of \"Discounts\" feature to adjust pay is prohibited.  Please document any issues under \u201cReport a Problem\u201d from the Work Order for proper review and adjustments.\n- Detailed information regarding ClearCaptions\u2019 payment structure can be found within Documents under \"*Work Order Payment Policy*\".\n\n **TROUBLESHOOTING:**\n\n- Call ClearCaptions at \\*\\*\\*\\*\\*\\*\\*\\*\\*\\*\\*\\* for issues preventing the installation and\/or for VoIP conversion if applicable.\n- VoIP Conversion guidance is available in the *Attached Files* link under Additional Information > Client Documents.\n- ***Use of your own \u201chotspot\u201d to connect a customer\u2019s captioning phone is strictly prohibited.***\n- If on Software 4.7.0 and phone is not auto-updating to newer software:\n\n1. Run Wizard\n2. Connect to customer's WIFI\n3. Reset the phone via the Red Button on back of device\n4. Run Wizard a second time\n5. Phone should now update to latest software",
+        "actions": []
+    },
+    "policy_and_procedures": {
+        "html": "<span>Customer Privacy Agreement:<\/span><br \/><span>Reference is hereby made to the Standard Work Order Terms and Conditions of Field Nation, LLC, a Minnesota limited liability company, last modified December 11, 2020 (as may be amended or revised from time to time, the &ldquo;<u>Work Order Terms<\/u>&rdquo;).&nbsp;This Work Order Supplement (this &ldquo;<u>Supplement<\/u>&rdquo;) is being provided pursuant to Section 1.1(f) of the Work Order Terms for the purpose of adding other specific terms of the Work Order submitted by ClearCaptions LLC, a Delaware limited liability company (&ldquo;<u>Buyer<\/u>&rdquo;).&nbsp;To accept the Work Order, a Provider must also accept all of the terms and conditions of this Supplement.&nbsp;&nbsp;Acceptance of the Work Order will constitute acceptance by Provider of the terms and conditions of this Supplement, all of which terms and conditions shall be deemed to be incorporated by reference into the Work Order Terms. Capitalized terms used, but not defined, herein shall have the meanings assigned to them in the Work Order Terms.<\/span><br \/><span>Provider agrees as follows:<\/span><br \/><br \/><br \/><span><span>1.&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<\/span><u>Customer Proprietary Network Information<\/u>. Provider will not collect, use, retain, disclose, sell or otherwise make available (collectively, &ldquo;<u>Use<\/u>&rdquo;) Customer Proprietary Network Information for any purpose other than for the purpose of performing the Services, and will at all times ensure that the Use of Customer Proprietary Network Information by Provider is in compliance with all applicable laws.<\/span><br \/><span>For purposes of this Addendum, &ldquo;<u>Customer Proprietary Network Information<\/u>&rdquo; means:<\/span><br \/><span><span>(1)&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<\/span>Information that relates to the quantity, technical configuration, type, destination, location, and amount of use of a telecommunications service used by any customer of a TRS provider (as defined in 47 CFR &sect; 64.5103(s)); and<\/span><br \/><span><span>(2)&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<\/span>Information regarding a customer&rsquo;s use of TRS (as defined in 47 CFR &sect; 64.5103(p)) contained in the documentation submitted by a TRS provider to the TRS Fund (as defined in 47 CFR &sect; 64.5103(4)) administrator in connection with a request for compensation for the provision of TRS.<\/span><br \/><span><span>2.&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<\/span><u>Consumer Privacy<\/u>.<\/span><br \/><span><span>A.&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<\/span>Provider agrees and acknowledges that Provider shall be deemed to be a &ldquo;service provider&rdquo; under the California Consumer Privacy Act of 2018, as amended (Cal. Civ. Code &sect;&sect; 1798.100 to 1798.199) (&ldquo;<u>CCPA<\/u>&rdquo;).<\/span><br \/><span><span>B.&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<\/span>Provider agrees that Provider will only Use the &ldquo;Personal Information&rdquo; of Buyer&rsquo;s &ldquo;Consumers&rdquo; for the specific purpose of providing the Services.&nbsp;For purposes of this Section 4, the terms &ldquo;Personal Information&rdquo; and &ldquo;Consumer&rdquo; have the meanings given to them by the CCPA.&nbsp;(Cal. Civ. Code &sect;&sect; 1798.140, subds. (g) (Consumer) &amp; (o)(1) (Personal Information)).<\/span><br \/><span><span>C.&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<\/span>Provider will not Use Personal Information for any purpose other than for the purpose of performing the Services, and will at all times ensure that its Use of Personal Information complies with the CCPA. If Provider purports that Provider is required by law or that there is any other reason to Use Personal Information for a purpose unrelated to the Services, Provider must first inform Buyer as well as the Consumer to whom such Personal Information belongs of the purported legal requirement and give Buyer and such Consumer an opportunity to object or challenge the requirement, unless the law prohibits such notice.<\/span><br \/><span><span>D.&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<\/span>Provider will limit the collection, use and retention of Personal Information to only what is necessary for the specific purpose of performing the Services.<\/span><br \/><span><span>E.&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<\/span>Provider will promptly comply with any Consumer request or other instruction by Buyer requiring Provider to disclose, amend, transfer or delete Personal Information, or to stop, mitigate or remedy any unauthorized processing.<\/span><br \/><span><span>F.&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<\/span>Provider will notify Buyer within ten (10) business days if Provider receives any complaint, notice, or communication that directly or indirectly relates to either Provider&rsquo;s or Buyer&rsquo;s compliance with the CCPA, including a verifiable consumer request under the CCPA.<\/span><br \/><span><span>G.&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<\/span>Provider hereby represents that Provider has read and understands the requirements of the CCPA and Provider&rsquo;s obligations as a service provider under the CCPA.<\/span><br \/><span><span>H.&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<\/span>Personal information shall be subject to the nondisclosure requirements set forth in Section 2.<\/span><br \/><span><span>3.&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<\/span><u>Mandatory Training<\/u>.&nbsp;Provider shall (i) complete all training requirements set forth by Buyer&rsquo;s Compliance Department prior to performing any of the Services, and (ii) complete any re-training requirements set forth by Buyer&rsquo;s Compliance Department annually for as long as the Work Order Terms or any Work Order remains in effect.<\/span><br \/><span><span>4.&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<\/span><u>Nondisclosure of<\/u>&nbsp;<u>Customer Proprietary Network Information and Personal Information<\/u>.<\/span><br \/><span><span>A.&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<\/span><u>Nondisclosure<\/u>.&nbsp;Provider shall not disclose or permit disclosure of any Customer Proprietary Network Information or Personal Information to any third party or use such information for any purpose other than performing the services set forth in the applicable Work Order (the &ldquo;<u>Services<\/u>&rdquo;).&nbsp;Provider shall notify Buyer promptly in writing if Provider becomes aware of any loss or disclosure, or potential loss or disclosure, of any Customer Proprietary Network Information or Personal Information, which notice shall describe such loss or disclosure or potential loss or disclosure in reasonable detail.&nbsp;<\/span><br \/><span><span>B.&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<\/span><u>No Duplication; Return of Materials<\/u>.&nbsp;Provider agrees, except as otherwise expressly authorized by Buyer, not to make any copies or duplicates of Customer Proprietary Network Information or Personal Information.&nbsp;Any materials or documents that have been furnished by Buyer to Provider in connection with the Work Order Terms and the Work Order shall be promptly returned by Provider, accompanied by all copies of such documentation, within ten (10) days after (a) the termination of the Terms and Conditions or the applicable Work Order or (b) the written request of Buyer. Upon the request of Buyer, Provider shall promptly confirm in writing to Buyer that Provider has complied with its obligations under this Section 2.<\/span><br \/><span><br \/><\/span>",
+        "markdown": "Customer Privacy Agreement:  \nReference is hereby made to the Standard Work Order Terms and Conditions of Field Nation, LLC, a Minnesota limited liability company, last modified December 11, 2020 (as may be amended or revised from time to time, the \u201cWork Order Terms\u201d). This Work Order Supplement (this \u201cSupplement\u201d) is being provided pursuant to Section 1.1(f) of the Work Order Terms for the purpose of adding other specific terms of the Work Order submitted by ClearCaptions LLC, a Delaware limited liability company (\u201cBuyer\u201d). To accept the Work Order, a Provider must also accept all of the terms and conditions of this Supplement. Acceptance of the Work Order will constitute acceptance by Provider of the terms and conditions of this Supplement, all of which terms and conditions shall be deemed to be incorporated by reference into the Work Order Terms. Capitalized terms used, but not defined, herein shall have the meanings assigned to them in the Work Order Terms.  \nProvider agrees as follows:  \n  \n  \n1. Customer Proprietary Network Information. Provider will not collect, use, retain, disclose, sell or otherwise make available (collectively, \u201cUse\u201d) Customer Proprietary Network Information for any purpose other than for the purpose of performing the Services, and will at all times ensure that the Use of Customer Proprietary Network Information by Provider is in compliance with all applicable laws.  \nFor purposes of this Addendum, \u201cCustomer Proprietary Network Information\u201d means:  \n(1) Information that relates to the quantity, technical configuration, type, destination, location, and amount of use of a telecommunications service used by any customer of a TRS provider (as defined in 47 CFR \u00a7 64.5103(s)); and  \n(2) Information regarding a customer\u2019s use of TRS (as defined in 47 CFR \u00a7 64.5103(p)) contained in the documentation submitted by a TRS provider to the TRS Fund (as defined in 47 CFR \u00a7 64.5103(4)) administrator in connection with a request for compensation for the provision of TRS.  \n2. Consumer Privacy.  \nA. Provider agrees and acknowledges that Provider shall be deemed to be a \u201cservice provider\u201d under the California Consumer Privacy Act of 2018, as amended (Cal. Civ. Code \u00a7\u00a7 1798.100 to 1798.199) (\u201cCCPA\u201d).  \nB. Provider agrees that Provider will only Use the \u201cPersonal Information\u201d of Buyer\u2019s \u201cConsumers\u201d for the specific purpose of providing the Services. For purposes of this Section 4, the terms \u201cPersonal Information\u201d and \u201cConsumer\u201d have the meanings given to them by the CCPA. (Cal. Civ. Code \u00a7\u00a7 1798.140, subds. (g) (Consumer) & (o)(1) (Personal Information)).  \nC. Provider will not Use Personal Information for any purpose other than for the purpose of performing the Services, and will at all times ensure that its Use of Personal Information complies with the CCPA. If Provider purports that Provider is required by law or that there is any other reason to Use Personal Information for a purpose unrelated to the Services, Provider must first inform Buyer as well as the Consumer to whom such Personal Information belongs of the purported legal requirement and give Buyer and such Consumer an opportunity to object or challenge the requirement, unless the law prohibits such notice.  \nD. Provider will limit the collection, use and retention of Personal Information to only what is necessary for the specific purpose of performing the Services.  \nE. Provider will promptly comply with any Consumer request or other instruction by Buyer requiring Provider to disclose, amend, transfer or delete Personal Information, or to stop, mitigate or remedy any unauthorized processing.  \nF. Provider will notify Buyer within ten (10) business days if Provider receives any complaint, notice, or communication that directly or indirectly relates to either Provider\u2019s or Buyer\u2019s compliance with the CCPA, including a verifiable consumer request under the CCPA.  \nG. Provider hereby represents that Provider has read and understands the requirements of the CCPA and Provider\u2019s obligations as a service provider under the CCPA.  \nH. Personal information shall be subject to the nondisclosure requirements set forth in Section 2.  \n3. Mandatory Training. Provider shall (i) complete all training requirements set forth by Buyer\u2019s Compliance Department prior to performing any of the Services, and (ii) complete any re-training requirements set forth by Buyer\u2019s Compliance Department annually for as long as the Work Order Terms or any Work Order remains in effect.  \n4. Nondisclosure of Customer Proprietary Network Information and Personal Information.  \nA. Nondisclosure. Provider shall not disclose or permit disclosure of any Customer Proprietary Network Information or Personal Information to any third party or use such information for any purpose other than performing the services set forth in the applicable Work Order (the \u201cServices\u201d). Provider shall notify Buyer promptly in writing if Provider becomes aware of any loss or disclosure, or potential loss or disclosure, of any Customer Proprietary Network Information or Personal Information, which notice shall describe such loss or disclosure or potential loss or disclosure in reasonable detail.   \nB. No Duplication; Return of Materials. Provider agrees, except as otherwise expressly authorized by Buyer, not to make any copies or duplicates of Customer Proprietary Network Information or Personal Information. Any materials or documents that have been furnished by Buyer to Provider in connection with the Work Order Terms and the Work Order shall be promptly returned by Provider, accompanied by all copies of such documentation, within ten (10) days after (a) the termination of the Terms and Conditions or the applicable Work Order or (b) the written request of Buyer. Upon the request of Buyer, Provider shall promptly confirm in writing to Buyer that Provider has complied with its obligations under this Section 2."
+    },
+    "standard_instructions": {
+        "html": "English proficiency is necessary to the safe and efficient operation of ClearCaptions&rsquo; captioning service and is thus a requirement for work order assignment. English proficiency includes the ability to speak and understand English, and the ability to read and write English. Tasks requiring English proficiency include but are not limited to: conversing with English-speaking customers, understanding and troubleshooting the captioning system and\/or customer inquiries aurally, verbally and in writing, reading and comprehending reference tools, trainings, manuals, and work order details critical to installation completion, facilitating identity validation and consent requirements as required by law with English-speaking customers, as well as completing written portions of training in English.",
+        "markdown": "English proficiency is necessary to the safe and efficient operation of ClearCaptions\u2019 captioning service and is thus a requirement for work order assignment. English proficiency includes the ability to speak and understand English, and the ability to read and write English. Tasks requiring English proficiency include but are not limited to: conversing with English-speaking customers, understanding and troubleshooting the captioning system and\/or customer inquiries aurally, verbally and in writing, reading and comprehending reference tools, trainings, manuals, and work order details critical to installation completion, facilitating identity validation and consent requirements as required by law with English-speaking customers, as well as completing written portions of training in English."
+    },
+    "progress": {"sum": {"all": 21, "complete": 0, "incomplete": 21}, "label": "Tasks"},
+    "require_ein": false,
+    "advanced_qualifications": true,
+    "pending_routing_provider": [],
+    "attributes": {
+        "survey_id": 0,
+        "ignored_missing_qualifications": false,
+        "workorder_network_change_admin_only": "0"
+    },
+    "require_gps": true,
+    "require_ontime": true,
+    "has_version_change": false,
+    "smart_matched": false,
+    "role": {
+        "role": "viewer",
+        "role_context": 2,
+        "network_id": "1",
+        "status_id": 2,
+        "is_remote": false,
+        "assigned_user_id": 0,
+        "manager_id": 988607,
+        "service_company_id": 0,
+        "sub_roles": ["ncns", "can_get_routed", "can_request", "has_marketplace", "provider"],
+        "active_managed_provider": 0,
+        "work_order_company_id": 73961,
+        "managed_work_order": false
+    },
+    "workflow_completion": {
+        "metadata": {"page": 1, "pages": 1, "per_page": 0, "total": 0},
+        "status": "valid",
+        "results": []
+    },
+    "types_of_work": [{
+        "id": 106,
+        "name": "POTS",
+        "isPrimary": true,
+        "legacyTypeOfWorkId": null,
+        "source": "self_reported"
+    }],
+    "segments": [{
+        "id": 106,
+        "name": "POTS",
+        "isPrimary": true,
+        "legacyTypeOfWorkId": null,
+        "source": "self_reported"
+    }],
+    "tags": {
+        "metadata": {"total": 1, "per_page": 1, "pages": 1, "page": 1},
+        "actions": [],
+        "results": [{
+            "created": {
+                "utc": "2024-12-06 20:30:21",
+                "local": {"date": "2024-12-06", "time": "15:30:21"}
+            },
+            "author": {"id": 736596},
+            "id": 11,
+            "label": "Awaiting Response",
+            "hex_color": "#C0C0C0",
+            "types": ["substatus"],
+            "actions": []
+        }],
+        "correlation_id": "2a549d3a0e4a92fe6267182e235557ed7cb8f43b"
+    },
+    "work_order_id": 16323276,
+    "actions": ["tasks", "buyer_name_shown", "messaging", "request", "counter_offer", "require_gps"],
+    "title": "Internet Caption Phone (VoIP) Installation and Training",
+    "correlation_id": "82a04d1e893b0274665b427407d2bc3a8e3f02cf",
+    "href": "https:\/\/app.fieldnation.com\/workorders\/16323276",
+    "type_of_work": {"id": 3, "name": "Telecom \/ VOIP"},
+    "closing_notes": "",
+    "tasks_enabled": true,
+    "workflow_cancel": {
+        "metadata": {"total": 1, "pages": 1, "per_page": 1, "page": 1},
+        "results": ["Your role is not allowed to cancel this work order."],
+        "status": "invalid"
+    },
+    "stalled": {
+        "actions": [],
+        "status": "invalid",
+        "action_date": {"utc": "", "local": {"date": "", "time": ""}}
+    }
+};</script>

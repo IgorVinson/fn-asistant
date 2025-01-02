@@ -1,0 +1,3618 @@
+<!DOCTYPE html>
+<html class="c-page" lang="en">
+<head>
+    <title>POTS Line Audit (Make Offer, Suggest Schedule) - Field Nation</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <link rel="stylesheet" href="https://assets.fieldnation.com/pc/releases/3.44.43/platform-components-master-base-styles.css">
+    <link rel="stylesheet" href="https://assets.fieldnation.com/pc/releases/3.44.43/platform-components-master.css">
+    <link rel="stylesheet" href="https://assets.fieldnation.com/pc-widgets/releases/2.0.66/pc-widgets-main-base-styles.css">
+    <link rel="stylesheet" href="https://assets.fieldnation.com/pc-widgets/releases/2.0.66/pc-widgets-main.css">
+    <link rel="stylesheet" href="https://unpkg.com/placeholder-loading/dist/css/placeholder-loading.min.css">
+    <link rel="stylesheet" href="https://unpkg.com/placeholder-loading/dist/css/placeholder-loading.min.css">
+    <link rel="shortcut icon" href="/favicon.ico" type="image/x-icon">
+    <link rel="icon" href="/favicon.ico" type="image/x-icon">
+</head>
+<body class="c-page__docRoot">
+<div id="Globals"></div>
+<div id="fn-user-profile-sidebar"></div>
+<div id="fn-recruitments-widget"></div>
+<div class="c-page__masthead">
+    <div id="NavigationV2"></div>
+</div>
+<script type="text/javascript">
+    window.locale = "en";
+</script>
+<script type="text/javascript">
+    window.localeData = {};
+</script>
+<script type="text/javascript">
+    window.portal = null;
+</script>
+<script type="text/javascript">
+    window.top_nav = {
+        "logo": {
+            "src": "/assets/img/logo.png",
+            "alt": "Field Nation"
+        },
+        "search": {
+            "items": {
+                "provider": {
+                    "order": 1,
+                    "label": "Provider",
+                    "expanded": false
+                },
+                "work_order": {
+                    "order": 2,
+                    "label": "Work order",
+                    "expanded": true
+                }
+            }
+        },
+        "balance": {
+            "visible": false,
+            "balance": null
+        },
+        "messages": {
+            "visible": true,
+            "unread": null
+        },
+        "notifications": {
+            "visible": true,
+            "unread": null
+        },
+        "create": {
+            "visible": false,
+            "reason": "Your user level or feature does not allowed.",
+            "work_order": false,
+            "import": false
+        },
+        "menu": {
+            "notification_settings": true,
+            "referrals": true,
+            "training": true,
+            "help_center": true,
+            "mobile_site": true,
+            "log_out": true,
+            "company_manager": false,
+            "accounting": false,
+            "users": false,
+            "recruiting_efforts": false,
+            "company_training": false,
+            "edit_profile": true,
+            "new_features": true,
+            "my_company": false,
+            "switch_accounts": false,
+            "switch_back": false
+        },
+        "userId": 983643,
+        "groupId": 1,
+        "features": [],
+        "homeLink": "/workorders/",
+        "userName": "Ihor Tiazhkorob",
+        "userEmail": "vinsonfn24@gmail.com",
+        "userCreatedDate": 1726787093
+    };
+</script>
+<script src="/caching/ia?v=1733551802491"></script>
+<script type="text/javascript">
+    window.hosted_base = "https://assets.fieldnation.com/";
+</script>
+<script type="text/javascript">
+    window.io_host = "https://ws-prod.fieldnation.com/ws";
+</script>
+<script type="text/javascript">
+    window.ui_version = "1.0.0";
+</script>
+<script type="text/javascript">
+    window.user_topic = "user71d068d927b5e49305a70e1f6ec53494393010fc";
+</script>
+<script type="text/javascript">
+    window.company_topic = "";
+</script>
+<script type="text/javascript">
+    window._DRIVING_DIRECTIONS_PROVIDER = "google";
+</script>
+<script type="text/javascript">
+    window._DRIVING_DIRECTIONS_HOST = "";
+</script>
+<script type="text/javascript">
+    window._OSRM_HOST = "http://osrm-backend:5000";
+</script>
+<script type="text/javascript">
+    window._LEAFLET_URL = "https://api.tiles.mapbox.com/v4/jacobbeasley.ggg811om/{z}/{x}/{y}.png?access_token=pk.eyJ1IjoiamFjb2JiZWFzbGV5IiwiYSI6IlBGelg4WDAifQ.KtpfrNfln0jplKdKO-xSZA";
+</script>
+<script type="text/javascript">
+    window._GOOGLE_MAP_URL = "https://maps.googleapis.com/maps/api/js?v=3&libraries=geometry,drawing,places";
+</script>
+<script type="text/javascript">
+    window._GOOGLE_MAP_KEY = "REDACTED_GOOGLE_MAPS_KEY";
+</script>
+<script type="text/javascript">
+    window._AMPLITUDE_KEY = "c12f4fbbc94b7af99a5630b6c72efd27";
+</script>
+<script type="text/javascript">
+    window.DD_RUM_CLIENT_TOKEN = "pub80c39e3b7041279ae16d12f048f95630";
+</script>
+<script type="text/javascript">
+    window.DD_RUM_SAMPLE_RATE = "0";
+</script>
+<script type="text/javascript">
+    window.DD_RUM_REPLAY_SAMPLE_RATE = "0";
+</script>
+<script type="text/javascript">
+    window.DEPLOYMENT_NAME = "prod";
+</script>
+<script type="text/javascript">
+    window.DEPLOYMENT_VERSION = "24.23.6-f7f2db4-20241204-112746";
+</script>
+<script type="text/javascript">
+    window.PAYPAL_CLIENT_ID = "AXOCmJNMulJH-LbjRZvAG15WmbAjD7_NTCKTreEitIz-S5xs5g8SnCG_30HSAhUZ8fkxfS3TACk_bxk_";
+</script>
+<script type="text/javascript">
+    window.PAYPAL_AUTHORIZE_URL = "https://www.paypal.com/signin/authorize";
+</script>
+<script type="text/javascript">
+    window.QUALIFICATIONS_URL = "http://qualifications-prod.default.svc.cluster.local.:8080";
+</script>
+<script type="text/javascript">
+    window.MASKED_PHONE_SERVICE_URL = "";
+</script>
+<script type="text/javascript">
+    window.WORK_ORDER_CREATE_FORM_URL = "https://micro.fieldnation.com/work-order-form-prod/v1";
+</script>
+<script type="text/javascript">
+    window.COMMS_URL = "";
+</script>
+<script type="text/javascript">
+    window.marketplace_wo_limit = false;
+</script>
+<script type="text/javascript">
+    window.company_spend = false;
+</script>
+<script type="text/javascript">
+    window.contract = {
+        "metadata": {
+            "id": "6f8e009d-8f08-40ce-8f7e-97cf77b0cb8c",
+            "startsAt": "2024-11-24T06:02:38.010Z",
+            "endsAt": "2024-12-24T06:02:38.010Z",
+            "fieldNationId": 938092,
+            "source": {
+                "system": "monolith",
+                "contractId": "938092"
+            },
+            "labels": []
+        },
+        "contract_type": {
+            "type": "None"
+        },
+        "subscription": {
+            "enabled": false
+        },
+        "tmi_account": {
+            "enabled": false
+        },
+        "enterprise_account": {
+            "enabled": false
+        },
+        "marketplace_buyer": {
+            "enabled": false,
+            "tier": "basic",
+            "work_order_fee": {
+                "structure": "flat",
+                "enabled": false,
+                "amount": 0,
+                "period": "monthly",
+                "type": "percent",
+                "discount": {
+                    "enabled": false,
+                    "amount": 0
+                }
+            },
+            "overage_fee": {
+                "enabled": false,
+                "amount": 0,
+                "period": "monthly",
+                "type": "percent",
+                "discount": {
+                    "enabled": false,
+                    "amount": 0
+                }
+            },
+            "work_order_limit": {
+                "enabled": false,
+                "limit": -1,
+                "period": "monthly"
+            }
+        },
+        "integrations": {
+            "fieldServices": {
+                "enabled": false,
+                "services": [],
+                "tier": "Tier 1"
+            },
+            "clientAPI": {
+                "enabled": false,
+                "services": [],
+                "tier": "Tier 1"
+            },
+            "accounting": {
+                "enabled": false,
+                "services": [],
+                "tier": "Tier 1"
+            },
+            "storage": {
+                "enabled": false,
+                "services": []
+            },
+            "customIntegration": {
+                "enabled": false,
+                "services": []
+            }
+        },
+        "ecosystems": {
+            "eSignature": {
+                "enabled": false,
+                "amount": 0,
+                "type": "flat",
+                "period": "work_order"
+            }
+        },
+        "fn_one": {
+            "enabled": false,
+            "work_order_fee": {
+                "enabled": false,
+                "amount": 0,
+                "period": "monthly",
+                "type": "percent",
+                "discount": {
+                    "enabled": false,
+                    "amount": 0
+                }
+            },
+            "overage_fee": {
+                "enabled": false,
+                "amount": 0,
+                "period": "monthly",
+                "type": "percent",
+                "discount": {
+                    "enabled": false,
+                    "amount": 0
+                }
+            },
+            "work_order_limit": {
+                "enabled": false,
+                "limit": -1,
+                "period": "monthly"
+            }
+        },
+        "marketplace_provider": {
+            "enabled": true,
+            "tier": "premier",
+            "startsAt": "2024-11-24T06:02:38.010Z",
+            "endsAt": "2024-12-24T06:02:38.010Z",
+            "service_fee": {
+                "enabled": true,
+                "amount": 3.9,
+                "type": "percent",
+                "period": "work_order"
+            },
+            "free_screenings_limit": {
+                "limit": 1,
+                "period": "yearly",
+                "enabled": true
+            },
+            "oai_fee": {
+                "enabled": false,
+                "amount": 0.5,
+                "type": "percent",
+                "period": "work_order"
+            },
+            "gl_insurance_fee": {
+                "enabled": false,
+                "amount": 1.5,
+                "type": "percent",
+                "period": "work_order"
+            },
+            "package_chosen": true
+        },
+        "auto_dispatch": {
+            "enabled": false,
+            "tier": "basic"
+        },
+        "bundle_work_order": {
+            "enabled": false
+        },
+        "client_portals": {
+            "enabled": false
+        },
+        "clients": {
+            "enabled": false
+        },
+        "copy_work_order": {
+            "enabled": false
+        },
+        "curated_recruitment": {
+            "enabled": false,
+            "tier": "basic"
+        },
+        "custom_fields": {
+            "enabled": false
+        },
+        "enhanced_vetting": {
+            "enabled": false
+        },
+        "general_liability_liaison_fee": {
+            "enabled": false,
+            "amount": 0,
+            "period": "monthly",
+            "type": "percent",
+            "discount": {
+                "enabled": false,
+                "amount": 0
+            }
+        },
+        "mass_create": {
+            "enabled": false
+        },
+        "mass_update": {
+            "enabled": false
+        },
+        "multi_site": {
+            "enabled": false
+        },
+        "pricing_insights": {
+            "enabled": false
+        },
+        "projects": {
+            "enabled": false
+        },
+        "selection_rules": {
+            "enabled": false
+        },
+        "tags": {
+            "enabled": false
+        },
+        "templates": {
+            "enabled": false
+        },
+        "wo_activity_reports": {
+            "enabled": false
+        },
+        "work_order_approve": {
+            "enabled": false
+        },
+        "work_order_cancel": {
+            "enabled": false
+        },
+        "work_order_delete": {
+            "enabled": false
+        },
+        "work_order_download_attachments": {
+            "enabled": false
+        },
+        "work_order_edit": {
+            "enabled": false
+        },
+        "work_order_hold": {
+            "enabled": false
+        },
+        "work_order_message": {
+            "enabled": false
+        },
+        "workers_comp_fee": {
+            "enabled": false,
+            "amount": 0,
+            "period": "monthly",
+            "type": "percent",
+            "discount": {
+                "enabled": false,
+                "amount": 0
+            }
+        },
+        "provider_tags": {
+            "enabled": false
+        },
+        "approval_sidebar": {
+            "enabled": false
+        },
+        "marketsmart_insights": {
+            "enabled": false
+        },
+        "work_order_auto_approve": {
+            "enabled": false
+        },
+        "fast_pay": {
+            "enabled": true
+        },
+        "trip_log": {
+            "enabled": true
+        }
+    };
+</script>
+<script type="text/javascript">
+    window.PRICING_INSIGHTS_URL = "http://pricing-insights-prod.default.svc.cluster.local.:8080";
+</script>
+<script type="text/javascript">
+    window.NODE_ENV = "production";
+</script>
+<script type="text/javascript">
+    window.userEmail = "vinsonfn24@gmail.com";
+</script>
+<script type="text/javascript">
+    window.userGroupName = "Provider";
+</script>
+<script type="text/javascript">
+    window.userCreateDate = "1726787093";
+</script>
+<script type="text/javascript">
+    window.isBuyer = "No";
+</script>
+<script type="text/javascript">
+    window.managedProviders = "No";
+</script>
+<script type="text/javascript">
+    window.marketplaceManager = "No";
+</script>
+<script type="text/javascript">
+    window.userSiteTitle = "Field Nation";
+</script>
+<script type="text/javascript">
+    window.assetUrl = 'https://assets.fieldnation.com/';
+</script>
+<script type="text/javascript">
+    window.service_cloud_api_url = "https://micro.fieldnation.com/v1/service-cloud";
+</script>
+<script type="text/javascript">
+    window.service_cloud_enabled = true;
+</script>
+<script type="text/javascript">
+    window.analytics_jwt = '';
+</script>
+<script type="text/javascript">
+    window.comms_jwt = 'Bearer REDACTED_JWT';
+</script>
+<script type="text/javascript">
+    window.clover_sdk_url = 'https://checkout.clover.com/sdk.js';
+</script>
+<script type="text/javascript">
+    window.CLOVER_PUBLIC_TOKEN = 'd33116653d63480f9747555250a7c28d';
+</script>
+<script type="text/javascript">
+    window.CLOVER_MERCHANT_ID = 'BMH5XGRZMB831';
+</script>
+<script src="/caching/context?v=1733551802491"></script>
+<script src="/caching/swagger?v=1731422369732"></script>
+<div class="c-page__body" id="js-page__body">
+    <div class="c-page__bodyInner">
+        <div class="c-page__content">
+            <div id="WorkOrderDetail"></div>
+            <script type="text/javascript">
+                window.users = {};
+            </script>
+            <script type="text/javascript">
+                window.work_order = {
+                    "id": 16296143,
+                    "networks": {
+                        "metadata": {
+                            "total": 1,
+                            "per_page": 1,
+                            "pages": 1,
+                            "page": 1
+                        },
+                        "actions": [],
+                        "results": [{
+                            "id": 1,
+                            "name": "Field Nation",
+                            "type": "marketplace",
+                            "options": [{
+                                "id": 5,
+                                "name": "Buyer Flat Fee",
+                                "type": "decimal",
+                                "description": "Flat fee per job (buyer fee)",
+                                "category": "payment_fees",
+                                "visibility": "all",
+                                "editable": "staff_admin",
+                                "value": "0",
+                                "default_value": "0",
+                                "network_option_role": "provider",
+                                "actions": []
+                            }, {
+                                "id": 3,
+                                "name": "Service Fee Rate",
+                                "type": "decimal",
+                                "description": "Percentage of job total (provider fee)",
+                                "category": "payment_fees",
+                                "visibility": "all",
+                                "editable": "staff_admin",
+                                "value": "10",
+                                "default_value": "10",
+                                "network_option_role": "provider",
+                                "actions": []
+                            }, {
+                                "id": 2,
+                                "name": "Buyer Percentage of Service Fee",
+                                "type": "percent",
+                                "description": "Buyer share of % fee",
+                                "category": "payment_fees",
+                                "visibility": "all",
+                                "editable": "staff_admin",
+                                "value": "0",
+                                "default_value": "0",
+                                "network_option_role": "provider",
+                                "actions": []
+                            }, {
+                                "id": 19,
+                                "name": "Buyer Service Fee Cap",
+                                "type": "decimal",
+                                "description": "Buyer service fee cap",
+                                "category": "payment_fees",
+                                "visibility": "all",
+                                "editable": "staff_admin",
+                                "value": "0",
+                                "default_value": "0",
+                                "network_option_role": "provider",
+                                "actions": []
+                            }, {
+                                "id": 20,
+                                "name": "Provider Service Fee Cap",
+                                "type": "decimal",
+                                "description": "Provider service fee cap",
+                                "category": "payment_fees",
+                                "visibility": "all",
+                                "editable": "staff_admin",
+                                "value": "0",
+                                "default_value": "0",
+                                "network_option_role": "provider",
+                                "actions": []
+                            }, {
+                                "id": 8,
+                                "name": "Field Nation Processes Payments",
+                                "type": "checkbox",
+                                "description": "Process provider payments through Field Nation",
+                                "category": "settings",
+                                "visibility": "all",
+                                "editable": "staff_admin",
+                                "value": "1",
+                                "default_value": "1",
+                                "network_option_role": "provider",
+                                "actions": []
+                            }, {
+                                "id": 26,
+                                "name": "Constant Hourly Rate",
+                                "type": "decimal",
+                                "description": "Use constant hourly rate",
+                                "category": "settings",
+                                "visibility": "all",
+                                "editable": "staff_admin",
+                                "value": "0",
+                                "default_value": "0",
+                                "network_option_role": "provider",
+                                "actions": []
+                            }, {
+                                "id": 4,
+                                "name": "FN Insurance Program",
+                                "type": "checkbox",
+                                "description": "Apply Field Nation insurance fee if provider does not have insurance",
+                                "category": "settings",
+                                "visibility": "all",
+                                "editable": "staff_admin",
+                                "value": "1",
+                                "default_value": "1",
+                                "network_option_role": "provider",
+                                "actions": []
+                            }, {
+                                "id": 24,
+                                "name": "Insurance Required",
+                                "type": "checkbox",
+                                "description": "Insurance is required to become eligible (this option works in tandem with FN Insurance Program)",
+                                "category": "settings",
+                                "visibility": "all",
+                                "editable": "staff,staff_admin",
+                                "value": "1",
+                                "default_value": "1",
+                                "network_option_role": "provider",
+                                "actions": []
+                            }, {
+                                "id": 30,
+                                "name": "Work order pay types",
+                                "type": "text",
+                                "description": "Work order pay types",
+                                "category": "settings",
+                                "visibility": "all",
+                                "editable": "staff_admin",
+                                "value": "blended,fixed,hourly,per_device",
+                                "default_value": "blended,fixed,hourly,per_device",
+                                "network_option_role": "provider",
+                                "actions": []
+                            }, {
+                                "id": 31,
+                                "name": "Work order minimum hourly pay rate",
+                                "type": "decimal",
+                                "description": "Work order minimum hourly pay rate",
+                                "category": "settings",
+                                "visibility": "all",
+                                "editable": "staff_admin",
+                                "value": "",
+                                "default_value": "",
+                                "network_option_role": "provider",
+                                "actions": []
+                            }, {
+                                "id": 6,
+                                "name": "Hide Ratings",
+                                "type": "checkbox",
+                                "description": "Disable providers from seeing and providing ratings",
+                                "category": "permissions",
+                                "visibility": "all",
+                                "editable": "staff,buyer,staff_admin",
+                                "value": "0",
+                                "default_value": "0",
+                                "network_option_role": "provider",
+                                "actions": []
+                            }, {
+                                "id": 7,
+                                "name": "Direct Assign",
+                                "type": "checkbox",
+                                "description": "Allow direct assignment of providers",
+                                "category": "permissions",
+                                "visibility": "all",
+                                "editable": "staff,buyer,staff_admin",
+                                "value": "0",
+                                "default_value": "0",
+                                "network_option_role": "provider",
+                                "actions": []
+                            }, {
+                                "id": 14,
+                                "name": "Allow Auto Swap",
+                                "type": "checkbox",
+                                "description": "Disable provider swap confirmation",
+                                "category": "permissions",
+                                "visibility": "all",
+                                "editable": "staff,buyer,staff_admin",
+                                "value": "0",
+                                "default_value": "0",
+                                "network_option_role": "provider",
+                                "actions": []
+                            }, {
+                                "id": 15,
+                                "name": "Disable PQAP",
+                                "type": "checkbox",
+                                "description": "Disable Provider Quality Assurance Program (PQAP) processes",
+                                "category": "permissions",
+                                "visibility": "all",
+                                "editable": "staff,staff_admin",
+                                "value": "0",
+                                "default_value": "0",
+                                "network_option_role": "provider",
+                                "actions": []
+                            }, {
+                                "id": 13,
+                                "name": "Join Other Networks",
+                                "type": "checkbox",
+                                "description": "Allow providers to join other networks.",
+                                "category": "permissions",
+                                "visibility": "all",
+                                "editable": "staff,buyer,staff_admin",
+                                "value": "1",
+                                "default_value": "1",
+                                "network_option_role": "provider",
+                                "actions": []
+                            }, {
+                                "id": 27,
+                                "name": "Must be used as the exclusive network on work orders",
+                                "type": "checkbox",
+                                "description": "Must be used as the exclusive network on work orders",
+                                "category": "permissions",
+                                "visibility": "all",
+                                "editable": "staff,staff_admin",
+                                "value": "0",
+                                "default_value": "0",
+                                "network_option_role": "provider",
+                                "actions": []
+                            }, {
+                                "id": 28,
+                                "name": "Restrict access for newly added users",
+                                "type": "checkbox",
+                                "description": "Restrict access for newly added users",
+                                "category": "permissions",
+                                "visibility": "all",
+                                "editable": "staff,staff_admin",
+                                "value": "0",
+                                "default_value": "0",
+                                "network_option_role": "provider",
+                                "actions": []
+                            }, {
+                                "id": 32,
+                                "name": "Timesheet Tracking",
+                                "type": "checkbox",
+                                "description": "Hours on the work orders are tracked for timesheet",
+                                "category": "permissions",
+                                "visibility": "all",
+                                "editable": "staff_admin",
+                                "value": "0",
+                                "default_value": "0",
+                                "network_option_role": "provider",
+                                "actions": []
+                            }, {
+                                "id": 29,
+                                "name": "Use specific onboarding flow",
+                                "type": "text",
+                                "description": "Use specific onboarding flow",
+                                "category": "permissions",
+                                "visibility": "all",
+                                "editable": "staff,staff_admin",
+                                "value": "none",
+                                "default_value": "none",
+                                "network_option_role": "provider",
+                                "actions": []
+                            }, {
+                                "id": 21,
+                                "name": "Buy from Network",
+                                "type": "checkbox",
+                                "description": "Allow company to buy from network",
+                                "category": "company_permissions",
+                                "visibility": "all",
+                                "editable": "staff,buyer,staff_admin",
+                                "value": "1",
+                                "default_value": "1",
+                                "network_option_role": "provider",
+                                "actions": []
+                            }, {
+                                "id": 22,
+                                "name": "Perform Work",
+                                "type": "checkbox",
+                                "description": "Allow company to complete work in network",
+                                "category": "company_permissions",
+                                "visibility": "all",
+                                "editable": "staff,buyer,staff_admin",
+                                "value": "1",
+                                "default_value": "1",
+                                "network_option_role": "provider",
+                                "actions": []
+                            }, {
+                                "id": 23,
+                                "name": "Invite Talent",
+                                "type": "checkbox",
+                                "description": "Allow company to invite talent to network",
+                                "category": "company_permissions",
+                                "visibility": "all",
+                                "editable": "staff,buyer,staff_admin",
+                                "value": "1",
+                                "default_value": "1",
+                                "network_option_role": "provider",
+                                "actions": []
+                            }],
+                            "company_options": [],
+                            "sourced_providers": [],
+                            "actions": []
+                        }]
+                    },
+                    "attachments": {
+                        "correlation_id": "4b9e78125e1b4d1d710b126e17559169790c6f71",
+                        "actions": [],
+                        "sum": {
+                            "unreviewed": 0
+                        },
+                        "metadata": {
+                            "total": 2,
+                            "per_page": 2,
+                            "pages": 1,
+                            "page": 1
+                        },
+                        "results": [{
+                            "id": 1,
+                            "name": "Documents",
+                            "type": "document",
+                            "task": {
+                                "id": 0,
+                                "type": {
+                                    "id": 0
+                                }
+                            },
+                            "actions": [],
+                            "metadata": {
+                                "total": 0,
+                                "per_page": 0,
+                                "pages": 1,
+                                "page": 1
+                            },
+                            "results": []
+                        }, {
+                            "id": 38766589,
+                            "name": "Misc",
+                            "min_files": 0,
+                            "max_files": 999,
+                            "min_bytes": 1,
+                            "max_bytes": 104857600,
+                            "type": "slot",
+                            "task": {
+                                "id": 0
+                            },
+                            "expense": false,
+                            "actions": [],
+                            "metadata": {
+                                "total": 0,
+                                "per_page": 0,
+                                "pages": 1,
+                                "page": 1
+                            },
+                            "results": []
+                        }]
+                    },
+                    "shipments": {
+                        "metadata": {
+                            "total": 0,
+                            "per_page": 0,
+                            "pages": 1,
+                            "page": 1
+                        },
+                        "results": [],
+                        "correlation_id": "5bb31d997cee5ae518797246fe32d76d26f7ceee",
+                        "actions": []
+                    },
+                    "signatures": {
+                        "metadata": {
+                            "total": 0,
+                            "per_page": 1,
+                            "page": 1,
+                            "pages": 1
+                        },
+                        "correlation_id": "3e0508e51fcc71e267bbd7973e2bd1b90dbc4b1d",
+                        "actions": [],
+                        "results": []
+                    },
+                    "time_logs": {
+                        "actions": [],
+                        "hours": 0,
+                        "metadata": {
+                            "total": 0,
+                            "pages": 1,
+                            "per_page": 0,
+                            "page": 1
+                        },
+                        "results": [],
+                        "correlation_id": "ba37a30b0a425aa7ffc152e14a3f275d330e72d2"
+                    },
+                    "problems": {
+                        "metadata": {
+                            "total": 0,
+                            "per_page": 1,
+                            "page": 1,
+                            "pages": 1
+                        },
+                        "sum": {
+                            "active": 0,
+                            "resolved": 0
+                        },
+                        "correlation_id": "e2e5c4534532f930f305b9b1907d1e598aea2176",
+                        "actions": ["add"],
+                        "types": [{
+                            "id": 48,
+                            "name": "How to\/Technical assistance",
+                            "performance_event": false,
+                            "show_pqap_warning": false,
+                            "reportable": true,
+                            "message": "",
+                            "support_ticket": true,
+                            "send_to_buyer": false,
+                            "send_to_provider": true,
+                            "send_to_support": true,
+                            "send_to_accounting": false,
+                            "children": [],
+                            "has_other": false
+                        }, {
+                            "id": 49,
+                            "name": "Work order clarification needed",
+                            "performance_event": false,
+                            "show_pqap_warning": false,
+                            "reportable": true,
+                            "message": "",
+                            "support_ticket": false,
+                            "send_to_buyer": true,
+                            "send_to_provider": true,
+                            "send_to_support": false,
+                            "send_to_accounting": false,
+                            "children": [],
+                            "has_other": false
+                        }],
+                        "results": []
+                    },
+                    "pay": {
+                        "work_order_id": 16296143,
+                        "type": "hourly",
+                        "base": {
+                            "units": 2,
+                            "amount": 70
+                        },
+                        "additional": {
+                            "units": 0,
+                            "amount": 0
+                        },
+                        "fees": [{
+                            "name": "cancellation",
+                            "id": 0,
+                            "amount": 0,
+                            "queued": false,
+                            "charged": false,
+                            "hours24_applicable": false,
+                            "calculation": "fixed",
+                            "at_risk": false
+                        }, {
+                            "name": "provider",
+                            "amount": 7,
+                            "calculation": "percent",
+                            "modifier": 0.1,
+                            "charged": false,
+                            "min_amount": 7,
+                            "max_amount": 14,
+                            "display_name": "Field Nation Service Fee",
+                            "description": "Field Nation Service Charge of 10%. This service charge helps us operate Field Nation.",
+                            "breakdown": null
+                        }, {
+                            "name": "Provider Fee Pro",
+                            "display_name": "Field Nation Service Fee",
+                            "amount": 2.73,
+                            "max_amount": 5.46,
+                            "calculation": "percent",
+                            "description": "Field Nation Service Charge of 10% and additional Service Charge of 3.9% with Field Nation Pro. This service charge helps us operate Field Nation.",
+                            "modifier": 0.039,
+                            "breakdown": null
+                        }],
+                        "payment": {
+                            "id": 62786736,
+                            "amount": 140,
+                            "charged": false,
+                            "date": {
+                                "utc": "",
+                                "local": {
+                                    "date": "",
+                                    "time": ""
+                                }
+                            }
+                        },
+                        "client_payment_enabled": false,
+                        "client_payment_terms": 0,
+                        "hours": 0,
+                        "buyer_overall_jobs": 5066,
+                        "can_view": true,
+                        "buyer_approval_time_days": 9,
+                        "client_payment_terms_copy": "Payment will be processed Friday after approval",
+                        "client_payment_terms_updated_copy": "(processed on the Friday following Work Order approval)",
+                        "target_review_period": 7,
+                        "reported_hours": 0,
+                        "number_of_devices": 0,
+                        "hold": {
+                            "id": 62786736,
+                            "amount": 140,
+                            "charged": true
+                        },
+                        "minimum_payment": 20,
+                        "range": {
+                            "min": 70,
+                            "max": 140
+                        },
+                        "actions": ["has_range"],
+                        "labor_sum": 70,
+                        "fees_cancellation_pending": false,
+                        "passive_cancellation_amount": 30,
+                        "fee_cancellation_queued": "0",
+                        "fee_cancellation_charged": "0",
+                        "status_id": "2",
+                        "correlation_id": "9c0e0cb8b6574cc2c1801eb2e8d84b38236a5562",
+                        "bonuses": {
+                            "metadata": {
+                                "total": 0,
+                                "per_page": 0,
+                                "page": 1,
+                                "pages": 1
+                            },
+                            "sum": {
+                                "all": 0,
+                                "charged": 0,
+                                "uncharged": 0
+                            },
+                            "results": [],
+                            "actions": []
+                        },
+                        "expenses": {
+                            "metadata": {
+                                "total": 0,
+                                "per_page": 0,
+                                "page": 1,
+                                "pages": 1
+                            },
+                            "sum": {
+                                "all": 0,
+                                "charged": 0,
+                                "uncharged": 0,
+                                "pending": 0,
+                                "approved": 0,
+                                "approved_amount": 0,
+                                "denied": 0
+                            },
+                            "results": [],
+                            "actions": []
+                        },
+                        "penalties": {
+                            "metadata": {
+                                "total": 2,
+                                "per_page": 2,
+                                "page": 1,
+                                "pages": 1
+                            },
+                            "sum": {
+                                "all": 30,
+                                "charged": 0,
+                                "uncharged": 30
+                            },
+                            "results": [{
+                                "id": 2444,
+                                "charged": false,
+                                "calculation": "fixed",
+                                "modifier": 15,
+                                "name": "Check-in and Check-out",
+                                "description": "If you do not check-in and check-out live while onsite, a $15 penalty will apply.",
+                                "status_reason": "",
+                                "updated_by": "",
+                                "updated_at": {
+                                    "local": {
+                                        "date": "",
+                                        "time": ""
+                                    },
+                                    "utc": ""
+                                },
+                                "amount": 15,
+                                "selected": true,
+                                "actions": []
+                            }, {
+                                "id": 2443,
+                                "charged": false,
+                                "calculation": "fixed",
+                                "modifier": 15,
+                                "name": "Work Order Closure",
+                                "description": "If the work order is not complete, and deliverables are not submitted within 3 days, a $15 penalty will apply.",
+                                "status_reason": "",
+                                "updated_by": "",
+                                "updated_at": {
+                                    "local": {
+                                        "date": "",
+                                        "time": ""
+                                    },
+                                    "utc": ""
+                                },
+                                "amount": 15,
+                                "selected": true,
+                                "actions": []
+                            }],
+                            "actions": []
+                        },
+                        "discounts": {
+                            "metadata": {
+                                "total": 0,
+                                "per_page": 0,
+                                "page": 1,
+                                "pages": 1
+                            },
+                            "sum": {
+                                "all": 0
+                            },
+                            "results": [],
+                            "actions": []
+                        },
+                        "increases": {
+                            "metadata": {
+                                "total": 0,
+                                "per_page": 0,
+                                "page": 1,
+                                "pages": 1
+                            },
+                            "minimum": 20,
+                            "sum": {
+                                "all": 0
+                            },
+                            "results": [],
+                            "actions": []
+                        },
+                        "positive": true,
+                        "currency_style": "positive",
+                        "max_pay": 140,
+                        "total": 63,
+                        "max_pay_limit": 120.54,
+                        "fn_process_payment": "1",
+                        "total_by_role": 140,
+                        "total_before_fees_by_role": 140,
+                        "calculated_total": {
+                            "total": {
+                                "min": 60.27,
+                                "max": 60.27
+                            }
+                        },
+                        "is_taxable_location": true
+                    },
+                    "pay_old": {
+                        "work_order_id": 16296143,
+                        "type": "hourly",
+                        "base": {
+                            "units": 2,
+                            "amount": 70
+                        },
+                        "additional": {
+                            "units": 0,
+                            "amount": 0
+                        },
+                        "fees": [{
+                            "name": "cancellation",
+                            "id": 0,
+                            "amount": 0,
+                            "queued": false,
+                            "charged": false,
+                            "hours24_applicable": false,
+                            "calculation": "fixed",
+                            "at_risk": false
+                        }, {
+                            "name": "provider",
+                            "amount": 7,
+                            "calculation": "percent",
+                            "modifier": 0.1,
+                            "charged": false,
+                            "min_amount": 7,
+                            "max_amount": 14,
+                            "display_name": "Field Nation Service Fee"
+                        }],
+                        "payment": {
+                            "id": 62786736,
+                            "amount": 140,
+                            "charged": false,
+                            "date": {
+                                "utc": "",
+                                "local": {
+                                    "date": "",
+                                    "time": ""
+                                }
+                            }
+                        },
+                        "finance": {
+                            "id": 0,
+                            "terms": "",
+                            "description": "Pre-Fund",
+                            "limit": 0,
+                            "invoiced_account": false
+                        },
+                        "client_payment_enabled": false,
+                        "client_payment_terms": 0,
+                        "hours": 0,
+                        "buyer_overall_jobs": 5066,
+                        "can_view": true,
+                        "buyer_approval_time_days": 9,
+                        "client_payment_terms_copy": "Payment will be processed Friday after approval",
+                        "client_payment_terms_updated_copy": "(processed on the Friday following Work Order approval)",
+                        "target_review_period": 7,
+                        "reported_hours": 0,
+                        "number_of_devices": 0,
+                        "hold": {
+                            "id": 62786736,
+                            "amount": 140,
+                            "charged": true
+                        },
+                        "minimum_payment": 20,
+                        "range": {
+                            "min": 70,
+                            "max": 140
+                        },
+                        "actions": ["has_range"],
+                        "labor_sum": 70,
+                        "fees_cancellation_pending": false,
+                        "passive_cancellation_amount": 30,
+                        "fee_cancellation_queued": "0",
+                        "fee_cancellation_charged": "0",
+                        "status_id": "2",
+                        "correlation_id": "9c0e0cb8b6574cc2c1801eb2e8d84b38236a5562",
+                        "bonuses": {
+                            "metadata": {
+                                "total": 0,
+                                "per_page": 0,
+                                "page": 1,
+                                "pages": 1
+                            },
+                            "sum": {
+                                "all": 0,
+                                "charged": 0,
+                                "uncharged": 0
+                            },
+                            "results": [],
+                            "actions": []
+                        },
+                        "expenses": {
+                            "metadata": {
+                                "total": 0,
+                                "per_page": 0,
+                                "page": 1,
+                                "pages": 1
+                            },
+                            "sum": {
+                                "all": 0,
+                                "charged": 0,
+                                "uncharged": 0,
+                                "pending": 0,
+                                "approved": 0,
+                                "approved_amount": 0,
+                                "denied": 0
+                            },
+                            "results": [],
+                            "actions": []
+                        },
+                        "penalties": {
+                            "metadata": {
+                                "total": 2,
+                                "per_page": 2,
+                                "page": 1,
+                                "pages": 1
+                            },
+                            "sum": {
+                                "all": 30,
+                                "charged": 0,
+                                "uncharged": 30
+                            },
+                            "results": [{
+                                "id": 2444,
+                                "charged": false,
+                                "calculation": "fixed",
+                                "modifier": 15,
+                                "name": "Check-in and Check-out",
+                                "description": "If you do not check-in and check-out live while onsite, a $15 penalty will apply.",
+                                "status_reason": "",
+                                "updated_by": "",
+                                "updated_at": {
+                                    "local": {
+                                        "date": "",
+                                        "time": ""
+                                    },
+                                    "utc": ""
+                                },
+                                "amount": 15,
+                                "selected": true,
+                                "actions": []
+                            }, {
+                                "id": 2443,
+                                "charged": false,
+                                "calculation": "fixed",
+                                "modifier": 15,
+                                "name": "Work Order Closure",
+                                "description": "If the work order is not complete, and deliverables are not submitted within 3 days, a $15 penalty will apply.",
+                                "status_reason": "",
+                                "updated_by": "",
+                                "updated_at": {
+                                    "local": {
+                                        "date": "",
+                                        "time": ""
+                                    },
+                                    "utc": ""
+                                },
+                                "amount": 15,
+                                "selected": true,
+                                "actions": []
+                            }],
+                            "actions": []
+                        },
+                        "discounts": {
+                            "metadata": {
+                                "total": 0,
+                                "per_page": 0,
+                                "page": 1,
+                                "pages": 1
+                            },
+                            "sum": {
+                                "all": 0
+                            },
+                            "results": [],
+                            "actions": []
+                        },
+                        "increases": {
+                            "metadata": {
+                                "total": 0,
+                                "per_page": 0,
+                                "page": 1,
+                                "pages": 1
+                            },
+                            "minimum": 20,
+                            "sum": {
+                                "all": 0
+                            },
+                            "results": [],
+                            "actions": []
+                        },
+                        "positive": true,
+                        "currency_style": "positive",
+                        "max_pay": 140,
+                        "total": 63,
+                        "max_pay_limit": 140,
+                        "fn_process_payment": "1",
+                        "total_by_role": 140,
+                        "total_before_fees_by_role": 140,
+                        "calculated_total": {
+                            "total": {
+                                "min": 63,
+                                "max": 126
+                            }
+                        }
+                    },
+                    "pay_service": {
+                        "workOrderId": 16296143,
+                        "userId": 983643,
+                        "lineItems": [{
+                            "name": "labor",
+                            "amount": 70,
+                            "description": "",
+                            "accounting_code": 532,
+                            "key": "labor"
+                        }, {
+                            "name": "expenses",
+                            "amount": 0,
+                            "description": "",
+                            "accounting_code": 0,
+                            "key": "expenses"
+                        }, {
+                            "name": "discounts",
+                            "amount": 0,
+                            "description": "",
+                            "accounting_code": 532,
+                            "key": "discounts"
+                        }, {
+                            "name": "bonuses",
+                            "amount": 0,
+                            "description": "",
+                            "accounting_code": 532,
+                            "key": "bonuses"
+                        }, {
+                            "name": "penalties",
+                            "amount": 0,
+                            "description": "",
+                            "accounting_code": 532,
+                            "key": "penalties"
+                        }, {
+                            "name": "Field Nation Service Fee",
+                            "amount": 7,
+                            "description": "",
+                            "accounting_code": 434,
+                            "key": "service_fee"
+                        }, {
+                            "name": "Provider Fee Pro",
+                            "amount": 2.73,
+                            "description": "",
+                            "accounting_code": 435,
+                            "key": "service_fee_pro"
+                        }, {
+                            "name": "Transaction Value Tax",
+                            "amount": 0,
+                            "description": "",
+                            "accounting_code": 535,
+                            "key": "gtv_state_tax"
+                        }],
+                        "fees": {
+                            "buyer": [{
+                                "name": "Transaction Value Tax",
+                                "key": "gtv_state_tax",
+                                "attributes": [],
+                                "percentCharge": 7,
+                                "breakdown": [{
+                                    "percent": 4.75,
+                                    "name": "NC STATE TAX",
+                                    "amount": 0
+                                }, {
+                                    "percent": 2.25,
+                                    "name": "NC COUNTY TAX",
+                                    "amount": 0
+                                }],
+                                "taxableAmount": 0,
+                                "serviceRef": "gtv",
+                                "actual": 0,
+                                "maximum": 0,
+                                "guarantee": 0,
+                                "taxCalculated": 0,
+                                "exemptAmount": 4.9,
+                                "exemptCertId": 38696939,
+                                "isExemptOverride": false
+                            }],
+                            "provider": [{
+                                "name": "Field Nation Service Fee",
+                                "key": "service_fee",
+                                "description": "Field Nation Service Charge of 10%. This service charge helps us operate Field Nation.",
+                                "attributes": [],
+                                "percentCharge": 10,
+                                "actual": 7,
+                                "maximum": 14,
+                                "guarantee": 14
+                            }, {
+                                "name": "Provider Fee Pro",
+                                "key": "service_fee_pro",
+                                "description": "Field Nation Service Charge of 10% and additional Service Charge of 3.9% with Field Nation Pro. This service charge helps us operate Field Nation.",
+                                "attributes": [],
+                                "percentCharge": 3.9,
+                                "actual": 2.73,
+                                "maximum": 5.46,
+                                "guarantee": 5.46
+                            }]
+                        },
+                        "totals": {
+                            "buyer": {
+                                "minimum": 70,
+                                "maximum": 140,
+                                "actual": 70,
+                                "guarantee": 140
+                            },
+                            "provider": {
+                                "minimum": 60.27,
+                                "maximum": 120.54,
+                                "actual": 60.27,
+                                "guarantee": 120.54
+                            }
+                        },
+                        "ledger": [{
+                            "note": "hours logged value 0 too low, using 1",
+                            "buyer": {
+                                "minimum": 0,
+                                "maximum": 0,
+                                "actual": 0,
+                                "guarantee": 0
+                            },
+                            "provider": {
+                                "minimum": 0,
+                                "maximum": 0,
+                                "actual": 0,
+                                "guarantee": 0
+                            }
+                        }, {
+                            "note": "Labor item is added with code 532",
+                            "buyer": {
+                                "minimum": 0,
+                                "maximum": 0,
+                                "actual": 0,
+                                "guarantee": 0
+                            },
+                            "provider": {
+                                "minimum": 0,
+                                "maximum": 0,
+                                "actual": 0,
+                                "guarantee": 0
+                            }
+                        }, {
+                            "note": "Labor 1 hour logged at $70.00\/hour",
+                            "buyer": {
+                                "minimum": 0,
+                                "maximum": 0,
+                                "actual": 70,
+                                "guarantee": 0
+                            },
+                            "provider": {
+                                "minimum": 0,
+                                "maximum": 0,
+                                "actual": 70,
+                                "guarantee": 0
+                            }
+                        }, {
+                            "note": "Labor minimum 1 hour at $70.00\/hour",
+                            "buyer": {
+                                "minimum": 70,
+                                "maximum": 0,
+                                "actual": 70,
+                                "guarantee": 0
+                            },
+                            "provider": {
+                                "minimum": 70,
+                                "maximum": 0,
+                                "actual": 70,
+                                "guarantee": 0
+                            }
+                        }, {
+                            "note": "Labor guarantee 2 hours at $70.00\/hour",
+                            "buyer": {
+                                "minimum": 70,
+                                "maximum": 0,
+                                "actual": 70,
+                                "guarantee": 140
+                            },
+                            "provider": {
+                                "minimum": 70,
+                                "maximum": 0,
+                                "actual": 70,
+                                "guarantee": 140
+                            }
+                        }, {
+                            "note": "Labor maximum 2 hours at $70.00\/hour",
+                            "buyer": {
+                                "minimum": 70,
+                                "maximum": 140,
+                                "actual": 70,
+                                "guarantee": 140
+                            },
+                            "provider": {
+                                "minimum": 70,
+                                "maximum": 140,
+                                "actual": 70,
+                                "guarantee": 140
+                            }
+                        }, {
+                            "note": "Minimum of all expenses against minimum possible labor",
+                            "buyer": {
+                                "minimum": 70,
+                                "maximum": 140,
+                                "actual": 70,
+                                "guarantee": 140
+                            },
+                            "provider": {
+                                "minimum": 70,
+                                "maximum": 140,
+                                "actual": 70,
+                                "guarantee": 140
+                            }
+                        }, {
+                            "note": "Maximum of all applied expenses against guaranteed labor",
+                            "buyer": {
+                                "minimum": 70,
+                                "maximum": 140,
+                                "actual": 70,
+                                "guarantee": 140
+                            },
+                            "provider": {
+                                "minimum": 70,
+                                "maximum": 140,
+                                "actual": 70,
+                                "guarantee": 140
+                            }
+                        }, {
+                            "note": "Maximum of all expenses against maximum possible labor",
+                            "buyer": {
+                                "minimum": 70,
+                                "maximum": 140,
+                                "actual": 70,
+                                "guarantee": 140
+                            },
+                            "provider": {
+                                "minimum": 70,
+                                "maximum": 140,
+                                "actual": 70,
+                                "guarantee": 140
+                            }
+                        }, {
+                            "note": "Approved 0\/0 expenses for $0.00",
+                            "buyer": {
+                                "minimum": 70,
+                                "maximum": 140,
+                                "actual": 70,
+                                "guarantee": 140
+                            },
+                            "provider": {
+                                "minimum": 70,
+                                "maximum": 140,
+                                "actual": 70,
+                                "guarantee": 140
+                            }
+                        }, {
+                            "note": "hours logged value 0 too low, using 1",
+                            "buyer": {
+                                "minimum": 70,
+                                "maximum": 140,
+                                "actual": 70,
+                                "guarantee": 140
+                            },
+                            "provider": {
+                                "minimum": 70,
+                                "maximum": 140,
+                                "actual": 70,
+                                "guarantee": 140
+                            }
+                        }, {
+                            "note": "Deduct discount $0.00 actual",
+                            "buyer": {
+                                "minimum": 70,
+                                "maximum": 140,
+                                "actual": 70,
+                                "guarantee": 140
+                            },
+                            "provider": {
+                                "minimum": 70,
+                                "maximum": 140,
+                                "actual": 70,
+                                "guarantee": 140
+                            }
+                        }, {
+                            "note": "Possible discounts reduce minimum for labor from $70.00 to $70.00",
+                            "buyer": {
+                                "minimum": 70,
+                                "maximum": 140,
+                                "actual": 70,
+                                "guarantee": 140
+                            },
+                            "provider": {
+                                "minimum": 70,
+                                "maximum": 140,
+                                "actual": 70,
+                                "guarantee": 140
+                            }
+                        }, {
+                            "note": "Possible discounts reduce maximum for labor from $140.00 to $140.00",
+                            "buyer": {
+                                "minimum": 70,
+                                "maximum": 140,
+                                "actual": 70,
+                                "guarantee": 140
+                            },
+                            "provider": {
+                                "minimum": 70,
+                                "maximum": 140,
+                                "actual": 70,
+                                "guarantee": 140
+                            }
+                        }, {
+                            "note": "hours logged value 0 too low, using 1",
+                            "buyer": {
+                                "minimum": 70,
+                                "maximum": 140,
+                                "actual": 70,
+                                "guarantee": 140
+                            },
+                            "provider": {
+                                "minimum": 70,
+                                "maximum": 140,
+                                "actual": 70,
+                                "guarantee": 140
+                            }
+                        }, {
+                            "note": "Applied 0\/0 bonuses for $0.00",
+                            "buyer": {
+                                "minimum": 70,
+                                "maximum": 140,
+                                "actual": 70,
+                                "guarantee": 140
+                            },
+                            "provider": {
+                                "minimum": 70,
+                                "maximum": 140,
+                                "actual": 70,
+                                "guarantee": 140
+                            }
+                        }, {
+                            "note": "Guarantee of bonuses against maximum possible labor (only in approved\/paid status)",
+                            "buyer": {
+                                "minimum": 70,
+                                "maximum": 140,
+                                "actual": 70,
+                                "guarantee": 140
+                            },
+                            "provider": {
+                                "minimum": 70,
+                                "maximum": 140,
+                                "actual": 70,
+                                "guarantee": 140
+                            }
+                        }, {
+                            "note": "Maximum of all applied bonuses against maximum possible labor",
+                            "buyer": {
+                                "minimum": 70,
+                                "maximum": 140,
+                                "actual": 70,
+                                "guarantee": 140
+                            },
+                            "provider": {
+                                "minimum": 70,
+                                "maximum": 140,
+                                "actual": 70,
+                                "guarantee": 140
+                            }
+                        }, {
+                            "note": "hours logged value 0 too low, using 1",
+                            "buyer": {
+                                "minimum": 70,
+                                "maximum": 140,
+                                "actual": 70,
+                                "guarantee": 140
+                            },
+                            "provider": {
+                                "minimum": 70,
+                                "maximum": 140,
+                                "actual": 70,
+                                "guarantee": 140
+                            }
+                        }, {
+                            "note": "Applied 0\/2 penalties for $0.00",
+                            "buyer": {
+                                "minimum": 70,
+                                "maximum": 140,
+                                "actual": 70,
+                                "guarantee": 140
+                            },
+                            "provider": {
+                                "minimum": 70,
+                                "maximum": 140,
+                                "actual": 70,
+                                "guarantee": 140
+                            }
+                        }, {
+                            "note": "Maximum of all applied penalties reduces minimum pay",
+                            "buyer": {
+                                "minimum": 70,
+                                "maximum": 140,
+                                "actual": 70,
+                                "guarantee": 140
+                            },
+                            "provider": {
+                                "minimum": 70,
+                                "maximum": 140,
+                                "actual": 70,
+                                "guarantee": 140
+                            }
+                        }, {
+                            "note": "Maximum of all applied penalties against maximum possible labor",
+                            "buyer": {
+                                "minimum": 70,
+                                "maximum": 140,
+                                "actual": 70,
+                                "guarantee": 140
+                            },
+                            "provider": {
+                                "minimum": 70,
+                                "maximum": 140,
+                                "actual": 70,
+                                "guarantee": 140
+                            }
+                        }, {
+                            "note": "Cancellation fee is not applicable for the work order",
+                            "buyer": {
+                                "minimum": 70,
+                                "maximum": 140,
+                                "actual": 70,
+                                "guarantee": 140
+                            },
+                            "provider": {
+                                "minimum": 70,
+                                "maximum": 140,
+                                "actual": 70,
+                                "guarantee": 140
+                            }
+                        }, {
+                            "note": "hours logged value 0 too low, using 1",
+                            "buyer": {
+                                "minimum": 70,
+                                "maximum": 140,
+                                "actual": 70,
+                                "guarantee": 140
+                            },
+                            "provider": {
+                                "minimum": 70,
+                                "maximum": 140,
+                                "actual": 70,
+                                "guarantee": 140
+                            }
+                        }, {
+                            "note": "Provider contract is enabled. Adding provider service fee of 3.9% to current network fee",
+                            "buyer": {
+                                "minimum": 70,
+                                "maximum": 140,
+                                "actual": 70,
+                                "guarantee": 140
+                            },
+                            "provider": {
+                                "minimum": 70,
+                                "maximum": 140,
+                                "actual": 70,
+                                "guarantee": 140
+                            }
+                        }, {
+                            "note": "Provider pays 10% service fee",
+                            "buyer": {
+                                "minimum": 70,
+                                "maximum": 140,
+                                "actual": 70,
+                                "guarantee": 140
+                            },
+                            "provider": {
+                                "minimum": 70,
+                                "maximum": 140,
+                                "actual": 70,
+                                "guarantee": 140
+                            }
+                        }, {
+                            "note": "Provider pays 3.9% pro service fee",
+                            "buyer": {
+                                "minimum": 70,
+                                "maximum": 140,
+                                "actual": 70,
+                                "guarantee": 140
+                            },
+                            "provider": {
+                                "minimum": 70,
+                                "maximum": 140,
+                                "actual": 70,
+                                "guarantee": 140
+                            }
+                        }, {
+                            "note": "No buyer service fee applied on this work order",
+                            "buyer": {
+                                "minimum": 70,
+                                "maximum": 140,
+                                "actual": 70,
+                                "guarantee": 140
+                            },
+                            "provider": {
+                                "minimum": 70,
+                                "maximum": 140,
+                                "actual": 70,
+                                "guarantee": 140
+                            }
+                        }, {
+                            "note": "Provider service fee of $7.00 applied from gross $70.00",
+                            "buyer": {
+                                "minimum": 70,
+                                "maximum": 140,
+                                "actual": 70,
+                                "guarantee": 140
+                            },
+                            "provider": {
+                                "minimum": 70,
+                                "maximum": 140,
+                                "actual": 70,
+                                "guarantee": 140
+                            }
+                        }, {
+                            "note": "Maximum provider service fee of $14.00 applied from maximum amount $140.00",
+                            "buyer": {
+                                "minimum": 70,
+                                "maximum": 140,
+                                "actual": 70,
+                                "guarantee": 140
+                            },
+                            "provider": {
+                                "minimum": 70,
+                                "maximum": 140,
+                                "actual": 70,
+                                "guarantee": 140
+                            }
+                        }, {
+                            "note": "Guarantee provider service fee of $14.00 applied from guarantee amount $140.00",
+                            "buyer": {
+                                "minimum": 70,
+                                "maximum": 140,
+                                "actual": 70,
+                                "guarantee": 140
+                            },
+                            "provider": {
+                                "minimum": 70,
+                                "maximum": 140,
+                                "actual": 70,
+                                "guarantee": 140
+                            }
+                        }, {
+                            "note": "Guarantee provider service fee of $14.00 applied from guarantee amount $140.00",
+                            "buyer": {
+                                "minimum": 70,
+                                "maximum": 140,
+                                "actual": 70,
+                                "guarantee": 140
+                            },
+                            "provider": {
+                                "minimum": 70,
+                                "maximum": 140,
+                                "actual": 70,
+                                "guarantee": 140
+                            }
+                        }, {
+                            "note": "Maximum provider service fee of $14.00 applied from maximum amount $140.00",
+                            "buyer": {
+                                "minimum": 70,
+                                "maximum": 140,
+                                "actual": 70,
+                                "guarantee": 140
+                            },
+                            "provider": {
+                                "minimum": 70,
+                                "maximum": 140,
+                                "actual": 70,
+                                "guarantee": 140
+                            }
+                        }, {
+                            "note": "Provider service fee of $7.00 applied from gross $70.00",
+                            "buyer": {
+                                "minimum": 70,
+                                "maximum": 140,
+                                "actual": 70,
+                                "guarantee": 140
+                            },
+                            "provider": {
+                                "minimum": 70,
+                                "maximum": 140,
+                                "actual": 70,
+                                "guarantee": 140
+                            }
+                        }, {
+                            "note": "Provider pro service fee of $2.73 applied from gross $70.00",
+                            "buyer": {
+                                "minimum": 70,
+                                "maximum": 140,
+                                "actual": 70,
+                                "guarantee": 140
+                            },
+                            "provider": {
+                                "minimum": 70,
+                                "maximum": 140,
+                                "actual": 70,
+                                "guarantee": 140
+                            }
+                        }, {
+                            "note": "Maximum provider pro service fee of $5.46 applied from maximum amount $140.00",
+                            "buyer": {
+                                "minimum": 70,
+                                "maximum": 140,
+                                "actual": 70,
+                                "guarantee": 140
+                            },
+                            "provider": {
+                                "minimum": 70,
+                                "maximum": 140,
+                                "actual": 70,
+                                "guarantee": 140
+                            }
+                        }, {
+                            "note": "Guarantee provider pro service fee of $5.46 applied from guarantee amount $140.00",
+                            "buyer": {
+                                "minimum": 70,
+                                "maximum": 140,
+                                "actual": 70,
+                                "guarantee": 140
+                            },
+                            "provider": {
+                                "minimum": 70,
+                                "maximum": 140,
+                                "actual": 70,
+                                "guarantee": 140
+                            }
+                        }, {
+                            "note": "Guarantee provider pro service fee of $5.46 applied from guarantee amount $140.00",
+                            "buyer": {
+                                "minimum": 70,
+                                "maximum": 140,
+                                "actual": 70,
+                                "guarantee": 140
+                            },
+                            "provider": {
+                                "minimum": 70,
+                                "maximum": 140,
+                                "actual": 70,
+                                "guarantee": 140
+                            }
+                        }, {
+                            "note": "Maximum provider pro service fee of $5.46 applied from maximum amount $140.00",
+                            "buyer": {
+                                "minimum": 70,
+                                "maximum": 140,
+                                "actual": 70,
+                                "guarantee": 140
+                            },
+                            "provider": {
+                                "minimum": 70,
+                                "maximum": 140,
+                                "actual": 70,
+                                "guarantee": 140
+                            }
+                        }, {
+                            "note": "Provider pro service fee of $2.73 applied from gross $70.00",
+                            "buyer": {
+                                "minimum": 70,
+                                "maximum": 140,
+                                "actual": 70,
+                                "guarantee": 140
+                            },
+                            "provider": {
+                                "minimum": 70,
+                                "maximum": 140,
+                                "actual": 70,
+                                "guarantee": 140
+                            }
+                        }, {
+                            "note": "Not applying buyer fee on workorder as contract does not have it enabled or is empty",
+                            "buyer": {
+                                "minimum": 70,
+                                "maximum": 140,
+                                "actual": 70,
+                                "guarantee": 140
+                            },
+                            "provider": {
+                                "minimum": 70,
+                                "maximum": 140,
+                                "actual": 70,
+                                "guarantee": 140
+                            }
+                        }, {
+                            "note": "No occupational accident insurance on workorder, not applying fee",
+                            "buyer": {
+                                "minimum": 70,
+                                "maximum": 140,
+                                "actual": 70,
+                                "guarantee": 140
+                            },
+                            "provider": {
+                                "minimum": 70,
+                                "maximum": 140,
+                                "actual": 70,
+                                "guarantee": 140
+                            }
+                        }, {
+                            "note": "No WA workers compensation on this workorder it does not meet the requirements",
+                            "buyer": {
+                                "minimum": 70,
+                                "maximum": 140,
+                                "actual": 70,
+                                "guarantee": 140
+                            },
+                            "provider": {
+                                "minimum": 70,
+                                "maximum": 140,
+                                "actual": 70,
+                                "guarantee": 140
+                            }
+                        }, {
+                            "note": "No high value supply on workorder, not applying fee.",
+                            "buyer": {
+                                "minimum": 70,
+                                "maximum": 140,
+                                "actual": 70,
+                                "guarantee": 140
+                            },
+                            "provider": {
+                                "minimum": 70,
+                                "maximum": 140,
+                                "actual": 70,
+                                "guarantee": 140
+                            }
+                        }, {
+                            "note": "Not applying international fees as it is disabled on the platform.",
+                            "buyer": {
+                                "minimum": 70,
+                                "maximum": 140,
+                                "actual": 70,
+                                "guarantee": 140
+                            },
+                            "provider": {
+                                "minimum": 70,
+                                "maximum": 140,
+                                "actual": 70,
+                                "guarantee": 140
+                            }
+                        }, {
+                            "note": "No general liability charged: provider has verified GL insurance",
+                            "buyer": {
+                                "minimum": 70,
+                                "maximum": 140,
+                                "actual": 70,
+                                "guarantee": 140
+                            },
+                            "provider": {
+                                "minimum": 70,
+                                "maximum": 140,
+                                "actual": 70,
+                                "guarantee": 140
+                            }
+                        }, {
+                            "note": "Not applying overage fee.",
+                            "buyer": {
+                                "minimum": 70,
+                                "maximum": 140,
+                                "actual": 70,
+                                "guarantee": 140
+                            },
+                            "provider": {
+                                "minimum": 70,
+                                "maximum": 140,
+                                "actual": 70,
+                                "guarantee": 140
+                            }
+                        }, {
+                            "note": "Not applying General Liability Fee as the work order doesn't have it.",
+                            "buyer": {
+                                "minimum": 70,
+                                "maximum": 140,
+                                "actual": 70,
+                                "guarantee": 140
+                            },
+                            "provider": {
+                                "minimum": 70,
+                                "maximum": 140,
+                                "actual": 70,
+                                "guarantee": 140
+                            }
+                        }, {
+                            "note": "Transaction value tax from accounting-code 532 has been added to work order",
+                            "buyer": {
+                                "minimum": 70,
+                                "maximum": 140,
+                                "actual": 70,
+                                "guarantee": 140
+                            },
+                            "provider": {
+                                "minimum": 70,
+                                "maximum": 140,
+                                "actual": 70,
+                                "guarantee": 140
+                            }
+                        }, {
+                            "note": "State tax fee of 7.00% gtv_actual",
+                            "buyer": {
+                                "minimum": 70,
+                                "maximum": 140,
+                                "actual": 70,
+                                "guarantee": 140
+                            },
+                            "provider": {
+                                "minimum": 70,
+                                "maximum": 140,
+                                "actual": 70,
+                                "guarantee": 140
+                            }
+                        }, {
+                            "note": "Maximum State tax fee of 7.00% gtv_maximum",
+                            "buyer": {
+                                "minimum": 70,
+                                "maximum": 140,
+                                "actual": 70,
+                                "guarantee": 140
+                            },
+                            "provider": {
+                                "minimum": 70,
+                                "maximum": 140,
+                                "actual": 70,
+                                "guarantee": 140
+                            }
+                        }, {
+                            "note": "Guarantee State tax fee of 7.00% gtv_guarantee",
+                            "buyer": {
+                                "minimum": 70,
+                                "maximum": 140,
+                                "actual": 70,
+                                "guarantee": 140
+                            },
+                            "provider": {
+                                "minimum": 70,
+                                "maximum": 140,
+                                "actual": 70,
+                                "guarantee": 140
+                            }
+                        }, {
+                            "note": "Guarantee State tax fee of 7.00% gtv_guarantee",
+                            "buyer": {
+                                "minimum": 70,
+                                "maximum": 140,
+                                "actual": 70,
+                                "guarantee": 140
+                            },
+                            "provider": {
+                                "minimum": 70,
+                                "maximum": 140,
+                                "actual": 70,
+                                "guarantee": 140
+                            }
+                        }, {
+                            "note": "Maximum State tax fee of 7.00% gtv_maximum",
+                            "buyer": {
+                                "minimum": 70,
+                                "maximum": 140,
+                                "actual": 70,
+                                "guarantee": 140
+                            },
+                            "provider": {
+                                "minimum": 70,
+                                "maximum": 140,
+                                "actual": 70,
+                                "guarantee": 140
+                            }
+                        }, {
+                            "note": "State tax fee of 7.00% gtv_actual",
+                            "buyer": {
+                                "minimum": 70,
+                                "maximum": 140,
+                                "actual": 70,
+                                "guarantee": 140
+                            },
+                            "provider": {
+                                "minimum": 70,
+                                "maximum": 140,
+                                "actual": 70,
+                                "guarantee": 140
+                            }
+                        }],
+                        "attributes": [{
+                            "type": "work_order",
+                            "name": "taxable_location",
+                            "value": "1"
+                        }, {
+                            "type": "work_order",
+                            "name": "buyer_taxable_location",
+                            "value": "1"
+                        }],
+                        "from_cache": true
+                    },
+                    "publish_stats": {
+                        "has_preferred_requests": false,
+                        "has_preferred_counters": false,
+                        "requests": 0,
+                        "counter_offers": 0,
+                        "routes": 2,
+                        "declines": 0,
+                        "all_requests": 0,
+                        "provider_metadata": {
+                            "requests": [],
+                            "counter_offers": [],
+                            "routes": [{
+                                "id": 15223
+                            }, {
+                                "id": 257130
+                            }]
+                        },
+                        "correlation_id": "500a3adda193665a88d91bcd843f9f268cd43030"
+                    },
+                    "requests": {
+                        "metadata": {
+                            "total": 0,
+                            "per_page": 0,
+                            "page": 1,
+                            "pages": 1
+                        },
+                        "sum": {
+                            "all": 0
+                        },
+                        "results": [],
+                        "correlation_id": "ba9d814b30e87e368ce81de227089e0aceb6b32a",
+                        "actions": ["add", "counter_offer"]
+                    },
+                    "allow_counter_offers": true,
+                    "is_user_declined": false,
+                    "routes": {
+                        "metadata": {
+                            "total": 0,
+                            "per_page": 0,
+                            "page": 1,
+                            "pages": 1
+                        },
+                        "sum": {
+                            "all": 0
+                        },
+                        "results": [],
+                        "actions": []
+                    },
+                    "declines": {
+                        "metadata": {
+                            "total": 0,
+                            "per_page": 0,
+                            "page": 1,
+                            "pages": 1
+                        },
+                        "sum": {
+                            "all": 0
+                        },
+                        "results": [],
+                        "actions": ["add"]
+                    },
+                    "custom_fields": {
+                        "actions": [],
+                        "internal": {
+                            "id": 0,
+                            "name": "",
+                            "value": "",
+                            "role": ""
+                        },
+                        "metadata": {
+                            "total": 1,
+                            "pages": 1,
+                            "per_page": 1,
+                            "page": 1
+                        },
+                        "results": [{
+                            "id": 1,
+                            "name": "General",
+                            "order": 1,
+                            "role": "buyer",
+                            "metadata": {
+                                "total": 0,
+                                "page": 1,
+                                "pages": 1,
+                                "per_page": 0
+                            },
+                            "results": []
+                        }],
+                        "correlation_id": "a00a75494eba914536d996e804860561956a8e12"
+                    },
+                    "has_onsite_custom_field": false,
+                    "qualifications": {
+                        "actions": [],
+                        "correlation_id": "7f789a8053fc2deb1e939fee14e1e5b23afbc1aa",
+                        "selection_rule": {
+                            "id": 0,
+                            "name": "",
+                            "status": "match",
+                            "actions": [],
+                            "total_selection_rule": "19",
+                            "weight": 1,
+                            "sum": {
+                                "total": 1,
+                                "match": 1,
+                                "no_match_optional": 0,
+                                "no_match_required": 0
+                            },
+                            "results": [{
+                                "id": 3,
+                                "name": "SC_TYPE_OF_WORK",
+                                "service": "",
+                                "description": "You must have the type of work: Telecom \/ VOIP",
+                                "custom_field": {
+                                    "id": 0
+                                },
+                                "operation": "equal_to",
+                                "order": 0,
+                                "extra": "",
+                                "required": true,
+                                "status": "match",
+                                "value": "Telecom \/ VOIP",
+                                "weight": 1
+                            }],
+                            "metadata": {
+                                "per_page": 1,
+                                "pages": 0,
+                                "page": 1,
+                                "total": 1
+                            }
+                        },
+                        "ignored_missing_qualifications": false
+                    },
+                    "ratings": {
+                        "correlation_id": "b3e19e83497dded40eb5f29373de6fd8802a13d7",
+                        "buyer": {
+                            "actions": [],
+                            "overall": {
+                                "approval_period": 7,
+                                "jobs": 5066,
+                                "percent_clear_expectations": 99,
+                                "percent_respectful": 99,
+                                "approval_days_suffix": "",
+                                "stars": 5,
+                                "ratings": 23689,
+                                "approval_days": 9,
+                                "approval_days_percentile": 90,
+                                "approval_days_range": 90,
+                                "days_90_percent_approval": "3",
+                                "percent_approval": [{
+                                    "days": 3,
+                                    "percent": 46
+                                }, {
+                                    "days": 5,
+                                    "percent": 73
+                                }, {
+                                    "days": 7,
+                                    "percent": 89
+                                }, {
+                                    "days": 14,
+                                    "percent": 99
+                                }]
+                            },
+                            "work_order": {
+                                "remaining_approval_period": false
+                            },
+                            "company": {
+                                "id": 55131
+                            },
+                            "manager": {
+                                "id": 820191
+                            }
+                        },
+                        "assigned_provider": {
+                            "actions": [],
+                            "user": {
+                                "id": 0
+                            }
+                        }
+                    },
+                    "bundle": {
+                        "id": 0,
+                        "company_id": 55131,
+                        "metadata": {
+                            "total": 0,
+                            "per_page": 0
+                        },
+                        "results": [],
+                        "actions": []
+                    },
+                    "auto_dispatch_stats": {
+                        "auto_assigned": false
+                    },
+                    "schedule": {
+                        "work_order_id": 16296143,
+                        "service_window": {
+                            "mode": "exact",
+                            "start": {
+                                "local": {
+                                    "date": "2024-12-10",
+                                    "time": "09:00:00"
+                                },
+                                "utc": "2024-12-10 14:00:00"
+                            },
+                            "end": {
+                                "local": {
+                                    "date": "",
+                                    "time": ""
+                                },
+                                "utc": ""
+                            }
+                        },
+                        "time_zone": {
+                            "id": 5,
+                            "name": "America\/New_York",
+                            "offset": 1,
+                            "short": "EST"
+                        },
+                        "status_id": 2,
+                        "company_id": 55131,
+                        "today_tomorrow": "Tomorrow",
+                        "est_labor_hours": 2,
+                        "updated": {
+                            "utc": "2024-12-05 15:28:30",
+                            "local": {
+                                "date": "2024-12-05",
+                                "time": "10:28:30"
+                            },
+                            "by": {
+                                "id": 820191,
+                                "name": "Mike Lee"
+                            }
+                        },
+                        "requests": {
+                            "metadata": {
+                                "total": 0,
+                                "per_page": 0,
+                                "page": 1,
+                                "pages": 1
+                            },
+                            "results": [],
+                            "actions": []
+                        },
+                        "correlation_id": "cc0816de003ba5f1089e2b7bf752aecd462870a6",
+                        "actions": []
+                    },
+                    "conflicts": [{
+                        "work_order_id": "16219367",
+                        "title": "Desktop Access Token HW\/SW Setup| White-Glove End User Training | Animal Hospital"
+                    }],
+                    "eta": {
+                        "user": {
+                            "id": 0
+                        },
+                        "task": {
+                            "id": 128510725
+                        },
+                        "start": {
+                            "local": {
+                                "date": "",
+                                "time": ""
+                            },
+                            "utc": ""
+                        },
+                        "end": {
+                            "local": {
+                                "date": "",
+                                "time": ""
+                            },
+                            "utc": ""
+                        },
+                        "hour_estimate": 0,
+                        "notes": "",
+                        "status": {
+                            "name": "unconfirmed",
+                            "updated": {
+                                "utc": "",
+                                "local": {
+                                    "date": "",
+                                    "time": ""
+                                }
+                            }
+                        },
+                        "mode": "exact",
+                        "actions": []
+                    },
+                    "location": {
+                        "coordinates": {
+                            "latitude": 34.6665,
+                            "longitude": -79.1005,
+                            "exact": true
+                        },
+                        "work_order_id": 16296143,
+                        "mode": "custom",
+                        "address1": "",
+                        "address2": "",
+                        "city": "Lumberton",
+                        "state": "NC",
+                        "zip": "28360",
+                        "country": "US",
+                        "notes": [],
+                        "type": {
+                            "id": 1,
+                            "name": "Commercial"
+                        },
+                        "display_name": "",
+                        "status_id": 2,
+                        "correlation_id": "4e64321a9a3e96325626b4994b7546472e995eee",
+                        "zoom": "13z",
+                        "map": {
+                            "url": "https:\/\/api.maptiler.com\/maps\/streets\/static\/-79.100500,34.666500,11\/320x300@2x.png?key=RZydBF85bkJ7CsJrAl6B&attribution=0&markers=-79.1005,34.6665|,",
+                            "href": "https:\/\/www.google.com\/maps\/search\/+Lumberton+NC+28360\/@34.6665,-79.1005,13z"
+                        },
+                        "actions": ["map"]
+                    },
+                    "coords": {
+                        "distance": 87.03455406434045,
+                        "latitude": 35.8888,
+                        "longitude": -78.7351,
+                        "exact": false,
+                        "user_id": 983643
+                    },
+                    "holds": {
+                        "metadata": {
+                            "total": 0,
+                            "per_page": 0,
+                            "pages": 1,
+                            "page": 1
+                        },
+                        "actions": [],
+                        "results": [],
+                        "categories": [{
+                            "id": 4,
+                            "name": "Pending Funds"
+                        }, {
+                            "id": 22,
+                            "name": "Pending Parts"
+                        }, {
+                            "id": 23,
+                            "name": "Pending Scope Approval"
+                        }, {
+                            "id": 24,
+                            "name": "Pending Reschedule"
+                        }],
+                        "correlation_id": "781a3386846a7431816dbc49bef8c691db1367ee"
+                    },
+                    "company": {
+                        "id": 55131,
+                        "name": "Spectrotel",
+                        "photo": "https:\/\/s3.amazonaws.com\/fieldnation\/company_logo\/55131.png?id=55131",
+                        "display_company_offer_setting": true,
+                        "check_in_instructions": "",
+                        "check_out_instructions": "",
+                        "provider_utilization_max_hours": 0,
+                        "provider_utilization_max_weekly": 0,
+                        "address": {
+                            "address1": "3535 State Route 66",
+                            "address2": "",
+                            "city": "Neptune City",
+                            "state": "NJ",
+                            "postalCode": "07753",
+                            "country": "US"
+                        },
+                        "features": [{
+                            "id": 11,
+                            "name": "Auto Dispatch"
+                        }, {
+                            "id": 12,
+                            "name": "Training Module"
+                        }, {
+                            "id": 18,
+                            "name": "Roles on Work Orders"
+                        }, {
+                            "id": 19,
+                            "name": "Task List Management"
+                        }, {
+                            "id": 1,
+                            "name": "Technician Search"
+                        }, {
+                            "id": 20,
+                            "name": "Client Invoicing"
+                        }, {
+                            "id": 25,
+                            "name": "Client Request Manager 2.0 Enabled"
+                        }, {
+                            "id": 26,
+                            "name": "Lipo"
+                        }, {
+                            "id": 29,
+                            "name": "Printable Badges"
+                        }, {
+                            "id": 2,
+                            "name": "Project Management"
+                        }, {
+                            "id": 39,
+                            "name": "UI Microservice"
+                        }, {
+                            "id": 44,
+                            "name": "React Work Order Details"
+                        }, {
+                            "id": 47,
+                            "name": "Service Type"
+                        }, {
+                            "id": 4,
+                            "name": "Buy from marketplace"
+                        }, {
+                            "id": 7,
+                            "name": "Penalty Charges"
+                        }]
+                    },
+                    "manager": {
+                        "thumbnail": "https:\/\/s3.amazonaws.com\/fieldnation\/profile_image\/820191-619e69e291cab.png",
+                        "id": 820191,
+                        "username": "mlee@spectrotel.com",
+                        "first_name": "Mike",
+                        "last_name": "Lee",
+                        "name": "Mike Lee"
+                    },
+                    "w2": false,
+                    "import_id": 0,
+                    "printable": true,
+                    "status": {
+                        "id": 2,
+                        "name": "Published",
+                        "display": "Published",
+                        "is_routed": false,
+                        "code": "",
+                        "delay": 0,
+                        "ncns": false,
+                        "sub_status": "",
+                        "confirmed": true,
+                        "correlation_id": "8614b0f8c7870b6f3c925d988410281203d19a93"
+                    },
+                    "messages": {
+                        "metadata": {
+                            "total": 4,
+                            "per_page": 0,
+                            "pages": 1,
+                            "page": 1
+                        },
+                        "actions": ["add"],
+                        "results": [],
+                        "correlation_id": "60da046e2591c4b74bdef94a7cd123cd155123f2"
+                    },
+                    "require_registered_service_companies": false,
+                    "assignee": {
+                        "user": {
+                            "id": 0,
+                            "first_name": "",
+                            "last_name": "",
+                            "address1": "",
+                            "address2": "",
+                            "city": "",
+                            "state": "",
+                            "zip": "",
+                            "country": "",
+                            "coords": {
+                                "latitude": 0,
+                                "longitude": 0
+                            },
+                            "cell": "",
+                            "phone": "",
+                            "phone_ext": "",
+                            "thumbnail": "\/images\/missing-profile.png"
+                        },
+                        "status_id": 2,
+                        "work_order_id": 16296143,
+                        "in_confirmation_window": false,
+                        "actions": []
+                    },
+                    "milestones": {
+                        "time_to_dispatch": 239770,
+                        "time_to_work_done": 379173,
+                        "time_alive": 139403,
+                        "time_to_approve": 0,
+                        "created": {
+                            "utc": "2024-12-02 20:55:04",
+                            "local": {
+                                "date": "2024-12-02",
+                                "time": "15:55:04"
+                            }
+                        },
+                        "published": {
+                            "utc": "2024-12-05 15:31:14",
+                            "local": {
+                                "date": "2024-12-05",
+                                "time": "10:31:14"
+                            }
+                        },
+                        "routed": {
+                            "utc": "2024-12-06 21:56:40",
+                            "local": {
+                                "date": "2024-12-06",
+                                "time": "16:56:40"
+                            }
+                        },
+                        "assigned": {
+                            "utc": "",
+                            "local": {
+                                "date": "",
+                                "time": ""
+                            }
+                        },
+                        "workdone": {
+                            "utc": "",
+                            "local": {
+                                "date": "",
+                                "time": ""
+                            }
+                        },
+                        "approved": {
+                            "utc": "",
+                            "local": {
+                                "date": "",
+                                "time": ""
+                            }
+                        },
+                        "paid": {
+                            "utc": "",
+                            "local": {
+                                "date": "",
+                                "time": ""
+                            }
+                        },
+                        "canceled": {
+                            "utc": "",
+                            "local": {
+                                "date": "",
+                                "time": ""
+                            }
+                        }
+                    },
+                    "contacts": {
+                        "metadata": {
+                            "total": 0,
+                            "per_page": 0,
+                            "pages": 1,
+                            "page": 1
+                        },
+                        "results": [],
+                        "correlation_id": "38c5f0b5a6cb56695c32540f6d88975b2d084bf3",
+                        "actions": []
+                    },
+                    "tasks": {
+                        "metadata": {
+                            "total": 8,
+                            "per_page": 8,
+                            "pages": 1,
+                            "page": 1,
+                            "completed": {
+                                "confirmassignment": 0,
+                                "download": 0,
+                                "checkin": 0,
+                                "phone": 0,
+                                "other": 0,
+                                "closeoutnotes": 0,
+                                "checkout": 0
+                            }
+                        },
+                        "results": [{
+                            "id": 128510725,
+                            "description": "Set start time",
+                            "descriptions": {
+                                "task": "Set start time",
+                                "first": "",
+                                "second": "",
+                                "third": "",
+                                "fourth": ""
+                            },
+                            "label": "Set Start Time",
+                            "alerts": [],
+                            "group": {
+                                "label": "Pre visit",
+                                "id": "prep"
+                            },
+                            "type": {
+                                "id": 1,
+                                "key": "confirmassignment",
+                                "name": "Set Start Time"
+                            },
+                            "created": {
+                                "utc": "2024-12-02 20:55:03",
+                                "local": {
+                                    "date": "2024-12-02",
+                                    "time": "15:55:03"
+                                }
+                            },
+                            "author": {
+                                "id": 0,
+                                "first_name": "",
+                                "last_name": ""
+                            },
+                            "status": "incomplete",
+                            "eta": {
+                                "user": {
+                                    "id": 0
+                                },
+                                "task": {
+                                    "id": 128510725
+                                },
+                                "start": {
+                                    "local": {
+                                        "date": "",
+                                        "time": ""
+                                    },
+                                    "utc": ""
+                                },
+                                "end": {
+                                    "local": {
+                                        "date": "",
+                                        "time": ""
+                                    },
+                                    "utc": ""
+                                },
+                                "hour_estimate": 0,
+                                "notes": "",
+                                "status": {
+                                    "name": "unconfirmed",
+                                    "updated": {
+                                        "utc": "",
+                                        "local": {
+                                            "date": "",
+                                            "time": ""
+                                        }
+                                    }
+                                },
+                                "mode": "exact",
+                                "actions": []
+                            },
+                            "actions": []
+                        }, {
+                            "id": 128510726,
+                            "description": "Download AC_LineAuditForm.xlsx",
+                            "descriptions": {
+                                "task": "Download",
+                                "first": "AC_LineAuditForm.xlsx",
+                                "second": "",
+                                "third": "",
+                                "fourth": ""
+                            },
+                            "label": "AC_LineAuditForm.xlsx",
+                            "alerts": [],
+                            "group": {
+                                "label": "Pre visit",
+                                "id": "prep"
+                            },
+                            "type": {
+                                "id": 13,
+                                "key": "download",
+                                "name": "Download a File"
+                            },
+                            "created": {
+                                "utc": "2024-12-02 20:55:03",
+                                "local": {
+                                    "date": "2024-12-02",
+                                    "time": "15:55:03"
+                                }
+                            },
+                            "author": {
+                                "id": 0,
+                                "first_name": "",
+                                "last_name": ""
+                            },
+                            "status": "incomplete",
+                            "actions": [],
+                            "attachment": []
+                        }, {
+                            "id": 128510727,
+                            "description": "Check in",
+                            "descriptions": {
+                                "task": "Check in",
+                                "first": "",
+                                "second": "",
+                                "third": "",
+                                "fourth": ""
+                            },
+                            "label": "Check in",
+                            "alerts": [],
+                            "group": {
+                                "label": "On site",
+                                "id": "onsite"
+                            },
+                            "type": {
+                                "id": 3,
+                                "key": "checkin",
+                                "name": "Check in"
+                            },
+                            "created": {
+                                "utc": "2024-12-02 20:55:03",
+                                "local": {
+                                    "date": "2024-12-02",
+                                    "time": "15:55:03"
+                                }
+                            },
+                            "author": {
+                                "id": 0,
+                                "first_name": "",
+                                "last_name": ""
+                            },
+                            "status": "incomplete",
+                            "time_log": [],
+                            "actions": []
+                        }, {
+                            "id": 128510728,
+                            "description": "Call *************** regarding checking in with Spectrotel upon arrival",
+                            "descriptions": {
+                                "task": "Call",
+                                "first": "***************",
+                                "second": "regarding",
+                                "third": "checking in with Spectrotel upon arrival",
+                                "fourth": ""
+                            },
+                            "label": "checking in with Spectrotel upon arrival",
+                            "alerts": [],
+                            "group": {
+                                "label": "On site",
+                                "id": "onsite"
+                            },
+                            "type": {
+                                "id": 8,
+                                "key": "phone",
+                                "name": "Call phone number"
+                            },
+                            "created": {
+                                "utc": "2024-12-02 20:55:03",
+                                "local": {
+                                    "date": "2024-12-02",
+                                    "time": "15:55:03"
+                                }
+                            },
+                            "author": {
+                                "id": 0,
+                                "first_name": "",
+                                "last_name": ""
+                            },
+                            "status": "incomplete",
+                            "actions": [],
+                            "phone": "***************"
+                        }, {
+                            "id": 128510729,
+                            "description": "Perform POTS line audit",
+                            "descriptions": {
+                                "task": "Perform POTS line audit",
+                                "first": "",
+                                "second": "",
+                                "third": "",
+                                "fourth": ""
+                            },
+                            "label": "Perform POTS line audit",
+                            "alerts": [],
+                            "group": {
+                                "label": "On site",
+                                "id": "onsite"
+                            },
+                            "type": {
+                                "id": 10,
+                                "key": "other",
+                                "name": "Unique task"
+                            },
+                            "created": {
+                                "utc": "2024-12-02 20:55:03",
+                                "local": {
+                                    "date": "2024-12-02",
+                                    "time": "15:55:03"
+                                }
+                            },
+                            "author": {
+                                "id": 0,
+                                "first_name": "",
+                                "last_name": ""
+                            },
+                            "status": "incomplete",
+                            "actions": []
+                        }, {
+                            "id": 128510730,
+                            "description": "Call *************** regarding audit report. Tech must call Spectrotel before leaving site to go over the audit findings with customer and Spectrotel",
+                            "descriptions": {
+                                "task": "Call",
+                                "first": "***************",
+                                "second": "regarding",
+                                "third": "audit report. Tech must call Spectrotel before leaving site to go over the audit findings with customer and Spectrotel",
+                                "fourth": ""
+                            },
+                            "label": "audit report. Tech must call Spectrotel before leaving site to go over the audit findings with customer and Spectrotel",
+                            "alerts": [],
+                            "group": {
+                                "label": "On site",
+                                "id": "onsite"
+                            },
+                            "type": {
+                                "id": 8,
+                                "key": "phone",
+                                "name": "Call phone number"
+                            },
+                            "created": {
+                                "utc": "2024-12-02 20:55:03",
+                                "local": {
+                                    "date": "2024-12-02",
+                                    "time": "15:55:03"
+                                }
+                            },
+                            "author": {
+                                "id": 0,
+                                "first_name": "",
+                                "last_name": ""
+                            },
+                            "status": "incomplete",
+                            "actions": [],
+                            "phone": "***************"
+                        }, {
+                            "id": 128510731,
+                            "description": "Enter closeout notes",
+                            "descriptions": {
+                                "task": "Enter closeout notes",
+                                "first": "",
+                                "second": "",
+                                "third": "",
+                                "fourth": ""
+                            },
+                            "label": "Enter close out notes",
+                            "alerts": [],
+                            "group": {
+                                "label": "On site",
+                                "id": "onsite"
+                            },
+                            "type": {
+                                "id": 2,
+                                "key": "closeoutnotes",
+                                "name": "Enter close out notes"
+                            },
+                            "created": {
+                                "utc": "2024-12-02 20:55:03",
+                                "local": {
+                                    "date": "2024-12-02",
+                                    "time": "15:55:03"
+                                }
+                            },
+                            "author": {
+                                "id": 0,
+                                "first_name": "",
+                                "last_name": ""
+                            },
+                            "status": "incomplete",
+                            "actions": [],
+                            "closing_notes": "",
+                            "closing_notes_internal": []
+                        }, {
+                            "id": 128510732,
+                            "description": "Check out",
+                            "descriptions": {
+                                "task": "Check out",
+                                "first": "",
+                                "second": "",
+                                "third": "",
+                                "fourth": ""
+                            },
+                            "label": "Check out",
+                            "alerts": [],
+                            "group": {
+                                "label": "On site",
+                                "id": "onsite"
+                            },
+                            "type": {
+                                "id": 4,
+                                "key": "checkout",
+                                "name": "Check out"
+                            },
+                            "created": {
+                                "utc": "2024-12-02 20:55:03",
+                                "local": {
+                                    "date": "2024-12-02",
+                                    "time": "15:55:03"
+                                }
+                            },
+                            "author": {
+                                "id": 0,
+                                "first_name": "",
+                                "last_name": ""
+                            },
+                            "status": "incomplete",
+                            "actions": [],
+                            "time_log": []
+                        }],
+                        "correlation_id": "e23f9006ab4d2ca21ac6db29057d7f56480e87b2",
+                        "actions": []
+                    },
+                    "swaps": {
+                        "metadata": {
+                            "total": 0,
+                            "per_page": 0,
+                            "pages": 1,
+                            "page": 1
+                        },
+                        "actions": [],
+                        "results": [],
+                        "correlation_id": "ed4e6874e76d891c32d93b59d74d557148efaaa7"
+                    },
+                    "equipments": [],
+                    "service_types": [{
+                        "id": 616,
+                        "name": "Site survey"
+                    }],
+                    "service_types_legacy": [{
+                        "id": 9,
+                        "name": "Site survey"
+                    }],
+                    "site_device": [],
+                    "high_potential": false,
+                    "special_skill": {
+                        "id": 0,
+                        "required": false,
+                        "certification_id": 0,
+                        "dynamic_term_id": 0,
+                        "name": "",
+                        "feeReduction": 0,
+                        "fee": 0,
+                        "international": 0
+                    },
+                    "description": {
+                        "html": "<p><strong><u>--------------------<\/u>JOB DETAILS<u>--------------------<\/u><\/strong><\/p><p>Tech is to perform below work. Tech must be familiar with pots testing and troubleshooting.<\/p><p>Tech is not to exceed 2 hour limit without authorization. <\/p><p><u>Technician must have valid photo ID<\/u><\/p><p><br><\/p><p><u>Check in with Work Order Manager and local onsite contact.<\/u><\/p><ol><li>Tech is to confirm dial tone and ID lines using 800-444-4444 on all existing POTS lines (This includes lines not on tech's work order) Please see line information below.<\/li><li>Tech is to call each line and confirm if line gets RNA, BUSY, VOICEMAIL, or MODEM\/FAX TONE, etc. Tech is to record finding for each line.<\/li><li>Tech is to ID Lines for Fax, Alarm, Elevator, Door Box, Etc.<\/li><li>If alarm lines are found please take photos of the alarm monitoring service and manufacturer. Include the info in the closeout notes as well.<\/li><li>If FAX is present, please inquire if it's being used, and whether it is public or accessible from outside of the company.<\/li><li>Tech is to call Spectrotel when audit is complete to report findings to Spectrotel and customer contact.<\/li><\/ol><p><br><\/p><p><u>Line Information:<\/u><\/p><p><p>x<\/p>\r\n<p>&nbsp;<\/p><\/p><p><strong><u>------------------------------------------------------------<\/u><\/strong><\/p><p><strong>\u2666 Material and Equipment<\/strong><\/p><p>The technician will need standard telecom materials and tools. Butt set\/test set, cable toner and probe, etc.<\/p><p>The provider must have a valid State\/Federal issued photo ID.<\/p><p><strong>\u2666 Closeout Notes and Deliverables<\/strong><\/p><p>Detailed closeout notes are required on this work order before checking out on site. Work order will be returned incomplete resulting in approval delay if performed work is not summarized in closeout notes.<\/p><p>We request that work orders are marked complete within 24 hours of the dispatch.<\/p><p>Subsequent work that may follow this work order's conclusion will be submitted under a new work order.<\/p><p>Please provide pictures of performed work on site and attach to this work order. Limit to a max of 30 pictures.<\/p><p>If a location denies entry for a missing Certificate of Insurance (COI) please request a sample COI with requirements and upload to Deliverables.<\/p>",
+                        "markdown": "**--------------------JOB DETAILS--------------------**\n\nTech is to perform below work. Tech must be familiar with pots testing and troubleshooting.\n\nTech is not to exceed 2 hour limit without authorization.\n\nTechnician must have valid photo ID\n\nCheck in with Work Order Manager and local onsite contact.\n\n1. Tech is to confirm dial tone and ID lines using 800-444-4444 on all existing POTS lines (This includes lines not on tech's work order) Please see line information below.\n2. Tech is to call each line and confirm if line gets RNA, BUSY, VOICEMAIL, or MODEM\/FAX TONE, etc. Tech is to record finding for each line.\n3. Tech is to ID Lines for Fax, Alarm, Elevator, Door Box, Etc.\n4. If alarm lines are found please take photos of the alarm monitoring service and manufacturer. Include the info in the closeout notes as well.\n5. If FAX is present, please inquire if it's being used, and whether it is public or accessible from outside of the company.\n6. Tech is to call Spectrotel when audit is complete to report findings to Spectrotel and customer contact.\n\nLine Information:\n\nx\n\n**------------------------------------------------------------**\n\n**\u2666 Material and Equipment**\n\nThe technician will need standard telecom materials and tools. Butt set\/test set, cable toner and probe, etc.\n\nThe provider must have a valid State\/Federal issued photo ID.\n\n**\u2666 Closeout Notes and Deliverables**\n\nDetailed closeout notes are required on this work order before checking out on site. Work order will be returned incomplete resulting in approval delay if performed work is not summarized in closeout notes.\n\nWe request that work orders are marked complete within 24 hours of the dispatch.\n\nSubsequent work that may follow this work order's conclusion will be submitted under a new work order.\n\nPlease provide pictures of performed work on site and attach to this work order. Limit to a max of 30 pictures.\n\nIf a location denies entry for a missing Certificate of Insurance (COI) please request a sample COI with requirements and upload to Deliverables.",
+                        "actions": []
+                    },
+                    "policy_and_procedures": {
+                        "html": "<strong>Pay<\/strong>: You agree that pay is determined by time on site reflected by Spectrotel's internal log. Please communicate with Support or Work Order Manager, while on site, about any time needed post case closure, and request it be noted.<br \/>1 hour Field Nation minimum, rate\/hour, is the standard unless you counter for some other type of pay.&nbsp;Provider's pay terms found in profiles or comments, according to Field Nation, are not valid.<br \/>Listed max labor hours is not an assumption of the amount of time this work order will take and does not equate to a pay minimum.Work may conclude with the minimum hour or may extend multiple hours - which is very common. <br \/>Actual work time over the listed max hours will be adjusted (please ensure to note increase reason.) Do not counter offer a fixed rate based on the listed labor hours.<br \/><strong>Expenses<\/strong>: Travel expenses must be put in a counter offer before assignment. No longer will travel expenses be approved after assignment.&nbsp;<br \/><strong>Assignment<\/strong>:The provider on site MUST be the provider assigned.&nbsp;Technician on site must have a valid Field Nation profile. Any tech swaps must be approved by the buyer through the Provider Swap process. Field Nation&rsquo;s policy on unauthorized providers on site will be adhered to and reported.<br \/>Please do not solicit Buyer with calls for work assignment.<br \/>The provider is expected to understand the work requested of them and have the required equipment before arrival at a site.<br \/>Out-of-Scope work requests made by a client, including revisit\/additional visit requests must be authorized by the Work Order Manager or other Spectrotel representatives only.<br \/><strong><strong>Dress<\/strong>: <\/strong>As you represent yourself and Spectrotel in the field, we urge you to dress neatly and appropriately. On site, please wear clean, fitting attire without tears or offensive imagery. We ask that your professional appearance matches your professional work.<strong><br \/>Penalties<\/strong>: If you do not check-in and check-out live while onsite, a $15 penalty will apply. If you are experiencing issues with the platform - don't delay completion and reach out to Field Nation support.<br \/>If the work order is not complete, and deliverables are not submitted within 3 days, a $15 penalty will apply.<br \/><strong>Cancelations<\/strong>: Cancels the day before work schedule, a payment of $30 will be given. Cancels the day of work schedule, a payment of 1 hour labor will be given.<br \/><strong>Approval<\/strong>: Payment approval turnaround is within 3-4 business days.",
+                        "markdown": "**Pay**: You agree that pay is determined by time on site reflected by Spectrotel's internal log. Please communicate with Support or Work Order Manager, while on site, about any time needed post case closure, and request it be noted.  \n1 hour Field Nation minimum, rate\/hour, is the standard unless you counter for some other type of pay. Provider's pay terms found in profiles or comments, according to Field Nation, are not valid.  \nListed max labor hours is not an assumption of the amount of time this work order will take and does not equate to a pay minimum.Work may conclude with the minimum hour or may extend multiple hours - which is very common.   \nActual work time over the listed max hours will be adjusted (please ensure to note increase reason.) Do not counter offer a fixed rate based on the listed labor hours.  \n**Expenses**: Travel expenses must be put in a counter offer before assignment. No longer will travel expenses be approved after assignment.   \n**Assignment**:The provider on site MUST be the provider assigned. Technician on site must have a valid Field Nation profile. Any tech swaps must be approved by the buyer through the Provider Swap process. Field Nation\u2019s policy on unauthorized providers on site will be adhered to and reported.  \nPlease do not solicit Buyer with calls for work assignment.  \nThe provider is expected to understand the work requested of them and have the required equipment before arrival at a site.  \nOut-of-Scope work requests made by a client, including revisit\/additional visit requests must be authorized by the Work Order Manager or other Spectrotel representatives only.  \n****Dress**:** As you represent yourself and Spectrotel in the field, we urge you to dress neatly and appropriately. On site, please wear clean, fitting attire without tears or offensive imagery. We ask that your professional appearance matches your professional work. **Penalties**: If you do not check-in and check-out live while onsite, a $15 penalty will apply. If you are experiencing issues with the platform - don't delay completion and reach out to Field Nation support.  \nIf the work order is not complete, and deliverables are not submitted within 3 days, a $15 penalty will apply.  \n**Cancelations**: Cancels the day before work schedule, a payment of $30 will be given. Cancels the day of work schedule, a payment of 1 hour labor will be given.  \n**Approval**: Payment approval turnaround is within 3-4 business days."
+                    },
+                    "standard_instructions": {
+                        "html": "",
+                        "markdown": ""
+                    },
+                    "progress": {
+                        "sum": {
+                            "all": 8,
+                            "complete": 0,
+                            "incomplete": 8
+                        },
+                        "label": "Tasks"
+                    },
+                    "require_ein": false,
+                    "advanced_qualifications": true,
+                    "pending_routing_provider": [],
+                    "attributes": {
+                        "survey_id": 0,
+                        "ignored_missing_qualifications": false,
+                        "workorder_network_change_admin_only": "0"
+                    },
+                    "require_gps": true,
+                    "require_ontime": true,
+                    "has_version_change": false,
+                    "smart_matched": false,
+                    "role": {
+                        "role": "viewer",
+                        "role_context": 2,
+                        "network_id": "1",
+                        "status_id": 2,
+                        "is_remote": false,
+                        "assigned_user_id": 0,
+                        "manager_id": 820191,
+                        "service_company_id": 0,
+                        "sub_roles": ["ncns", "can_get_routed", "can_request", "has_marketplace", "provider"],
+                        "active_managed_provider": 0,
+                        "work_order_company_id": 55131,
+                        "managed_work_order": false
+                    },
+                    "workflow_completion": {
+                        "metadata": {
+                            "page": 1,
+                            "pages": 1,
+                            "per_page": 0,
+                            "total": 0
+                        },
+                        "status": "valid",
+                        "results": []
+                    },
+                    "types_of_work": [{
+                        "id": 106,
+                        "name": "POTS",
+                        "isPrimary": true,
+                        "legacyTypeOfWorkId": null,
+                        "source": "self_reported"
+                    }],
+                    "segments": [{
+                        "id": 106,
+                        "name": "POTS",
+                        "isPrimary": true,
+                        "legacyTypeOfWorkId": null,
+                        "source": "self_reported"
+                    }],
+                    "tags": {
+                        "metadata": {
+                            "total": 0,
+                            "per_page": 0,
+                            "pages": 1,
+                            "page": 1
+                        },
+                        "actions": [],
+                        "results": [],
+                        "correlation_id": "cd5f770185459adcc5fb8c4ab1da74314a3c49f6"
+                    },
+                    "work_order_id": 16296143,
+                    "actions": ["tasks", "buyer_name_shown", "messaging", "request", "counter_offer", "service_types", "require_gps"],
+                    "title": "POTS Line Audit (Make Offer, Suggest Schedule)",
+                    "correlation_id": "a628131a5e82b84a5973cbaf57776d3075430ee6",
+                    "href": "https:\/\/app.fieldnation.com\/workorders\/16296143",
+                    "type_of_work": {
+                        "id": 3,
+                        "name": "Telecom \/ VOIP"
+                    },
+                    "closing_notes": "",
+                    "tasks_enabled": true,
+                    "workflow_cancel": {
+                        "metadata": {
+                            "total": 1,
+                            "pages": 1,
+                            "per_page": 1,
+                            "page": 1
+                        },
+                        "results": ["Your role is not allowed to cancel this work order."],
+                        "status": "invalid"
+                    },
+                    "stalled": {
+                        "actions": [],
+                        "status": "invalid",
+                        "action_date": {
+                            "utc": "",
+                            "local": {
+                                "date": "",
+                                "time": ""
+                            }
+                        }
+                    }
+                };
+            </script>
+            <script type="text/javascript">
+                window.selection_rules = [{
+                    "id": 0,
+                    "name": "Default ranking"
+                }];
+            </script>
+            <script type="text/javascript">
+                window.histories = {};
+            </script>
+            <script type="text/javascript">
+                window.support_tickets = {};
+            </script>
+            <script type="text/javascript">
+                window.messages = {};
+            </script>
+            <script type="text/javascript">
+                window.auto_publish = false;
+            </script>
+            <script type="text/javascript">
+                window.insurance = {};
+            </script>
+            <script type="text/javascript">
+                window.eligibility = false;
+            </script>
+            <script type="text/javascript">
+                window.is_parts_and_materials_enabled = false;
+            </script>
+            <script type="text/javascript">
+                window.groups = {};
+            </script>
+            <script type="text/javascript">
+                window.company = {};
+            </script>
+            <script type="text/javascript">
+                window.activity_metrics = false;
+            </script>
+            <script type="text/javascript">
+                window.providerOAI = {
+                    "preference": [{
+                        "company_id": 0,
+                        "active": false,
+                        "created_at": "0000-00-00 00:00:00",
+                        "starts_at": "0000-00-00 00:00:00"
+                    }]
+                };
+            </script>
+        </div>
+    </div>
+</div>
+<link rel="stylesheet" href="//fonts.googleapis.com/css?family=Open+Sans:400,700,800&amp;subset=latin,latin-ext">
+<script crossorigin src="//unpkg.com/react@17.0.2/umd/react.production.min.js"></script>
+<script crossorigin src="//unpkg.com/react-dom@17.0.2/umd/react-dom.production.min.js"></script>
+<script crossorigin src="https://assets.fieldnation.com/pc/releases/3.44.43/platform-components-master.js"></script>
+<script crossorigin src="https://assets.fieldnation.com/pc-widgets/releases/2.0.66/pc-widgets-main.js"></script>
+<script src="https://checkout.clover.com/sdk.js"></script>
+<script src="https://assets.fieldnation.com/scss.68ea9d3c31c46cca6643.js"></script>
+<link rel="stylesheet" href="https://assets.fieldnation.com/scss.a09b52b9d2eb71e8e3dd.css">
+<link rel="stylesheet" href="https://assets.fieldnation.com/NavigationV2.5b634138d5134ab3e219.css">
+<link rel="stylesheet" href="https://assets.fieldnation.com/Globals.a438aabd54b149a56fc2.css">
+<link rel="stylesheet" href="https://assets.fieldnation.com/proxy.c997b173326378e2dc31.css">
+<link rel="stylesheet" href="https://assets.fieldnation.com/WorkOrderDetail.3a0d0d7df44124acd869.css">
+<script src="//cdnjs.cloudflare.com/ajax/libs/gsap/1.20.3/TweenMax.min.js"></script>
+<script src="https://assets.fieldnation.com/vendor_94e83994400b535d7a65.production.min.js"></script>
+<script src="https://assets.fieldnation.com/common.536143bfe7f7534715ff.js"></script>
+<script src="https://assets.fieldnation.com/NavigationV2.49a392ad69c45503b593.js"></script>
+<script src="https://assets.fieldnation.com/Globals.35a8699bfff2ca440958.js"></script>
+<script type="text/javascript" src="https://assets.fieldnation.com/user-profile.private-feedback.master.js"></script>
+<script type="text/javascript" src="https://assets.fieldnation.com/user-profile.sidebar.master.js"></script>
+<script type="text/javascript" src="https://assets.fieldnation.com/user-profile.skillsServiceWidget.master.js"></script>
+<script type="text/javascript" src="https://assets.fieldnation.com/integration-parts-and-materials-ui.PartAndMaterialsWidget.master.js"></script>
+<script type="text/javascript" src="https://assets.fieldnation.com/activity-metrics-ui.woPerformanceMetrics.main.js"></script>
+<script type="text/javascript" src="https://assets.fieldnation.com/recruitments.surveyCreateWidget.master.js"></script>
+<script type="text/javascript" src="https://assets.fieldnation.com/recruitments.surveyDetailsWidget.master.js"></script>
+<script type="text/javascript" src="https://assets.fieldnation.com/recruitments.surveyInterceptWidget.master.js"></script>
+<script type="text/javascript" src="https://maps.googleapis.com/maps/api/js?key=REDACTED_GOOGLE_MAPS_KEY&amp;libraries=places&amp;file=.js"></script>
+<script type="text/javascript" src="https://assets.fieldnation.com/WorkOrderDetail.9aaa14fd6969dedf85a8.js"></script>
+<script type="text/javascript" src="https://assets.fieldnation.com/qualifications.qualificationsInterceptWidget.main.js"></script>
+<script type="text/javascript">
+    (function(i, s, o, g, r, a, m) {
+            i['GoogleAnalyticsObject'] = r;
+            i[r] = i[r] || function() {
+                (i[r].q = i[r].q || []).push(arguments)
+            }
+                ,
+                i[r].l = 1 * new Date();
+            a = s.createElement(o),
+                m = s.getElementsByTagName(o)[0];
+            a.async = 1;
+            a.src = g;
+            m.parentNode.insertBefore(a, m)
+        }
+    )(window, document, 'script', '//www.google-analytics.com/analytics.js', 'ga');
+
+    ga('create', 'UA-3952637-1', 'fieldnation.com');
+    ga('require', 'linkid', 'linkid.js');
+    ga('send', 'pageview', {
+        'dimension1': '2'// Group ID dimension
+    });
+    ga(function(tracker) {
+        var clientId = tracker.get('clientId');
+        ga('set', 'dimension3', clientId);
+    });
+
+    // wootric
+    var pattern = /^\/workorders(\/)?$/;
+    if (pattern.test(window.location.pathname) && window.userSiteTitle == "Field Nation") {
+        // Wootric for Net Promoter Score (NPS) survey
+        window.wootricSettings = {
+            email: window.userEmail,
+            created_at: window.userCreateDate,
+            product_name: window.userSiteTitle,
+            account_token: (window.NODE_ENV == "production" ? "NPS-9006d07a" : "NPS-959a6f34"),
+            properties: {
+                user_group: window.userGroupName,
+                is_buyer: window.isBuyer,
+                managed_providers: window.managedProviders ? 'Yes' : 'No',
+                is_mp_manager: window.marketplaceManager
+            }
+        };
+
+        /*{literal}<![CDATA[*/
+        if (window.wootricSettings) {
+            let i = new Image;
+            i.src = "//d8myem934l1zi.cloudfront.net/pixel.gif?account_token=" + window.wootricSettings.account_token + "&email=" + encodeURIComponent(window.wootricSettings.email) + "&created_at=" + window.wootricSettings.created_at + "&url=" + encodeURIComponent(window.location) + "&random=" + Math.random()
+        }
+        window.lightningjs || function(c) {
+            function g(b, d) {
+                d && (d += (/\?/.test(d) ? "&" : "?") + "lv=1");
+                c[b] || function() {
+                    var i = window
+                        , h = document
+                        , j = b
+                        , g = h.location.protocol
+                        , l = "load"
+                        , k = 0;
+                    (function() {
+                            function b() {
+                                a.P(l);
+                                a.w = 1;
+                                c[j]("_load")
+                            }
+                            c[j] = function() {
+                                function m() {
+                                    m.id = e;
+                                    return c[j].apply(m, arguments)
+                                }
+                                var b, e = ++k;
+                                b = this && this != i ? this.id || 0 : 0;
+                                (a.s = a.s || []).push([e, b, arguments]);
+                                m.then = function(b, c, h) {
+                                    var d = a.fh[e] = a.fh[e] || []
+                                        , j = a.eh[e] = a.eh[e] || []
+                                        , f = a.ph[e] = a.ph[e] || [];
+                                    b && d.push(b);
+                                    c && j.push(c);
+                                    h && f.push(h);
+                                    return m
+                                }
+                                ;
+                                return m
+                            }
+                            ;
+                            var a = c[j]._ = {};
+                            a.fh = {};
+                            a.eh = {};
+                            a.ph = {};
+                            a.l = d ? d.replace(/^\/\//, (g == "https:" ? g : "http:") + "//") : d;
+                            a.p = {
+                                0: +new Date
+                            };
+                            a.P = function(b) {
+                                a.p[b] = new Date - a.p[0]
+                            }
+                            ;
+                            a.w && b();
+                            i.addEventListener ? i.addEventListener(l, b, !1) : i.attachEvent("on" + l, b);
+                            var q = function() {
+                                function b() {
+                                    return ["<head></head><", c, ' onload="var d=', n, ";d.getElementsByTagName('head')[0].", d, "(d.", g, "('script')).", i, "='", a.l, "'\"></", c, ">"].join("")
+                                }
+                                var c = "body"
+                                    , e = h[c];
+                                if (!e)
+                                    return setTimeout(q, 100);
+                                a.P(1);
+                                var d = "appendChild", g = "createElement", i = "src", k = h[g]("div"), l = k[d](h[g]("div")), f = h[g]("iframe"), n = "document", p;
+                                k.style.display = "none";
+                                e.insertBefore(k, e.firstChild).id = o + "-" + j;
+                                f.frameBorder = "0";
+                                f.id = o + "-frame-" + j;
+                                /MSIE[ ]+6/.test(navigator.userAgent) && (f[i] = "javascript:false");
+                                f.allowTransparency = "true";
+                                l[d](f);
+                                try {
+                                    f.contentWindow[n].open()
+                                } catch (s) {
+                                    a.domain = h.domain,
+                                        p = "javascript:var d=" + n + ".open();d.domain='" + h.domain + "';",
+                                        f[i] = p + "void(0);"
+                                }
+                                try {
+                                    var r = f.contentWindow[n];
+                                    r.write(b());
+                                    r.close()
+                                } catch (t) {
+                                    f[i] = p + 'd.write("' + b().replace(/"/g, String.fromCharCode(92) + '"') + '");d.close();'
+                                }
+                                a.P(2)
+                            };
+                            a.l && q()
+                        }
+                    )()
+                }();
+                c[b].lv = "1";
+                return c[b]
+            }
+            var o = "lightningjs"
+                , k = window[o] = g(o);
+            k.require = g;
+            k.modules = c
+        }({});
+        window.wootric = lightningjs.require("wootric", "//d27j601g4x0gd5.cloudfront.net/beacon.js");
+        window.wootric("run");
+        /*]]>{/literal}*/
+    }
+
+    // mouseflow
+    window._mfq = window._mfq || [];
+    var activateMouseflow = function() {
+        var mf = document.createElement("script");
+        mf.type = "text/javascript";
+        mf.async = true;
+        mf.src = "//cdn.mouseflow.com/projects/a5e05deb-b194-4d99-8867-993546701d22.js";
+        document.getElementsByTagName("head")[0].appendChild(mf);
+    };
+    var enableMouseFlow = function() {
+        sessionStorage.setItem('mf_start', '1');
+        activateMouseflow();
+    };
+    var setMouseFlowTag = function(tagName) {
+        window._mfq.push(['tag', tagName]);
+    };
+    var setMouseFlowVar = function(varName, value) {
+        window._mfq.push(['setVariable', varName, value]);
+    };
+    if (sessionStorage.getItem('mf_start') == '1') {
+        activateMouseflow();
+    }
+
+    const features = window.context.features.results.map(function(x) {
+        return x.id
+    });
+    const group_id = Number.parseInt(window.context.group.id || 0, 10);
+    const company_id = window.context.company ? Number.parseInt(window.context.company.id || 0, 10) : 0;
+
+    let userType = 'Unknown';
+    if (group_id === 1) {
+        // provider or managed provider
+        userType = company_id === 0 ? 'Marketplace Provider' : 'Managed Provider';
+    } else if ([2, 7, 8].includes(group_id)) {
+        // admin, manager, or dispatcher, check for features.
+        const buyingFeature = features.find(function(f) {
+            return f === 4
+        });
+        const scFeature = features.find(function(f) {
+            return f === 33
+        })
+        if (buyingFeature && scFeature) {
+            userType = 'Buyer/Service Company';
+        } else if (buyingFeature) {
+            userType = 'Buyer';
+        } else if (scFeature) {
+            userType = 'Service Company';
+        }
+    }
+
+    const app_id = window.location.origin.match(/https:\/\/(app|ui).fieldnation.com/) ? 'q77i1otv' : 'flq8a8sh';
+    if (window.top_nav.userId) {
+        const tier = window.contract.marketplace_buyer?.tier || '';
+        const tierUpper = tier.charAt(0).toUpperCase() + tier.slice(1);
+        let gmStatus = 'None';
+        const contractSource = window.contract.metadata?.source.system;
+        if (contractSource?.startsWith('gm-wave-')) {
+            gmStatus = `Wave ${contractSource[contractSource.length - 1]}`
+        }
+        const providerTier = (window.contract.marketplace_provider?.tier === 'premier' && window.contract.marketplace_provider.enabled) ? 'Provider Pro' : 'Provider Standard';
+        window.intercomSettings = {
+            app_id,
+            name: window.top_nav.userName,
+            // Full name
+            email: window.top_nav.userEmail,
+            // Email address
+            user_id: window.top_nav.userId,
+            // User id
+            "Group ID": window.context.group.id,
+            "Group Name": window.context.group.name,
+            "User Type": userType,
+            state: window.context.state,
+            created_at: window.top_nav.userCreatedDate,
+            // Signup date as a Unix timestamp
+            "Status": window.context.status.name,
+            "Marketplace Status": window.context.group.id === 1 ? window.context.marketplace_status : undefined,
+            "Existing Buyer GM": gmStatus,
+            "Provider Plan": providerTier,
+        }
+        if (window.context.company && window.context.company.id) {
+            window.intercomSettings.company = {
+                company_id: window.context.company.id,
+                name: window.context.company.name,
+                plan: tierUpper,
+            }
+        }
+    } else {
+        window.intercomSettings = {
+            app_id,
+        }
+    }
+    (function() {
+            var w = window;
+            var ic = w.Intercom;
+            if (typeof ic === "function") {
+                ic('reattach_activator');
+                ic('update', w.intercomSettings);
+            } else {
+                var d = document;
+                var i = function() {
+                    i.c(arguments);
+                };
+                i.q = [];
+                i.c = function(args) {
+                    i.q.push(args);
+                }
+                ;
+                w.Intercom = i;
+                var l = function() {
+                    var s = d.createElement('script');
+                    s.type = 'text/javascript';
+                    s.async = true;
+                    s.src = 'https://widget.intercom.io/widget/q77i1otv';
+                    var x = d.getElementsByTagName('script')[0];
+                    x.parentNode.insertBefore(s, x);
+                };
+                if (w.attachEvent) {
+                    w.attachEvent('onload', l);
+                } else {
+                    w.addEventListener('load', l, false);
+                }
+            }
+        }
+    )();
+</script>
+</body>
+</html>

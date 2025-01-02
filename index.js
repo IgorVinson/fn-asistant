@@ -5,6 +5,7 @@ import {getOrderLink} from "./utils/gmail/getOrderLink.js";
 import {google} from "googleapis";
 import {loginToFieldNation} from "./utils/FieldNation/loginToFieldNation.js";
 import puppeteer from "puppeteer";
+import {fetchWorkOrderData} from "./utils/fetchWorkOrderData.js";
 
 // Налаштовуємо сервер
 const app = express();
@@ -16,12 +17,12 @@ const browser = await puppeteer.launch({headless: false}); // headless: false д
 const pageFN = await browser.newPage();
 
 loginToFieldNation(browser, pageFN);
-const pageWM = await browser.newPage();
-await pageWM.goto('https://www.workmarket.com/login')
+// const pageWM = await browser.newPage();
+// await pageWM.goto('https://www.workmarket.com/login')
 
 async function periodicCheck() {
     const auth = await authorize();
-    const gmail = await google.gmail({ version: 'v1', auth });
+    const gmail = await google.gmail({version: 'v1', auth});
     try {
 
         setInterval(async () => {
@@ -31,31 +32,42 @@ async function periodicCheck() {
                 // Виводимо посилання з листа
                 const orderLink = getOrderLink(lastEmailBody);
 
-                if(orderLink?.includes('fieldnation')) {
-                    const page = await browser.newPage();
-                    await page.goto(orderLink, {waitUntil: 'load'});
-                }
-                else {
-                    try {
-                        const encodedOrderLink = encodeURI(orderLink);
-                        const page = await browser.newPage();
-                        await page.goto(encodedOrderLink, { waitUntil: 'load' });
-                    } catch (error) {
-                        console.error('Error during navigation:', error);
-                    }
-                }
-
-
+                // if(orderLink?.includes('fieldnation')) {
+                //     try {
+                //         const page = await browser.newPage();
+                //         await page.goto(orderLink, { waitUntil: 'load' });
+                //
+                //         // extractData(browser, page);
+                //         // console.log(laborAmount)
+                //     }
+                //     catch (error) {
+                //         console.error('Error during navigation:', error);
+                //     }
+                //
+                //
+                // }
+                // else {
+                //     try {
+                //         const encodedOrderLink = encodeURI(orderLink);
+                //         const page = await browser.newPage();
+                //         await page.goto(encodedOrderLink, { waitUntil: 'load' });
+                //         //{labor, hours, title, description, date, distance}
+                //
+                //     } catch (error) {
+                //         console.error('Error during navigation:', error);
+                //     }
+                // }
 
                 console.log('Посилання на замовлення:', orderLink);
+                const data = await fetchWorkOrderData(orderLink);
+                console.log(data);
 
             }
-        }, 5000); // Перевіряємо кожну 1 хвилин
+        }, 10000); // Перевіряємо кожні 5 секунд
     } catch (error) {
         console.error('Error during authorization or email check:', error);
     }
 }
-
 
 // Старт сервера
 app.listen(port, async () => {
