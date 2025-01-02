@@ -83,7 +83,7 @@ async function periodicCheck() {
                 const SPEED = 50; // Середня швидкість у милях на годину
                 const FREE_TRAVEL_LIMIT = 50 / 60; // Безкоштовний час у годинах (50 хв = 50 / 60)
                 const TRAVEL_RATE = 30; // Ставка за годину дороги
-                const MIN_PAY_THRESHOLD = 125; // Мінімальна оплата за виїзд
+                const MIN_PAY_THRESHOLD = 150; // Мінімальна оплата за виїзд
 
                 // Розрахунок часу в дорозі з урахуванням поїздки "туди і назад"
                 const travelTime = Math.max(0, (distance / SPEED) * 2 - FREE_TRAVEL_LIMIT);
