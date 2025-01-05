@@ -57,8 +57,7 @@ export async function postWorOrderRequest(url, time, estHours) {
                 console.error("Error sending work order request:", error);
             }
         )
-
-        // Перевірка статусу відповіді
+        
     } catch (error) {
         console.error('Помилка:', error.message);
         return null;

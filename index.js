@@ -61,15 +61,7 @@ async function periodicCheck() {
                 // }
 
                 console.log("order`s link", orderLink);
-
-                // const data = await getWorkOrderData(orderLink);
-                // const time = data.startDateAndTime.local;
-                // const estHours = data.estLaborHours;
-                // console.log(data);
-                //
-                // await postWorOrderRequest(orderLink, time, estHours);
-                // await sendWorkOrderMessage(orderLink);
-
+                
                 const data = await getWorkOrderData(orderLink);
 
                 if (!data) {
@@ -99,7 +91,7 @@ async function periodicCheck() {
                     console.log('Не відповідає умовам, не подаю заявку.');
                 }
             }
-        }, 15000); // Перевіряємо кожні 5 секунд
+        }, 10000); // Перевіряємо кожні 10 секунд
     } catch (error) {
         console.error('Error during authorization or email check:', error);
     }
