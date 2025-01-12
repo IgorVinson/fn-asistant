@@ -1,8 +1,8 @@
 import path from "path";
 import fs from "fs";
 
-export async function saveCookies(page) {
-    const cookiesFilePath = path.resolve(process.cwd(), 'utils', 'FieldNation', 'cookies.json');
+export async function saveCookies(page,platform) {
+    const cookiesFilePath = path.resolve(process.cwd(), 'utils', platform, 'cookies.json');
 
     if (fs.existsSync(cookiesFilePath)) {
         fs.unlinkSync(cookiesFilePath); // Видаляємо старий файл
