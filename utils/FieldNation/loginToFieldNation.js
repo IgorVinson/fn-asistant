@@ -1,6 +1,3 @@
-import puppeteer from 'puppeteer';
-import fs from "fs";
-import path from "path";
 import {saveCookies} from "../saveCookies.js";
 
 
@@ -24,7 +21,7 @@ export async function loginToFieldNation(browser, page) {
         await page.click('button[type="submit"]'); // Натискаємо кнопку "Submit" після введення пароля
         await page.waitForNavigation(); // Чекаємо на навігацію після входу
 
-        await saveCookies(page);
+        await saveCookies(page, 'FieldNation');
 
     } catch (error) {
         console.error('Помилка з Cookies:', error.message,);
