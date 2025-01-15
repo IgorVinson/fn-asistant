@@ -17,10 +17,12 @@ const port = 3000;
 // Перевірка листів кожні 1 хвилину
 
 const browser = await puppeteer.launch({headless: false}); // headless: false дозволить бачити браузер
-const pageFN = await browser.newPage();
+await loginToFieldNation(browser);
+await loginToWorkMarket(browser);
 
-// await loginToFieldNation(browser, pageFN);
-await loginToWorkMarket(browser,pageFN);
+// const browserWM = await puppeteer.launch({headless: false});
+//
+// await loginToWorkMarket(browserWM);
 
 // const pageWM = await browser.newPage();
 // await pageWM.goto('https://www.workmarket.com/login')

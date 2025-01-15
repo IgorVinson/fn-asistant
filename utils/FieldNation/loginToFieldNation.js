@@ -1,9 +1,11 @@
 import {saveCookies} from "../saveCookies.js";
 
 
-export async function loginToFieldNation(browser, page) {
+export async function loginToFieldNation(browser) {
 
     const url = 'https://app.fieldnation.com/';
+
+    const page = await browser.newPage();
 
     try {
         // Переходимо на сторінку замовлення
