@@ -1,0 +1,105 @@
+import fs from 'fs';
+import path from 'path';
+
+
+const cookiesFilePath = path.resolve( 'cookies.json');
+
+function getCookies() {
+    try {
+        if (!fs.existsSync(cookiesFilePath)) {
+            throw new Error('Cookies file not found!');
+        }
+
+        const cookiesJson = JSON.parse(fs.readFileSync(cookiesFilePath, 'utf-8'));
+
+        if (!Array.isArray(cookiesJson)) {
+            throw new Error('Invalid cookies format: Expected an array of cookie objects');
+        }
+
+        // Filter valid cookies with name and value, and join them into a cookie string
+        const cookies = cookiesJson
+            .filter(cookie => typeof cookie.name === 'string' && typeof cookie.value === 'string')
+            .map(cookie => `${cookie.name}=${cookie.value}`)
+            .join('; ');
+
+        if (!cookies) {
+            throw new Error('No valid cookies found in the file');
+        }
+
+        return cookies;
+    } catch (error) {
+        console.error(`Error reading cookies: ${error.message}`);
+        return null; // Return null if any error occurs
+    }
+}
+
+
+export async function getWMorderData(url = "https://www.workmarket.com/assignments/details/6351360579") {
+    try {
+
+        const cookies = getCookies();
+
+        console.log(cookies)
+
+        const response = await fetch(url, {
+            headers: {
+                "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
+                "accept-language": "en-US,en;q=0.9",
+                "cache-control": "max-age=0",
+                "priority": "u=0, i",
+                "sec-ch-ua": '"Chromium";v="131", "Not_A Brand";v="24"',
+                "sec-ch-ua-mobile": "?0",
+                "sec-ch-ua-platform": '"macOS"',
+                "sec-fetch-dest": "document",
+                "sec-fetch-mode": "navigate",
+                "sec-fetch-site": "same-origin",
+                "sec-fetch-user": "?1",
+                "upgrade-insecure-requests": "1",
+                "Referer": "https://www.workmarket.com/login?redirectTo=/assignments/details/5659140276",
+                "cookie": cookies,
+                "Referrer-Policy": "strict-origin-when-cross-origin",
+            },
+            method: "GET"
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP error: ${response.status}`);
+        }
+
+        const body = await response.text();
+
+        // Regular expressions to extract data
+        const titleMatch = body.match(/<title>(.*?)<\/title>/);
+        const companyMatch = body.match(/<a href="\/profile\/company\/\d+">(.*?)<\/a>/);
+        const hourlyRateMatch = body.match(/\$([0-9.]+)\/hr/);
+        const hoursOfWorkMatch = body.match(/\(up to ([0-9]+)hr\)/);
+        const totalPaymentMatch = body.match(/<td>\s*<strong>\s*\$([0-9.]+)/);
+        const dateMatch = body.match(/<strong>(Fri, [0-9\/]+)<\/strong>\s*<br\/>\s*([0-9:AMP ]+)/);
+        const distanceMatch = body.match(/\(([\d.]+ mi)\)/);
+
+        // Extract and log the data
+        const title = titleMatch ? titleMatch[1].trim() : null;
+        const company = companyMatch ? companyMatch[1].trim() : null;
+        const hourlyRate = hourlyRateMatch ? hourlyRateMatch[1] : null;
+        const hoursOfWork = hoursOfWorkMatch ? hoursOfWorkMatch[1] : null;
+        const totalPayment = totalPaymentMatch ? totalPaymentMatch[1] : null;
+        const date = dateMatch ? dateMatch[1] : null;
+        const time = dateMatch ? dateMatch[2] : null;
+        const distance = distanceMatch ? distanceMatch[1] : null;
+
+        console.log("Title:", title);
+        console.log("Company:", company);
+        console.log("Hourly Rate:", hourlyRate);
+        console.log("Hours of Work:", hoursOfWork);
+        console.log("Total Payment:", totalPayment);
+        console.log("Date:", date);
+        console.log("Time:", time);
+        console.log("Distance:", distance);
+
+    } catch (error) {
+        console.error('Error:', error.message);
+        return null;
+    }
+}
+
+getWMorderData()
