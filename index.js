@@ -5,9 +5,9 @@ import {getOrderLink} from "./utils/gmail/getOrderLink.js";
 import {google} from "googleapis";
 import {loginToFieldNation} from "./utils/FieldNation/loginToFieldNation.js";
 import puppeteer from "puppeteer";
-import {getWorkOrderData} from "./utils/getWorkOrderData.js";
-import {postWorOrderRequest} from "./utils/postWorOrderRequest.js";
-import {sendWorkOrderMessage} from "./utils/sendWorkOrderMessage.js";
+import {getFNorderData} from "./utils/FieldNation/getFNorderData.js";
+import {postWorOrderRequest} from "./utils/FieldNation/postWorOrderRequest.js";
+import {sendWorkOrderMessage} from "./utils/FieldNation/sendWorkOrderMessage.js";
 import {loginToWorkMarket} from "./utils/WorkMarket/loginToWorkMarket.js";
 
 // Налаштовуємо сервер
@@ -21,6 +21,7 @@ const pageFN = await browser.newPage();
 
 // await loginToFieldNation(browser, pageFN);
 await loginToWorkMarket(browser,pageFN);
+
 // const pageWM = await browser.newPage();
 // await pageWM.goto('https://www.workmarket.com/login')
 
@@ -64,7 +65,7 @@ await loginToWorkMarket(browser,pageFN);
 //
 //                 console.log("order`s link", orderLink);
 //
-//                 const data = await getWorkOrderData(orderLink);
+//                 const data = await getFNorderData(orderLink);
 //
 //                 if (!data) {
 //                     console.log('Помилка: Дані відсутні.');
