@@ -87,6 +87,17 @@ export async function getWMorderData(url = "https://www.workmarket.com/assignmen
         const time = dateMatch ? dateMatch[2] : null;
         const distance = distanceMatch ? distanceMatch[1] : null;
 
+        return {
+           title,
+           company,
+           hourlyRate,
+           hoursOfWork,
+           totalPayment,
+           date,
+           time,
+           distance
+        };
+
         console.log("Title:", title);
         console.log("Company:", company);
         console.log("Hourly Rate:", hourlyRate);
