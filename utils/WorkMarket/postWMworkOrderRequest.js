@@ -32,7 +32,7 @@ function getCookies() {
 }
 
 // Function to post work order request
-export async function postWorOrderRequest(url = "https://www.workmarket.com/assignments/details/7118853401", time, estHours) {
+export async function postWMworkOrderRequest(url = "https://www.workmarket.com/assignments/details/7118853401") {
     try {
         // Get cookies
         const cookies = await getCookies();
@@ -95,4 +95,4 @@ export async function postWorOrderRequest(url = "https://www.workmarket.com/assi
 }
 
 // Call the function
-await postWorOrderRequest();
+await postWMworkOrderRequest();
