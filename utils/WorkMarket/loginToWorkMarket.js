@@ -1,9 +1,10 @@
 import {saveCookies} from "../saveCookies.js";
 
 
-export async function loginToWorkMarket(browser, page) {
+export async function loginToWorkMarket(browser) {
 
     const url = 'https://www.workmarket.com/login';
+    const page = await browser.newPage();
 
     try {
         // Переходимо на сторінку замовлення
