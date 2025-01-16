@@ -1,6 +1,8 @@
 import fs from 'fs';
 import path from 'path';
 
+
+
 // Шлях до файлу з куками
 const cookiesFilePath = path.resolve('utils', 'FieldNation', 'cookies.json');
 
@@ -16,7 +18,7 @@ function getCookies() {
 // Функція для виконання запиту і аналізу даних
 export async function getFNorderData(url) {
     try {
-        // Отримуємо куки
+
         const cookies = getCookies();
 
         // Виконуємо запит
@@ -41,7 +43,6 @@ export async function getFNorderData(url) {
             method: "GET"
         });
 
-        // Перевірка статусу відповіді
         if (!response.ok) {
             throw new Error(`HTTP помилка: ${response.status}`);
         }
