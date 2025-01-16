@@ -1,6 +1,5 @@
 import fs from 'fs';
 import path from 'path';
-import * as cheerio from 'cheerio';
 
 
 const cookiesFilePath = path.resolve(
@@ -37,7 +36,7 @@ function getCookies() {
 }
 
 
-export async function getWMorderData(url = "https://www.workmarket.com/assignments/details/4512278753") {
+export async function getWMorderData(url = "https://www.workmarket.com/assignments/details/6594276143") {
 
     try {
         const cookies = await getCookies();
@@ -69,10 +68,6 @@ export async function getWMorderData(url = "https://www.workmarket.com/assignmen
 
         const body = await response.text();
 
-        const $ = cheerio.load(body);
-        const date1 = $('strong').first().text().trim();
-
-        console.log('Extracted Date:', date1);
 
         // Regular expressions to extract data
         const titleMatch = body.match(/<title>(.*?)<\/title>/);
@@ -80,10 +75,31 @@ export async function getWMorderData(url = "https://www.workmarket.com/assignmen
         const hourlyRateMatch = body.match(/\$([0-9.]+)\/hr/);
         const hoursOfWorkMatch = body.match(/\(up to ([0-9]+)hr\)/);
         const totalPaymentMatch = body.match(/<td>\s*<strong>\s*\$([0-9.]+)/);
-        const dateMatch = body.match(/<strong>(Fri, [0-9\/]+)<\/strong>\s*<br\/>\s*([0-9:AMP ]+)/);
-        const distanceMatch = body.match(/\(([\d.]+ mi)\)/);
-        console.log(dateMatch, 'dateMatch')
 
+        const dateMatch = body.match(/<strong>(Mon|Tue|Wed|Thu|Fri|Sat|Sun), [0-9\/]+<\/strong>\s*<br\/>\s*([0-9:AMP ]+)/);
+
+        const distanceMatch = body.match(/\(([\d.]+ mi)\)/);
+        // console.log(distanceMatch, "distanceMatch")
+
+        const ddMatches = body.match(/<dd>.*?<\/dd>/gs);
+        const secondDd = ddMatches[1];
+        // console.log(secondDd)
+
+        if (secondDd) {
+            // Extract the full date range string
+            const dateRangeMatch = secondDd.match(/<strong>([\s\S]*?)<\/strong>/);
+            const timeMatch = secondDd.match(/<br\/>\s*([0-9:AMP ]+)\s*to\s*([0-9:AMP ]+)/);
+
+            const dateRange = dateRangeMatch ? dateRangeMatch[1].trim().replace(/\s+/g, ' ') : null; // Normalize whitespace
+            const startTime = timeMatch ? timeMatch[1] : null;           // Extracts "8:00 AM"
+            const endTime = timeMatch ? timeMatch[2] : null;             // Extracts "10:00 AM"
+
+            console.log("Date Range:", dateRange);
+            console.log("Start Time:", startTime);
+            console.log("End Time:", endTime);
+        } else {
+            console.log("Second <dd> element not found.");
+        }
 
         // Extract and log the data
         const title = titleMatch ? titleMatch[1].trim() : null;
