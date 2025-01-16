@@ -48,7 +48,7 @@ async function periodicCheck() {
         } catch (error) {
             console.error('Error during email check:', error);
         }
-    }, 5000); // Check every minute
+    }, 10000); // Check every minute
 }
 
 // Extract order link from email
@@ -176,7 +176,7 @@ async function processOrder(orderLink) {
 // Start the server
 app.listen(port, async () => {
     console.log(`Server running on port ${port}`);
-    initialize();
+    // initialize();
     periodicCheck();
 });
 
