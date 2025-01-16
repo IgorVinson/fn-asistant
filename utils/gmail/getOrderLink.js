@@ -1,5 +1,3 @@
-import { authorize } from './login.js'; // Імпортуємо авторизацію
-import { getLastUnreadEmail } from './getLastUnreadEmail.js'; // Приклад імпорту функції
 
 /**
  * Функція для отримання посилання на замовлення з вмісту останнього листа
@@ -23,16 +21,16 @@ export function getOrderLink(emailBody) {
     }
 }
 
-(async () => {
-    try {
-        const auth = await authorize();  // Авторизація
-        const lastEmailBody = await getLastUnreadEmail(auth);  // Отримуємо вміст останнього листа
-
-        if (lastEmailBody) {
-            const orderLink = getOrderLink(lastEmailBody);  // Шукаємо посилання на замовлення
-            console.log('Посилання на останнє замовлення:', orderLink);
-        }
-    } catch (error) {
-        console.error('Помилка:', error);
-    }
-})();
+// (async () => {
+//     try {
+//         const auth = await authorize();  // Авторизація
+//         const lastEmailBody = await getLastUnreadEmail(auth);  // Отримуємо вміст останнього листа
+//
+//         if (lastEmailBody) {
+//             const orderLink = getOrderLink(lastEmailBody);  // Шукаємо посилання на замовлення
+//             console.log('Посилання на останнє замовлення:', orderLink);
+//         }
+//     } catch (error) {
+//         console.error('Помилка:', error);
+//     }
+// })();

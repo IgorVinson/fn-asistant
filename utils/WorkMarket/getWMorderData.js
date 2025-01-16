@@ -34,7 +34,7 @@ function getCookies() {
 }
 
 
-export async function getWMorderData(url = "https://www.workmarket.com/assignments/details/6351360579") {
+export async function getWMorderData(url) {
 
     try {
         const cookies = await getCookies();
@@ -65,6 +65,9 @@ export async function getWMorderData(url = "https://www.workmarket.com/assignmen
         }
 
         const body = await response.text();
+
+        const workOrderIdMatch = body.match(/<h2 class="assignment-header">[\s\S]*?<small>\(ID:\s*(\d+)\)<\/small>/);
+        const workOrderId = workOrderIdMatch ? workOrderIdMatch[1] : null;
 
 
         // Regular expressions to extract data
@@ -105,17 +108,8 @@ export async function getWMorderData(url = "https://www.workmarket.com/assignmen
         const totalPayment = totalPaymentMatch ? totalPaymentMatch[1] : null;
         const distance = distanceMatch ? distanceMatch[1] : null;
 
-
-        console.log("Title:", title);
-        console.log("Company:", company);
-        console.log("Hourly Rate:", hourlyRate);
-        console.log("Hours of Work:", hoursOfWork);
-        console.log("Total Payment:", totalPayment);
-        console.log("Date:", date);
-        console.log("Time:", time);
-        console.log("Distance:", distance);
-
         return {
+            workOrderId,
             title,
             company,
             hourlyRate,

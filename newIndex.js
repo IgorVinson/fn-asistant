@@ -48,7 +48,7 @@ async function periodicCheck() {
         } catch (error) {
             console.error('Error during email check:', error);
         }
-    }, 60000); // Check every minute
+    }, 5000); // Check every minute
 }
 
 // Extract order link from email
@@ -85,6 +85,7 @@ function normalizeData(data, platform) {
         };
     } else if (platform === "WorkMarket") {
         return {
+            workOrderId: data.workOrderId,
             title: data.title,
             startDateAndTime: `${data.date} ${data.time}`, // Combine date and time
             distance: parseFloat(data.distance?.replace(" mi", "")) || null,
@@ -115,7 +116,7 @@ function isEligibleForApplication(data) {
 }
 
 // Apply for the job
-async function applyForJob(orderLink, startDateAndTime, estLaborHours) {
+async function applyForJob(orderLink, startDateAndTime, estLaborHours,id) {
 
     const platform = determinePlatform(orderLink);
 
@@ -126,7 +127,7 @@ async function applyForJob(orderLink, startDateAndTime, estLaborHours) {
         }
 
         if (platform === "WorkMarket") {
-            await postWMworkOrderRequest(orderLink);
+            await postWMworkOrderRequest(orderLink, startDateAndTime, estLaborHours,id);
         }
 
     } catch (error) {
@@ -139,6 +140,7 @@ async function processOrder(orderLink) {
 
     try {
         const platform = determinePlatform(orderLink);
+
         let data = null;
 
         if (platform === "FieldNation") {
@@ -156,11 +158,9 @@ async function processOrder(orderLink) {
 
         const normalizedData = normalizeData(data, platform);
 
-        console.log("Normalized Data:", normalizedData);
-
         // Proceed with the application process
         if (isEligibleForApplication(normalizedData)) {
-            await applyForJob(orderLink, normalizedData.startDateAndTime, normalizedData.estLaborHours);
+            await applyForJob(orderLink, normalizedData.startDateAndTime, normalizedData.estLaborHours,data.workOrderId);
         } else {
             console.log("Order does not meet application criteria.");
         }
@@ -174,19 +174,19 @@ async function processOrder(orderLink) {
 }
 
 // Start the server
-// app.listen(port, async () => {
-//     console.log(`Server running on port ${port}`);
-//     // await initialize();
-//     // periodicCheck();
-// });
+app.listen(port, async () => {
+    console.log(`Server running on port ${port}`);
+    initialize();
+    periodicCheck();
+});
 
-(async () => {
-    const exampleFieldNationLink = "https://app.fieldnation.com/workorders/16360252";
-    // const exampleWorkMarketLink = "https://www.workmarket.com/assignments/details/5844786705";
-
-    console.log("Processing FieldNation Order:");
-    await processOrder(exampleFieldNationLink);
-
-    // console.log("\nProcessing WorkMarket Order:");
-    // await processOrder(exampleWorkMarketLink);
-})();
+// (async () => {
+//     const exampleFieldNationLink = "https://app.fieldnation.com/workorders/16360252";
+//     const exampleWorkMarketLink = "https://www.workmarket.com/assignments/details/5844786705";
+//
+//     console.log("Processing FieldNation Order:");
+//     await processOrder(exampleFieldNationLink);
+//
+//     console.log("\nProcessing WorkMarket Order:");
+//     await processOrder(exampleWorkMarketLink);
+// })();

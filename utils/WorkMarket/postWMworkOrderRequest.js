@@ -32,7 +32,9 @@ function getCookies() {
 }
 
 // Function to post work order request
-export async function postWMworkOrderRequest(url = "https://www.workmarket.com/assignments/details/7118853401") {
+export async function postWMworkOrderRequest(url,date,hours, workOrderId) {
+
+    console.log(workOrderId,'ID!!!')
 
     try {
         // Get cookies
@@ -58,7 +60,6 @@ export async function postWMworkOrderRequest(url = "https://www.workmarket.com/a
             throw new Error('Failed to retrieve cookies.');
         }
 
-        const workOrderId = url.split('/').pop();
         const response = await fetch(`https://www.workmarket.com/assignments/apply/${workOrderId}`, {
             headers: {
                 "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
