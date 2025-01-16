@@ -123,7 +123,6 @@ async function applyForJob(orderLink, startDateAndTime, estLaborHours) {
 
         if (platform === "FieldNation") {
             await postFNworkOrderRequest(orderLink, startDateAndTime, estLaborHours);
-            console.log('Successfully applied for the job on FieldNation.');
         }
 
         if (platform === "WorkMarket") {
@@ -182,12 +181,12 @@ async function processOrder(orderLink) {
 // });
 
 (async () => {
-    // const exampleFieldNationLink = "https://app.fieldnation.com/workorders/16498286";
-    const exampleWorkMarketLink = "https://www.workmarket.com/assignments/details/5844786705";
+    const exampleFieldNationLink = "https://app.fieldnation.com/workorders/16360252";
+    // const exampleWorkMarketLink = "https://www.workmarket.com/assignments/details/5844786705";
 
-    // console.log("Processing FieldNation Order:");
-    // await processOrder(exampleFieldNationLink);
+    console.log("Processing FieldNation Order:");
+    await processOrder(exampleFieldNationLink);
 
-    console.log("\nProcessing WorkMarket Order:");
-    await processOrder(exampleWorkMarketLink);
+    // console.log("\nProcessing WorkMarket Order:");
+    // await processOrder(exampleWorkMarketLink);
 })();
