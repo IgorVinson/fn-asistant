@@ -89,7 +89,8 @@ function normalizeData(data, platform) {
             startDateAndTime: `${data.date} ${data.time}`, // Combine date and time
             distance: parseFloat(data.distance?.replace(" mi", "")) || null,
             payRange: {
-                min: parseFloat(data.hourlyRate || 0) * parseFloat(data.hoursOfWork || 0),
+
+                min: parseFloat(data.hourlyRate || 0) ,
                 max: parseFloat(data.totalPayment || 0),
             },
             estLaborHours: parseFloat(data.hoursOfWork || 0),
@@ -127,7 +128,6 @@ async function applyForJob(orderLink, startDateAndTime, estLaborHours) {
 
         if (platform === "WorkMarket") {
             await postWMworkOrderRequest(orderLink);
-            console.log('Successfully applied for the job on WorkMarket.');
         }
 
     } catch (error) {
@@ -182,8 +182,8 @@ async function processOrder(orderLink) {
 // });
 
 (async () => {
-    const exampleFieldNationLink = "https://www.fieldnation.com/workorders/12345";
-    const exampleWorkMarketLink = "https://www.workmarket.com/assignments/details/4512278753";
+    // const exampleFieldNationLink = "https://app.fieldnation.com/workorders/16498286";
+    const exampleWorkMarketLink = "https://www.workmarket.com/assignments/details/5844786705";
 
     // console.log("Processing FieldNation Order:");
     // await processOrder(exampleFieldNationLink);

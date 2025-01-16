@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 
-const cookiesFilePath = path.resolve('cookies.json');
+const cookiesFilePath = path.resolve('utils', 'WorkMarket', 'cookies.json');
 
 // Function to get cookies
 function getCookies() {
@@ -33,6 +33,7 @@ function getCookies() {
 
 // Function to post work order request
 export async function postWMworkOrderRequest(url = "https://www.workmarket.com/assignments/details/7118853401") {
+
     try {
         // Get cookies
         const cookies = await getCookies();
@@ -52,8 +53,6 @@ export async function postWMworkOrderRequest(url = "https://www.workmarket.com/a
         if (!CSRFToken) {
             throw new Error('CSRFToken value is undefined');
         }
-
-        console.log('CSRFToken:', CSRFToken);
 
         if (!cookies) {
             throw new Error('Failed to retrieve cookies.');
