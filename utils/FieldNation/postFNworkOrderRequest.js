@@ -14,7 +14,7 @@ function getCookies() {
 }
 
 // Функція для виконання запиту і аналізу даних
-export async function postWorOrderRequest(url, time, estHours) {
+export async function postFNworkOrderRequest(url, time, estHours) {
     try {
         // Отримуємо куки
         const cookies = getCookies();

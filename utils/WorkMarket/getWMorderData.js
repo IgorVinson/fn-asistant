@@ -1,8 +1,11 @@
 import fs from 'fs';
 import path from 'path';
+import * as cheerio from 'cheerio';
 
 
-const cookiesFilePath = path.resolve( 'cookies.json');
+const cookiesFilePath = path.resolve(
+    // 'utils', 'WorkMarket',
+    'cookies.json');
 
 function getCookies() {
     try {
@@ -34,12 +37,10 @@ function getCookies() {
 }
 
 
-export async function getWMorderData(url = "https://www.workmarket.com/assignments/details/6351360579") {
+export async function getWMorderData(url = "https://www.workmarket.com/assignments/details/4512278753") {
+
     try {
-
-        const cookies = getCookies();
-
-        console.log(cookies)
+        const cookies = await getCookies();
 
         const response = await fetch(url, {
             headers: {
@@ -68,6 +69,11 @@ export async function getWMorderData(url = "https://www.workmarket.com/assignmen
 
         const body = await response.text();
 
+        const $ = cheerio.load(body);
+        const date1 = $('strong').first().text().trim();
+
+        console.log('Extracted Date:', date1);
+
         // Regular expressions to extract data
         const titleMatch = body.match(/<title>(.*?)<\/title>/);
         const companyMatch = body.match(/<a href="\/profile\/company\/\d+">(.*?)<\/a>/);
@@ -76,6 +82,8 @@ export async function getWMorderData(url = "https://www.workmarket.com/assignmen
         const totalPaymentMatch = body.match(/<td>\s*<strong>\s*\$([0-9.]+)/);
         const dateMatch = body.match(/<strong>(Fri, [0-9\/]+)<\/strong>\s*<br\/>\s*([0-9:AMP ]+)/);
         const distanceMatch = body.match(/\(([\d.]+ mi)\)/);
+        console.log(dateMatch, 'dateMatch')
+
 
         // Extract and log the data
         const title = titleMatch ? titleMatch[1].trim() : null;
@@ -87,16 +95,7 @@ export async function getWMorderData(url = "https://www.workmarket.com/assignmen
         const time = dateMatch ? dateMatch[2] : null;
         const distance = distanceMatch ? distanceMatch[1] : null;
 
-        return {
-           title,
-           company,
-           hourlyRate,
-           hoursOfWork,
-           totalPayment,
-           date,
-           time,
-           distance
-        };
+
 
         console.log("Title:", title);
         console.log("Company:", company);
@@ -106,6 +105,17 @@ export async function getWMorderData(url = "https://www.workmarket.com/assignmen
         console.log("Date:", date);
         console.log("Time:", time);
         console.log("Distance:", distance);
+
+        return {
+            title,
+            company,
+            hourlyRate,
+            hoursOfWork,
+            totalPayment,
+            date,
+            time,
+            distance
+        };
 
     } catch (error) {
         console.error('Error:', error.message);

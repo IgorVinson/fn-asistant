@@ -1,6 +1,8 @@
 import fs from 'fs';
 import path from 'path';
 
+
+
 // Шлях до файлу з куками
 const cookiesFilePath = path.resolve('utils', 'FieldNation', 'cookies.json');
 
