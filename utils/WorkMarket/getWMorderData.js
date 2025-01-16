@@ -36,7 +36,7 @@ function getCookies() {
 }
 
 
-export async function getWMorderData(url = "https://www.workmarket.com/assignments/details/6594276143") {
+export async function getWMorderData(url = "https://www.workmarket.com/assignments/details/6351360579") {
 
     try {
         const cookies = await getCookies();
@@ -55,7 +55,7 @@ export async function getWMorderData(url = "https://www.workmarket.com/assignmen
                 "sec-fetch-site": "same-origin",
                 "sec-fetch-user": "?1",
                 "upgrade-insecure-requests": "1",
-                "Referer": "https://www.workmarket.com/login?redirectTo=/assignments/details/5659140276",
+                "Referer": "https://www.workmarket.com/login?redirectTo=/assignments/details/5456662857",
                 "cookie": cookies,
                 "Referrer-Policy": "strict-origin-when-cross-origin",
             },
@@ -75,28 +75,26 @@ export async function getWMorderData(url = "https://www.workmarket.com/assignmen
         const hourlyRateMatch = body.match(/\$([0-9.]+)\/hr/);
         const hoursOfWorkMatch = body.match(/\(up to ([0-9]+)hr\)/);
         const totalPaymentMatch = body.match(/<td>\s*<strong>\s*\$([0-9.]+)/);
-
-        const dateMatch = body.match(/<strong>(Mon|Tue|Wed|Thu|Fri|Sat|Sun), [0-9\/]+<\/strong>\s*<br\/>\s*([0-9:AMP ]+)/);
-
         const distanceMatch = body.match(/\(([\d.]+ mi)\)/);
-        // console.log(distanceMatch, "distanceMatch")
+        let date = null;
+        let time = null;
+
 
         const ddMatches = body.match(/<dd>.*?<\/dd>/gs);
         const secondDd = ddMatches[1];
-        // console.log(secondDd)
 
         if (secondDd) {
             // Extract the full date range string
             const dateRangeMatch = secondDd.match(/<strong>([\s\S]*?)<\/strong>/);
-            const timeMatch = secondDd.match(/<br\/>\s*([0-9:AMP ]+)\s*to\s*([0-9:AMP ]+)/);
+            const timeMatch = secondDd.match(/<br\/>\s*([0-9:AMP ]+)\s*(?:to\s*([0-9:AMP ]+))?/);
 
             const dateRange = dateRangeMatch ? dateRangeMatch[1].trim().replace(/\s+/g, ' ') : null; // Normalize whitespace
-            const startTime = timeMatch ? timeMatch[1] : null;           // Extracts "8:00 AM"
-            const endTime = timeMatch ? timeMatch[2] : null;             // Extracts "10:00 AM"
+            const startTime = timeMatch ? timeMatch[1] : null; // Extracts "8:00 AM"
+            const endTime = timeMatch && timeMatch[2] ? timeMatch[2] : null; // Extracts "10:00 AM" if present
 
-            console.log("Date Range:", dateRange);
-            console.log("Start Time:", startTime);
-            console.log("End Time:", endTime);
+            date = dateRange || null;
+            time = endTime ? `${startTime} to ${endTime} EST` : `${startTime} EST`;
+
         } else {
             console.log("Second <dd> element not found.");
         }
@@ -107,10 +105,7 @@ export async function getWMorderData(url = "https://www.workmarket.com/assignmen
         const hourlyRate = hourlyRateMatch ? hourlyRateMatch[1] : null;
         const hoursOfWork = hoursOfWorkMatch ? hoursOfWorkMatch[1] : null;
         const totalPayment = totalPaymentMatch ? totalPaymentMatch[1] : null;
-        const date = dateMatch ? dateMatch[1] : null;
-        const time = dateMatch ? dateMatch[2] : null;
         const distance = distanceMatch ? distanceMatch[1] : null;
-
 
 
         console.log("Title:", title);
