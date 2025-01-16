@@ -15,6 +15,9 @@ function getCookies() {
 
 // Функція для виконання запиту і аналізу даних
 export async function postFNworkOrderRequest(url, time, estHours) {
+
+    console.log(time)
+
     try {
         // Отримуємо куки
         const cookies = getCookies();
@@ -40,7 +43,7 @@ export async function postFNworkOrderRequest(url, time, estHours) {
             body: JSON.stringify({
                 "work_order_id": workOrderId,
                 eta: {
-                    start: {local: time},
+                    start: {local: time.local},
                     hour_estimate: estHours
                 }
 
