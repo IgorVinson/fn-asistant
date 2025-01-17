@@ -48,7 +48,7 @@ async function periodicCheck() {
         } catch (error) {
             console.error('Error during email check:', error);
         }
-    }, 10000); // Check every minute
+    }, 5000); // Check every minute
 }
 
 // Extract order link from email
@@ -71,8 +71,6 @@ function determinePlatform(orderLink) {
 }
 
 function normalizeData(data, platform) {
-
-    console.log(data, 'DATA')
 
     if (platform === "FieldNation") {
         return {
@@ -158,12 +156,14 @@ async function processOrder(orderLink) {
 
         const normalizedData = normalizeData(data, platform);
 
+        console.log(normalizedData, 'NORMALIZED DATA')
+
         // Proceed with the application process
-        if (isEligibleForApplication(normalizedData)) {
-            await applyForJob(orderLink, normalizedData.startDateAndTime, normalizedData.estLaborHours,data.workOrderId);
-        } else {
-            console.log("Order does not meet application criteria.");
-        }
+        // if (isEligibleForApplication(normalizedData)) {
+        //     await applyForJob(orderLink, normalizedData.startDateAndTime, normalizedData.estLaborHours,data.workOrderId);
+        // } else {
+        //     console.log("Order does not meet application criteria.");
+        // }
 
         return normalizedData;
 
@@ -179,6 +179,9 @@ app.listen(port, async () => {
     // initialize();
     periodicCheck();
 });
+
+console.log(await getWMorderData())
+
 
 // (async () => {
 //     const exampleFieldNationLink = "https://app.fieldnation.com/workorders/16360252";
