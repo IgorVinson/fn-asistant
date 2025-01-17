@@ -103,7 +103,7 @@ const currentMonth = {
         "Friday": [
             {
                 "date": "2025-01-17",
-                "events": ["10:00 - 13:00", "14:00 - 18:00" ]
+                "events": []
             }
         ],
         "Saturday": [

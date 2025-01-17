@@ -11,6 +11,7 @@ import {postWMworkOrderRequest} from "./utils/WorkMarket/postWMworkOrderRequest.
 import {sendWorkOrderMessage} from "./utils/FieldNation/sendWorkOrderMessage.js";
 import {loginToWorkMarket} from "./utils/WorkMarket/loginToWorkMarket.js";
 import {getWMorderData} from "./utils/WorkMarket/getWMorderData.js";
+import normalizeDateFromWO from "./normalizedDateFromWO.js";
 
 // Configure the server
 const app = express();
@@ -89,7 +90,7 @@ function normalizeData(data, platform) {
             distance: parseFloat(data.distance?.replace(" mi", "")) || null,
             payRange: {
 
-                min: parseFloat(data.hourlyRate || 0) ,
+                min: parseFloat(data.hourlyRate || 0),
                 max: parseFloat(data.totalPayment || 0),
             },
             estLaborHours: parseFloat(data.hoursOfWork || 0),
@@ -114,7 +115,7 @@ function isEligibleForApplication(data) {
 }
 
 // Apply for the job
-async function applyForJob(orderLink, startDateAndTime, estLaborHours,id) {
+async function applyForJob(orderLink, startDateAndTime, estLaborHours, id) {
 
     const platform = determinePlatform(orderLink);
 
@@ -125,7 +126,7 @@ async function applyForJob(orderLink, startDateAndTime, estLaborHours,id) {
         }
 
         if (platform === "WorkMarket") {
-            await postWMworkOrderRequest(orderLink, startDateAndTime, estLaborHours,id);
+            await postWMworkOrderRequest(orderLink, startDateAndTime, estLaborHours, id);
         }
 
     } catch (error) {
@@ -154,9 +155,10 @@ async function processOrder(orderLink) {
             return null;
         }
 
-        const normalizedData = normalizeData(data, platform);
 
-        console.log(normalizedData, 'NORMALIZED DATA')
+        const normalizedData = normalizeDateFromWO(data);
+
+        console.log("Normalized Data:", normalizedData);
 
         // Proceed with the application process
         // if (isEligibleForApplication(normalizedData)) {
@@ -176,7 +178,7 @@ async function processOrder(orderLink) {
 // Start the server
 app.listen(port, async () => {
     console.log(`Server running on port ${port}`);
-    // initialize();
+    // await initialize();
     periodicCheck();
 });
 
