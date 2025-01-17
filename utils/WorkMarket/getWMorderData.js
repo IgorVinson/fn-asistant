@@ -79,7 +79,6 @@ export async function getWMorderData(url) {
         let date = null;
         let time = null;
 
-
         const ddMatches = body.match(/<dd>.*?<\/dd>/gs);
         const secondDd = ddMatches[1];
 
@@ -107,10 +106,12 @@ export async function getWMorderData(url) {
         const totalPayment = totalPaymentMatch ? totalPaymentMatch[1] : null;
         const distance = distanceMatch ? distanceMatch[1] : null;
 
+
         return {
-            workOrderId,
-            title,
+            id:workOrderId,
+            platform: "WorkMarket",
             company,
+            title,
             hourlyRate,
             hoursOfWork,
             totalPayment,
