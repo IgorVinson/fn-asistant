@@ -71,34 +71,6 @@ function determinePlatform(orderLink) {
     return null;
 }
 
-function normalizeData(data, platform) {
-
-    if (platform === "FieldNation") {
-        return {
-            title: data.title,
-            startDateAndTime: data.startDateAndTime,
-            distance: data.distance,
-            payRange: data.payRange,
-            estLaborHours: data.estLaborHours,
-            platform: "FieldNation",
-        };
-    } else if (platform === "WorkMarket") {
-        return {
-            workOrderId: data.workOrderId,
-            title: data.title,
-            startDateAndTime: `${data.date} ${data.time}`, // Combine date and time
-            distance: parseFloat(data.distance?.replace(" mi", "")) || null,
-            payRange: {
-
-                min: parseFloat(data.hourlyRate || 0),
-                max: parseFloat(data.totalPayment || 0),
-            },
-            estLaborHours: parseFloat(data.hoursOfWork || 0),
-            platform: "WorkMarket",
-        };
-    }
-    throw new Error("Unsupported platform for normalization.");
-}
 
 function isEligibleForApplication(data) {
     const SPEED = 50; // Average speed in miles per hour
@@ -157,8 +129,6 @@ async function processOrder(orderLink) {
 
 
         const normalizedData = normalizeDateFromWO(data);
-
-        console.log("Normalized Data:", normalizedData);
 
         // Proceed with the application process
         // if (isEligibleForApplication(normalizedData)) {
