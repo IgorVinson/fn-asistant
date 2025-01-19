@@ -17,19 +17,11 @@ const currentMonth = {
             platform: 'FieldNation',
             title: 'cabling',
             time: {
-                start: '2025-02-11T16:00:00',
-                end: '2025-02-11T18:00:00'
+                start: '2025-01-11T16:00:00',
+                end: '2025-01-11T18:00:00'
             },
         },
-            {
-                id: '565912276',
-                platform: 'WorkMarket',
-                title: 'Rack installation',
-                time: {
-                    start: '2025-02-11T09:00:00',
-                    end: '2025-02-11T14:00:00'
-                },
-            },],
+          ,],
         "SUN 12": []
     },
     "week3": {
@@ -38,7 +30,15 @@ const currentMonth = {
         "WED 15": [],
         "THU 16": [],
         "FRI 17": [],
-        "SAT 18": [],
+        "SAT 18": [  {
+            id: '565912276',
+            platform: 'WorkMarket',
+            title: 'Rack installation',
+            time: {
+                start: '2025-01-18T09:00:00',
+                end: '2025-01-18T13:00:00'
+            },
+        }],
         "SUN 19": []
     },
     "week4": {

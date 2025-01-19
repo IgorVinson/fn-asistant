@@ -1,10 +1,5 @@
 import schedule from "./schedule.js";
 
-// Define working hours and buffer
-const WORK_START_TIME = "10:30";
-const WORK_END_TIME = "21:00";
-const MIN_BUFFER_MINUTES = 30;
-
 const SPEED = 50; // Average speed in miles per hour
 const FREE_TRAVEL_LIMIT = 50 / 60; // Free travel time in hours
 const TRAVEL_RATE = 30; // Rate per hour of travel
@@ -20,8 +15,8 @@ const normalizedWO = {
     company: 'Endeavor Managed Services',
     title: 'Experienced Networking/Cabling tech Needed - Exterior Wall-Mount Installation\t LTE/5G Cradlepoint Installation - Work Market',
     time: {
-        start: '2025-02-11T09:00:00',
-        end: '2025-02-11T14:00:00'
+        start: '2025-01-18T13:29:00',
+        end: '2025-01-18T15:30:00'
     },
     payRange: {min: 45, max: 300},
     estLaborHours: 6,
@@ -53,53 +48,65 @@ function isEligibleForApplication(workOrder, schedule) {
 }
 
 function isSlotAvailable(schedule, workOrderTime) {
-    const { start: startTime, end: endTime } = workOrderTime;
+
+    const WORK_START_TIME = "10:30";
+    const WORK_END_TIME = "21:00";
+    const MIN_BUFFER_MINUTES = 30;
+
+    const { start: startTime, end: endTime } = workOrderTime.time;
     const stampStartTime = new Date(startTime).getTime();
     const stampEndTime = new Date(endTime).getTime();
 
-    const dayEvents = Object.values(schedule)
-        .flatMap(week => Object.values(week))
-        .flat()
-        .filter(event => event.date === taskDate);
-
-    // If no events, validate against work hours
-    if (dayEvents.length === 0) {
-        const workStartTime = new Date(`${taskDate}T${WORK_START_TIME}:00`).getTime();
-        const workEndTime = new Date(`${taskDate}T${WORK_END_TIME}:00`).getTime();
-
-        return stampStartTime >= workStartTime && stampEndTime <= workEndTime;
+    function toESTTimestamp(dateStr) {
+        const date = new Date(dateStr);
+        const utcTimestamp = date.getTime();
+        const estOffset = -5 * 60 * 60 * 1000; // EST is UTC-5
+        return utcTimestamp + estOffset;
     }
 
-    // Flatten and sort events by their start time
-    const events = dayEvents[0].events
-        .map(range => range.split(" - ").map(time => new Date(`${taskDate}T${time.trim()}:00`).getTime()))
-        .sort((a, b) => a[0] - b[0]);
+    const WORK_START = new Date(`${startTime.split('T')[0]}T${WORK_START_TIME}:00`).getTime();
 
-    let prevEndTime = new Date(`${taskDate}T${WORK_START_TIME}:00`).getTime();
+    const WORK_END = new Date(`${startTime.split('T')[0]}T${WORK_END_TIME}:00`).getTime();
 
-    for (const [startTime, endTime] of events) {
+    if (stampStartTime < WORK_START || stampEndTime > WORK_END) {
+        return false;
+    }
+
+    const allEvents = Object.values(schedule)
+        .flatMap(week => Object.entries(week).flatMap(([day, events]) => {
+            return events.map(event => ({
+                day,
+                start: new Date(event.time.start).getTime(),
+                end: new Date(event.time.end).getTime(),
+            }));
+        }));
+
+    const sameDayEvents = allEvents.filter(event => {
+        const eventDay = event.day.split(' ')[1];
+        const workOrderDay = new Date(startTime).getDate();
+        return parseInt(eventDay, 10) === workOrderDay;
+    });
+
+    const sortedEvents = sameDayEvents.sort((a, b) => a.start - b.start);
+
+    let prevEndTime = WORK_START;
+
+    for (const event of sortedEvents) {
         if (
             stampStartTime >= prevEndTime + MIN_BUFFER_MINUTES * 60 * 1000 &&
-            stampEndTime <= startTime - MIN_BUFFER_MINUTES * 60 * 1000
+            stampEndTime <= event.start - MIN_BUFFER_MINUTES * 60 * 1000
         ) {
             return true;
         }
-        prevEndTime = endTime;
+        prevEndTime = event.end;
     }
 
-    // Check if the task fits after the last event
-    const workEndTime = new Date(`${taskDate}T${WORK_END_TIME}:00`).getTime();
-    return (
-        stampStartTime >= prevEndTime + MIN_BUFFER_MINUTES * 60 * 1000 &&
-        stampEndTime <= workEndTime
-    );
+    return stampStartTime >= prevEndTime + MIN_BUFFER_MINUTES * 60 * 1000 && stampEndTime <= WORK_END;
 }
 
-
-
-console.log(isEligibleForApplication(normalizedWO, schedule)); // Check for FieldNation
-console.log(isPaymentEligible(normalizedWO))
-
+// console.log(isEligibleForApplication(normalizedWO, schedule)); // Check for FieldNation
+// console.log(isPaymentEligible(normalizedWO))
+console.log(isSlotAvailable(schedule, normalizedWO));
 
 // function isSlotAvailable(schedule, orderTime) {
 //     const taskEndTime = taskStartTime + taskDuration;
