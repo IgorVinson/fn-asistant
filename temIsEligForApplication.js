@@ -20,10 +20,10 @@ const normalizedWO = {
     company: 'Endeavor Managed Services',
     title: 'Experienced Networking/Cabling tech Needed - Exterior Wall-Mount Installation\t LTE/5G Cradlepoint Installation - Work Market',
     time: {
-        start: {date: '2025-02-11', time: '09:00:00'},
-        end: {date: '2025-02-11', time: '14:00:00'}
+        start: '2025-02-11T09:00:00',
+        end: '2025-02-11T14:00:00'
     },
-    payRange: {min: 45, max: 270},
+    payRange: {min: 45, max: 300},
     estLaborHours: 6,
     distance: 11,
 }
@@ -52,13 +52,11 @@ function isEligibleForApplication(workOrder, schedule) {
 
 }
 
-function isSlotAvailable(schedule, orderTime) {
-    const { start, end } = orderTime;
-    const taskStartTime = new Date(start).getTime();
-    const taskEndTime = new Date(end).getTime();
+function isSlotAvailable(schedule, workOrderTime) {
+    const { start: startTime, end: endTime } = workOrderTime;
+    const stampStartTime = new Date(startTime).getTime();
+    const stampEndTime = new Date(endTime).getTime();
 
-    // Filter events for the specific task date
-    const taskDate = new Date(start).toISOString().split("T")[0];
     const dayEvents = Object.values(schedule)
         .flatMap(week => Object.values(week))
         .flat()
@@ -69,7 +67,7 @@ function isSlotAvailable(schedule, orderTime) {
         const workStartTime = new Date(`${taskDate}T${WORK_START_TIME}:00`).getTime();
         const workEndTime = new Date(`${taskDate}T${WORK_END_TIME}:00`).getTime();
 
-        return taskStartTime >= workStartTime && taskEndTime <= workEndTime;
+        return stampStartTime >= workStartTime && stampEndTime <= workEndTime;
     }
 
     // Flatten and sort events by their start time
@@ -81,8 +79,8 @@ function isSlotAvailable(schedule, orderTime) {
 
     for (const [startTime, endTime] of events) {
         if (
-            taskStartTime >= prevEndTime + MIN_BUFFER_MINUTES * 60 * 1000 &&
-            taskEndTime <= startTime - MIN_BUFFER_MINUTES * 60 * 1000
+            stampStartTime >= prevEndTime + MIN_BUFFER_MINUTES * 60 * 1000 &&
+            stampEndTime <= startTime - MIN_BUFFER_MINUTES * 60 * 1000
         ) {
             return true;
         }
@@ -92,8 +90,8 @@ function isSlotAvailable(schedule, orderTime) {
     // Check if the task fits after the last event
     const workEndTime = new Date(`${taskDate}T${WORK_END_TIME}:00`).getTime();
     return (
-        taskStartTime >= prevEndTime + MIN_BUFFER_MINUTES * 60 * 1000 &&
-        taskEndTime <= workEndTime
+        stampStartTime >= prevEndTime + MIN_BUFFER_MINUTES * 60 * 1000 &&
+        stampEndTime <= workEndTime
     );
 }
 
