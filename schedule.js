@@ -1,200 +1,63 @@
 const currentMonth = {
     "week1": {
-        "Wednesday": [
-            {
-                "date": "2025-01-01",
-                "events": []
-            }
-        ],
-        "Thursday": [
-            {
-                "date": "2025-01-02",
-                "events": []
-            }
-        ],
-        "Friday": [
-            {
-                "date": "2025-01-03",
-                "events": []
-            }
-        ],
-        "Saturday": [
-            {
-                "date": "2025-01-04",
-                "events": []
-            }
-        ]
+        "WED 1": [],
+        "THU 2": [],
+        "FRI 3": [],
+        "SAT 4": [],
+        "SUN 5": []
     },
     "week2": {
-        "Sunday": [
+        "MON 6": [],
+        "TUE 7": [],
+        "WED 8": [],
+        "THU 9": [],
+        "FRI 10": [],
+        "SAT 11": [{
+            id: '5659140276',
+            platform: 'FieldNation',
+            title: 'cabling',
+            time: {
+                start: '2025-02-11T16:00:00',
+                end: '2025-02-11T18:00:00'
+            },
+        },
             {
-                "date": "2025-01-05",
-                "events": []
-            }
-        ],
-        "Monday": [
-            {
-                "date": "2025-01-06",
-                "events": []
-            }
-        ],
-        "Tuesday": [
-            {
-                "date": "2025-01-07",
-                "events": []
-            }
-        ],
-        "Wednesday": [
-            {
-                "date": "2025-01-08",
-                "events": []
-            }
-        ],
-        "Thursday": [
-            {
-                "date": "2025-01-09",
-                "events": []
-            }
-        ],
-        "Friday": [
-            {
-                "date": "2025-01-10",
-                "events": []
-            }
-        ],
-        "Saturday": [
-            {
-                "date": "2025-01-11",
-                "events": []
-            }
-        ]
+                id: '565912276',
+                platform: 'WorkMarket',
+                title: 'Rack installation',
+                time: {
+                    start: '2025-02-11T09:00:00',
+                    end: '2025-02-11T14:00:00'
+                },
+            },],
+        "SUN 12": []
     },
     "week3": {
-        "Sunday": [
-            {
-                "date": "2025-01-12",
-                "events": []
-            }
-        ],
-        "Monday": [
-            {
-                "date": "2025-01-13",
-                "events": []
-            }
-        ],
-        "Tuesday": [
-            {
-                "date": "2025-01-14",
-                "events": []
-            }
-        ],
-        "Wednesday": [
-            {
-                "date": "2025-01-15",
-                "events": []
-            }
-        ],
-        "Thursday": [
-            {
-                "date": "2025-01-16",
-                "events": []
-            }
-        ],
-        "Friday": [
-            {
-                "date": "2025-01-17",
-                "events": []
-            }
-        ],
-        "Saturday": [
-            {
-                "date": "2025-01-18",
-                "events": []
-            }
-        ]
+        "MON 13": [],
+        "TUE 14": [],
+        "WED 15": [],
+        "THU 16": [],
+        "FRI 17": [],
+        "SAT 18": [],
+        "SUN 19": []
     },
     "week4": {
-        "Sunday": [
-            {
-                "date": "2025-01-19",
-                "events": []
-            }
-        ],
-        "Monday": [
-            {
-                "date": "2025-01-20",
-                "events": []
-            }
-        ],
-        "Tuesday": [
-            {
-                "date": "2025-01-21",
-                "events": []
-            }
-        ],
-        "Wednesday": [
-            {
-                "date": "2025-01-22",
-                "events": []
-            }
-        ],
-        "Thursday": [
-            {
-                "date": "2025-01-23",
-                "events": []
-            }
-        ],
-        "Friday": [
-            {
-                "date": "2025-01-24",
-                "events": []
-            }
-        ],
-        "Saturday": [
-            {
-                "date": "2025-01-25",
-                "events": []
-            }
-        ]
+        "MON 20": [],
+        "TUE 21": [],
+        "WED 22": [],
+        "THU 23": [],
+        "FRI 24": [],
+        "SAT 25": [],
+        "SUN 26": []
     },
     "week5": {
-        "Sunday": [
-            {
-                "date": "2025-01-26",
-                "events": []
-            }
-        ],
-        "Monday": [
-            {
-                "date": "2025-01-27",
-                "events": []
-            }
-        ],
-        "Tuesday": [
-            {
-                "date": "2025-01-28",
-                "events": []
-            }
-        ],
-        "Wednesday": [
-            {
-                "date": "2025-01-29",
-                "events": []
-            }
-        ],
-        "Thursday": [
-            {
-                "date": "2025-01-30",
-                "events": []
-            }
-        ],
-        "Friday": [
-            {
-                "date": "2025-01-31",
-                "events": []
-            }
-        ]
+        "MON 27": [],
+        "TUE 28": [],
+        "WED 29": [],
+        "THU 30": [],
+        "FRI 31": []
     }
 }
+
 
 export default currentMonth;
