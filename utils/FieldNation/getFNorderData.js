@@ -2,7 +2,6 @@ import fs from 'fs';
 import path from 'path';
 
 
-
 // Шлях до файлу з куками
 const cookiesFilePath = path.resolve('utils', 'FieldNation', 'cookies.json');
 
@@ -59,13 +58,22 @@ export async function getFNorderData(url) {
         }
 
         const workOrder = JSON.parse(match[1].trim());
+
+
         return {
+            id: workOrder.id,
+            platform: "FieldNation",
+            company: workOrder.company.name,
             title: workOrder.title,
-            startDateAndTime: workOrder.schedule.service_window.start,
-            distance: workOrder.coords.distance,
+            time: {
+                start: workOrder.schedule.service_window.start.local,
+                end: workOrder.schedule.service_window.end.local
+            },
             payRange: workOrder.pay.range,
-            estLaborHours: workOrder.schedule.est_labor_hours
+            estLaborHours: workOrder.schedule.est_labor_hours,
+            distance: Math.floor(Number(workOrder.coords.distance)),
         };
+
 
     } catch (error) {
         console.error('Помилка:', error.message);

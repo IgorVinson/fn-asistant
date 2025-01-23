@@ -1,8 +1,9 @@
 import fs from 'fs';
 import path from 'path';
 
-
-const cookiesFilePath = path.resolve('utils', 'WorkMarket', 'cookies.json');
+const cookiesFilePath = path.resolve(
+    // 'utils', 'WorkMarket',
+    'cookies.json');
 
 function getCookies() {
     try {
@@ -32,7 +33,6 @@ function getCookies() {
         return null; // Return null if any error occurs
     }
 }
-
 
 export async function getWMorderData(url) {
 
@@ -80,7 +80,6 @@ export async function getWMorderData(url) {
         let date = null;
         let time = null;
 
-
         const ddMatches = body.match(/<dd>.*?<\/dd>/gs);
         const secondDd = ddMatches[1];
 
@@ -109,9 +108,10 @@ export async function getWMorderData(url) {
         const distance = distanceMatch ? distanceMatch[1] : null;
 
         return {
-            workOrderId,
-            title,
+            id: workOrderId,
+            platform: "WorkMarket",
             company,
+            title,
             hourlyRate,
             hoursOfWork,
             totalPayment,

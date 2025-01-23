@@ -34,7 +34,6 @@ function getCookies() {
 // Function to post work order request
 export async function postWMworkOrderRequest(url,date,hours, workOrderId) {
 
-    console.log(workOrderId,'ID!!!')
 
     try {
         // Get cookies

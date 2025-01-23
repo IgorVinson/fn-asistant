@@ -11,10 +11,11 @@ import {postWMworkOrderRequest} from "./utils/WorkMarket/postWMworkOrderRequest.
 import {sendWorkOrderMessage} from "./utils/FieldNation/sendWorkOrderMessage.js";
 import {loginToWorkMarket} from "./utils/WorkMarket/loginToWorkMarket.js";
 import {getWMorderData} from "./utils/WorkMarket/getWMorderData.js";
+import normalizeDateFromWO from "./normalizedDateFromWO.js";
 
 // Configure the server
 const app = express();
-const port = 3000;
+const port = 3001;
 
 let browser; // Declare a browser instance
 
@@ -48,7 +49,7 @@ async function periodicCheck() {
         } catch (error) {
             console.error('Error during email check:', error);
         }
-    }, 10000); // Check every minute
+    }, 1000); // Check every minute
 }
 
 // Extract order link from email
@@ -70,36 +71,6 @@ function determinePlatform(orderLink) {
     return null;
 }
 
-function normalizeData(data, platform) {
-
-    console.log(data, 'DATA')
-
-    if (platform === "FieldNation") {
-        return {
-            title: data.title,
-            startDateAndTime: data.startDateAndTime,
-            distance: data.distance,
-            payRange: data.payRange,
-            estLaborHours: data.estLaborHours,
-            platform: "FieldNation",
-        };
-    } else if (platform === "WorkMarket") {
-        return {
-            workOrderId: data.workOrderId,
-            title: data.title,
-            startDateAndTime: `${data.date} ${data.time}`, // Combine date and time
-            distance: parseFloat(data.distance?.replace(" mi", "")) || null,
-            payRange: {
-
-                min: parseFloat(data.hourlyRate || 0) ,
-                max: parseFloat(data.totalPayment || 0),
-            },
-            estLaborHours: parseFloat(data.hoursOfWork || 0),
-            platform: "WorkMarket",
-        };
-    }
-    throw new Error("Unsupported platform for normalization.");
-}
 
 function isEligibleForApplication(data) {
     const SPEED = 50; // Average speed in miles per hour
@@ -116,7 +87,7 @@ function isEligibleForApplication(data) {
 }
 
 // Apply for the job
-async function applyForJob(orderLink, startDateAndTime, estLaborHours,id) {
+async function applyForJob(orderLink, startDateAndTime, estLaborHours, id) {
 
     const platform = determinePlatform(orderLink);
 
@@ -127,7 +98,7 @@ async function applyForJob(orderLink, startDateAndTime, estLaborHours,id) {
         }
 
         if (platform === "WorkMarket") {
-            await postWMworkOrderRequest(orderLink, startDateAndTime, estLaborHours,id);
+            await postWMworkOrderRequest(orderLink, startDateAndTime, estLaborHours, id);
         }
 
     } catch (error) {
@@ -156,14 +127,15 @@ async function processOrder(orderLink) {
             return null;
         }
 
-        const normalizedData = normalizeData(data, platform);
+
+        const normalizedData = normalizeDateFromWO(data);
 
         // Proceed with the application process
-        if (isEligibleForApplication(normalizedData)) {
-            await applyForJob(orderLink, normalizedData.startDateAndTime, normalizedData.estLaborHours,data.workOrderId);
-        } else {
-            console.log("Order does not meet application criteria.");
-        }
+        // if (isEligibleForApplication(normalizedData)) {
+        //     await applyForJob(orderLink, normalizedData.startDateAndTime, normalizedData.estLaborHours,data.workOrderId);
+        // } else {
+        //     console.log("Order does not meet application criteria.");
+        // }
 
         return normalizedData;
 
@@ -176,9 +148,12 @@ async function processOrder(orderLink) {
 // Start the server
 app.listen(port, async () => {
     console.log(`Server running on port ${port}`);
-    // initialize();
+    // await initialize();
     periodicCheck();
 });
+
+console.log(await getWMorderData())
+
 
 // (async () => {
 //     const exampleFieldNationLink = "https://app.fieldnation.com/workorders/16360252";
