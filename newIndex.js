@@ -15,7 +15,7 @@ import normalizeDateFromWO from "./normalizedDateFromWO.js";
 
 // Configure the server
 const app = express();
-const port = 3000;
+const port = 3001;
 
 let browser; // Declare a browser instance
 
@@ -49,7 +49,7 @@ async function periodicCheck() {
         } catch (error) {
             console.error('Error during email check:', error);
         }
-    }, 5000); // Check every minute
+    }, 1000); // Check every minute
 }
 
 // Extract order link from email

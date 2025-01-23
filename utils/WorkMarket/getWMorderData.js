@@ -1,8 +1,9 @@
 import fs from 'fs';
 import path from 'path';
 
-
-const cookiesFilePath = path.resolve('utils', 'WorkMarket', 'cookies.json');
+const cookiesFilePath = path.resolve(
+    // 'utils', 'WorkMarket',
+    'cookies.json');
 
 function getCookies() {
     try {
@@ -106,9 +107,8 @@ export async function getWMorderData(url) {
         const totalPayment = totalPaymentMatch ? totalPaymentMatch[1] : null;
         const distance = distanceMatch ? distanceMatch[1] : null;
 
-
         return {
-            id:workOrderId,
+            id: workOrderId,
             platform: "WorkMarket",
             company,
             title,
