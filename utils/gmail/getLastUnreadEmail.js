@@ -1,37 +1,35 @@
-import { google } from 'googleapis';
-
 /**
- * Отримати останній непрочитаний лист і повернути його вміст
+ * Get the latest unread email and return its content
  *
  * @param {OAuth2Client|OAuth2Client} auth An authorized OAuth2 client.
  * @param gmail Object for Gmail API interaction
- * @returns {Promise<string|null>} - Вміст останнього листа або null, якщо немає нових листів
+ * @returns {Promise<string|null>} - Content of the latest email or null if no new emails
  */
 export async function getLastUnreadEmail(auth, gmail) {
 
-    // Отримати останній непрочитаний лист
+    // Get the latest unread email
     const res = await gmail.users?.messages.list({
         userId: 'me',
-        labelIds: ['INBOX'], // Шукаємо тільки вхідні
-        q: 'is:unread', // Тільки непрочитані листи
-        maxResults: 1, // Отримати лише один лист (найновіший)
+        labelIds: ['INBOX'], // Search only inbox
+        q: 'is:unread', // Only unread emails
+        maxResults: 1, // Get only one email (the newest)
     });
 
     const messages = res.data.messages;
 
     if (!messages || messages.length === 0) {
-        console.log('Немає нових непрочитаних листів.');
+        console.log('No new unread emails.');
         return null;
     }
 
-    // Отримати деталі листа за його ID
+    // Get email details by its ID
     const messageId = messages[0].id;
     const msg = await gmail.users?.messages.get({
         userId: 'me',
         id: messageId,
     });
 
-    // Змінити статус листа на прочитаний
+    // Change email status to read
     await gmail.users?.messages.modify({
         userId: 'me',
         id: messageId,
@@ -40,20 +38,20 @@ export async function getLastUnreadEmail(auth, gmail) {
         },
     });
 
-    // Отримати текст листа
+    // Get email text
     const body = getMessageBody(msg.data.payload);
 
     if (body) {
-        // console.log(`Вміст останнього листа: \n${body}`);
-        return body; // Повертаємо вміст листа
+        // console.log(`Content of the latest email: \n${body}`);
+        return body; // Return email content
     } else {
-        console.log('Не вдалося отримати вміст листа.');
+        console.log('Failed to get email content.');
         return null;
     }
 }
 
 /**
- * Функція для отримання текстового вмісту листа
+ * Function to get text content of an email
  * @param {Object} payload
  * @returns {string|null}
  */
@@ -73,3 +71,5 @@ function getMessageBody(payload) {
 
     return body ? body : null;
 }
+
+
