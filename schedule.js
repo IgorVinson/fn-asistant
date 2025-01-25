@@ -20,8 +20,8 @@ const currentMonth = {
                 start: '2025-01-11T16:00:00',
                 end: '2025-01-11T18:00:00'
             },
-        },
-          ,],
+        }
+        ],
         "SUN 12": []
     },
     "week3": {
@@ -30,15 +30,7 @@ const currentMonth = {
         "WED 15": [],
         "THU 16": [],
         "FRI 17": [],
-        "SAT 18": [  {
-            id: '565912276',
-            platform: 'WorkMarket',
-            title: 'Rack installation',
-            time: {
-                start: '2025-01-18T09:00:00',
-                end: '2025-01-18T13:00:00'
-            },
-        }],
+        "SAT 18": [],
         "SUN 19": []
     },
     "week4": {
@@ -51,7 +43,15 @@ const currentMonth = {
         "SUN 26": []
     },
     "week5": {
-        "MON 27": [],
+        "MON 27": [{
+            id: '5659140276',
+            platform: 'FieldNation',
+            title: 'cabling',
+            time: {
+                start: '2025-01-27T10:00:00',
+                end: '2025-01-27T12:00:00'
+            },
+        }],
         "TUE 28": [],
         "WED 29": [],
         "THU 30": [],
