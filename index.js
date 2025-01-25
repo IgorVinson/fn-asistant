@@ -1,103 +1,146 @@
 import express from 'express';
+import {google} from "googleapis";
+import puppeteer from "puppeteer";
 import {getLastUnreadEmail} from "./utils/gmail/getLastUnreadEmail.js";
 import {authorize} from "./utils/gmail/login.js";
 import {getOrderLink} from "./utils/gmail/getOrderLink.js";
-import {google} from "googleapis";
 import {loginToFieldNation} from "./utils/FieldNation/loginToFieldNation.js";
-import puppeteer from "puppeteer";
 import {getFNorderData} from "./utils/FieldNation/getFNorderData.js";
 import {postFNworkOrderRequest} from "./utils/FieldNation/postFNworkOrderRequest.js";
+import {postWMworkOrderRequest} from "./utils/WorkMarket/postWMworkOrderRequest.js";
 import {sendWorkOrderMessage} from "./utils/FieldNation/sendWorkOrderMessage.js";
 import {loginToWorkMarket} from "./utils/WorkMarket/loginToWorkMarket.js";
+import {getWMorderData} from "./utils/WorkMarket/getWMorderData.js";
+import normalizeDateFromWO from "./normalizedDateFromWO.js";
+import isEligibleForApplication from "./isEligibleForApplication.js";
 
-// Налаштовуємо сервер
+// Configure the server
 const app = express();
 const port = 3000;
 
-// Перевірка листів кожні 1 хвилину
+let browser; // Declare a browser instance
 
-const browser = await puppeteer.launch({headless: false}); // headless: false дозволить бачити браузер
-await loginToFieldNation(browser);
-await loginToWorkMarket(browser);
+// Initialize Puppeteer and log in to FieldNation and WorkMarket
+async function initialize() {
+    browser = await puppeteer.launch({headless: false}); // Set headless: false to see the browser
+    await loginToFieldNation(browser);
+    await loginToWorkMarket(browser);
+}
 
-
+// Periodically check for unread emails
 async function periodicCheck() {
     const auth = await authorize();
-    const gmail = await google.gmail({version: 'v1', auth});
-    try {
+    const gmail = google.gmail({version: 'v1', auth});
 
-        setInterval(async () => {
+    setInterval(async () => {
+        try {
             const lastEmailBody = await getLastUnreadEmail(auth, gmail);
-
             if (lastEmailBody) {
-                // Виводимо посилання з листа
-                const orderLink = getOrderLink(lastEmailBody);
-
-                // if(orderLink?.includes('fieldnation')) {
-                //     try {
-                //         const page = await browser.newPage();
-                //         await page.goto(orderLink, { waitUntil: 'load' });
-                //
-                //         // extractData(browser, page);
-                //         // console.log(laborAmount)
-                //     }
-                //     catch (error) {
-                //         console.error('Error during navigation:', error);
-                //     }
-                //
-                //
-                // }
-                // else {
-                //     try {
-                //         const encodedOrderLink = encodeURI(orderLink);
-                //         const page = await browser.newPage();
-                //         await page.goto(encodedOrderLink, { waitUntil: 'load' });
-                //         //{labor, hours, title, description, date, distance}
-                //
-                //     } catch (error) {
-                //         console.error('Error during navigation:', error);
-                //     }
-                // }
-
-                console.log("order`s link", orderLink);
-
-                const data = await getFNorderData(orderLink);
-
-                if (!data) {
-                    console.log('Помилка: Дані відсутні.');
-                    return;
-                }
-
-                const {startDateAndTime, distance, payRange, estLaborHours} = data;
-
-                // Константи для розрахунків
-                const SPEED = 50; // Середня швидкість у милях на годину
-                const FREE_TRAVEL_LIMIT = 50 / 60; // Безкоштовний час у годинах (50 хв = 50 / 60)
-                const TRAVEL_RATE = 30; // Ставка за годину дороги
-                const MIN_PAY_THRESHOLD = 150; // Мінімальна оплата за виїзд
-
-                // Розрахунок часу в дорозі з урахуванням поїздки "туди і назад"
-                const travelTime = Math.max(0, (distance / SPEED) * 2 - FREE_TRAVEL_LIMIT);
-
-                // Розрахунок мінімальної необхідної оплати
-                const minPay = distance < 20 ? MIN_PAY_THRESHOLD : MIN_PAY_THRESHOLD + travelTime * TRAVEL_RATE;
-
-                if (payRange.max / estLaborHours >= 50 && payRange.max >= minPay) {
-                    console.log('Відповідає умовам, подаю заявку.');
-                    await postFNworkOrderRequest(orderLink, startDateAndTime.local, estLaborHours);
-                    await sendWorkOrderMessage(orderLink);
+                console.log("Email body received.");
+                const orderLink = extractOrderLink(lastEmailBody);
+                if (orderLink) {
+                    console.log("Order link extracted:", orderLink);
+                    await processOrder(orderLink);
                 } else {
-                    console.log('Не відповідає умовам, не подаю заявку.');
+                    console.log("No valid order link found in email.");
                 }
+            } else {
+                console.log("No unread emails found.");
             }
-        }, 10000); // Перевіряємо кожні 10 секунд
+        } catch (error) {
+            console.error('Error during email check:', error);
+        }
+    }, 1000); // Check every sec
+}
+
+// Extract order link from email
+function extractOrderLink(emailBody) {
+    try {
+        return getOrderLink(emailBody);
     } catch (error) {
-        console.error('Error during authorization or email check:', error);
+        console.error('Error extracting order link:', error);
+        return null;
     }
 }
 
-// Старт сервера
+function determinePlatform(orderLink) {
+    if (orderLink.includes("fieldnation")) {
+        return "FieldNation";
+    } else if (orderLink.includes("workmarket")) {
+        return "WorkMarket";
+    }
+    return null;
+}
+
+// Apply for the job
+async function applyForJob(orderLink, startDateAndTime, estLaborHours, id) {
+
+    const platform = determinePlatform(orderLink);
+
+    try {
+
+        if (platform === "FieldNation") {
+            await postFNworkOrderRequest(orderLink, startDateAndTime, estLaborHours);
+            await sendWorkOrderMessage(orderLink);
+
+        }
+
+        if (platform === "WorkMarket") {
+            await postWMworkOrderRequest(orderLink, startDateAndTime, estLaborHours, id);
+        }
+
+    } catch (error) {
+        console.error('Error applying for the job:', error);
+    }
+}
+
+// Process the order: check requirements and apply if valid
+async function processOrder(orderLink) {
+
+    try {
+        const platform = determinePlatform(orderLink);
+
+        let data = null;
+
+        if (platform === "FieldNation") {
+            data = await getFNorderData(orderLink);
+        } else if (platform === "WorkMarket") {
+            data = await getWMorderData(orderLink);
+        } else {
+            throw new Error("Unsupported platform or invalid order link.");
+        }
+
+        if (!data) {
+            console.error("Failed to retrieve order data.");
+            return null;
+        }
+
+
+        const normalizedData = normalizeDateFromWO(data);
+
+        console.log(normalizedData);
+
+        // Proceed with the application process
+        if (isEligibleForApplication(normalizedData)) {
+            await applyForJob(orderLink, normalizedData.time, normalizedData.estLaborHours, normalizedData.id);
+        } else {
+            console.log("Order does not meet application criteria.");
+        }
+
+        return normalizedData;
+
+    } catch (error) {
+        console.error('Error processing order:', error);
+        return null;
+    }
+}
+
+// Start the server
 app.listen(port, async () => {
-    console.log(`Сервер запущено на порту ${port}`);
-    // periodicCheck();
+    console.log(`Server running on port ${port}`);
+    await initialize();
+    await periodicCheck();
 });
+
+
+
