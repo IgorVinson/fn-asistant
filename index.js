@@ -11,8 +11,8 @@ import {postWMworkOrderRequest} from "./utils/WorkMarket/postWMworkOrderRequest.
 import {sendWorkOrderMessage} from "./utils/FieldNation/sendWorkOrderMessage.js";
 import {loginToWorkMarket} from "./utils/WorkMarket/loginToWorkMarket.js";
 import {getWMorderData} from "./utils/WorkMarket/getWMorderData.js";
-import normalizeDateFromWO from "./normalizedDateFromWO.js";
-import isEligibleForApplication from "./isEligibleForApplication.js";
+import normalizeDateFromWO from "./utils/normalizedDateFromWO.js";
+import isEligibleForApplication from "./utils/isEligibleForApplication.js";
 
 // Configure the server
 const app = express();
@@ -138,7 +138,7 @@ async function processOrder(orderLink) {
 // Start the server
 app.listen(port, async () => {
     console.log(`Server running on port ${port}`);
-    await initialize();
+    // await initialize();
     await periodicCheck();
 });
 

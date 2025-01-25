@@ -1,4 +1,4 @@
-import schedule from "./schedule.js";
+import schedule from "../schedule.js";
 
 function isPaymentEligible(workOrder) {
 
@@ -19,17 +19,17 @@ function isPaymentEligible(workOrder) {
     return workOrder.payRange.max / estLaborHours >= 50 && workOrder.payRange.max >= minPay;
 }
 
-function isSlotAvailable(schedule, workOrderTime) {
-    const WORK_START_TIME = "07:59";
-    const WORK_END_TIME = "23:00";
+function isSlotAvailable(schedule, workOrder) {
+    const DAY_WORK_START_TIME = "07:59";
+    const DAY_WORK_END_TIME = "23:00";
     const MIN_BUFFER_MINUTES = 30;
 
-    const { start: startTime, end: endTime } = workOrderTime;
+    const { start: startTime, end: endTime } = workOrder.time;
     const stampStartTime = new Date(startTime).getTime();
     const stampEndTime = new Date(endTime).getTime();
 
-    const WORK_START = new Date(`${startTime.split('T')[0]}T${WORK_START_TIME}:00`).getTime();
-    const WORK_END = new Date(`${startTime.split('T')[0]}T${WORK_END_TIME}:00`).getTime();
+    const WORK_START = new Date(`${startTime.split('T')[0]}T${DAY_WORK_START_TIME}:00`).getTime();
+    const WORK_END = new Date(`${startTime.split('T')[0]}T${DAY_WORK_END_TIME}:00`).getTime();
 
     if (stampStartTime < WORK_START || stampEndTime > WORK_END) {
         console.log("Time is not available: Outside work hours");
@@ -78,7 +78,7 @@ function isEligibleForApplication(workOrder) {
 
     if (isPaymentEligible(workOrder)) {
         console.log('payment ok')
-        return isSlotAvailable(schedule, workOrder.time);
+        return isSlotAvailable(schedule, workOrder);
 
     } else {
         console.log('payment not ok')
@@ -88,7 +88,5 @@ function isEligibleForApplication(workOrder) {
 }
 
 export default isEligibleForApplication;
-
-
 
 

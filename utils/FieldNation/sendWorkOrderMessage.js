@@ -67,5 +67,3 @@ export async function sendWorkOrderMessage(url = 'https://app.fieldnation.com/wo
         return null;
     }
 }
-
-sendWorkOrderMessage();
