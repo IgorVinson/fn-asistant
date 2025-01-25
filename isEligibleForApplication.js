@@ -1,49 +1,93 @@
-const FNnormilizedData = {
-    title: 'Walgreens POS Logic unit / Printer / ELO Refresh (Assist)',
-    startDateAndTime: {
-        local: { date: '2025-02-11', time: '09:00:00' },
-        utc: '2025-02-11 14:00:00'
-    },
-    distance: 11.17511551089284,
-    payRange: { min: 45, max: 270 },
-    estLaborHours: 6,
-    platform: 'FieldNation'
-}
+import schedule from "./schedule.js";
 
+function isPaymentEligible(workOrder) {
 
-const WMnormalizedData = {
-    workOrderId: '5659140276',
-    title: 'Experienced Networking/Cabling tech Needed - Exterior Wall-Mount Installation\t LTE/5G Cradlepoint Installation - Work Market',
-    startDateAndTime: 'Fri, 01/17/2025 9:00 AM  EST',
-    distance: 39.6,
-    payRange: { min: 0, max: 187.58 },
-    estLaborHours: 0,
-    platform: 'WorkMarket'
-}
-
-
-function isEligibleForApplication(data) {
     const SPEED = 50; // Average speed in miles per hour
     const FREE_TRAVEL_LIMIT = 50 / 60; // Free travel time in hours
     const TRAVEL_RATE = 30; // Rate per hour of travel
     const MIN_PAY_THRESHOLD = 150; // Minimum pay for a trip
 
-    const travelTime = Math.max(0, (data.distance / SPEED) * 2 - FREE_TRAVEL_LIMIT);
-    const minPay = data.distance < 20
+    const travelTime = Math.max(0, (workOrder.distance / SPEED) * 2 - FREE_TRAVEL_LIMIT);
+
+    const minPay = workOrder.distance < 20
         ? MIN_PAY_THRESHOLD
         : MIN_PAY_THRESHOLD + travelTime * TRAVEL_RATE;
 
-    let estLaborHours = data.estLaborHours;
+    let estLaborHours = workOrder.estLaborHours;
+    if (!workOrder.estLaborHours) estLaborHours = 4;
 
-    if(!data.estLaborHours) estLaborHours = 4;
-
-
-    return data.payRange.max / estLaborHours >= 50 && data.payRange.max >= minPay;
+    return workOrder.payRange.max / estLaborHours >= 50 && workOrder.payRange.max >= minPay;
 }
 
-console.log(isEligibleForApplication(FNnormilizedData))
-console.log(isEligibleForApplication(WMnormalizedData))
+function isSlotAvailable(schedule, workOrderTime) {
+    const WORK_START_TIME = "07:59";
+    const WORK_END_TIME = "23:00";
+    const MIN_BUFFER_MINUTES = 30;
 
+    const { start: startTime, end: endTime } = workOrderTime;
+    const stampStartTime = new Date(startTime).getTime();
+    const stampEndTime = new Date(endTime).getTime();
+
+    const WORK_START = new Date(`${startTime.split('T')[0]}T${WORK_START_TIME}:00`).getTime();
+    const WORK_END = new Date(`${startTime.split('T')[0]}T${WORK_END_TIME}:00`).getTime();
+
+    if (stampStartTime < WORK_START || stampEndTime > WORK_END) {
+        console.log("Time is not available: Outside work hours");
+        return false;
+    }
+
+    const allEvents = Object.values(schedule)
+        .flatMap(week => Object.entries(week).flatMap(([day, events]) => {
+            return events.map(event => ({
+                day,
+                start: new Date(event.time.start).getTime(),
+                end: new Date(event.time.end).getTime(),
+            }));
+        }));
+
+    const sameDayEvents = allEvents.filter(event => {
+        const eventDay = event.day.split(' ')[1];
+        const workOrderDay = new Date(startTime).getDate();
+        return parseInt(eventDay, 10) === workOrderDay;
+    });
+
+    const sortedEvents = sameDayEvents.sort((a, b) => a.start - b.start);
+
+    let prevEndTime = WORK_START;
+
+    for (const event of sortedEvents) {
+        if (
+            stampStartTime >= prevEndTime + MIN_BUFFER_MINUTES * 60 * 1000 &&
+            stampEndTime <= event.start - MIN_BUFFER_MINUTES * 60 * 1000
+        ) {
+            return true;
+        }
+        prevEndTime = event.end;
+    }
+
+    const finalCheck = stampStartTime >= prevEndTime + MIN_BUFFER_MINUTES * 60 * 1000 && stampEndTime <= WORK_END;
+
+    if (!finalCheck) {
+        console.log("Time is not available: Conflicts with existing schedule");
+    }
+
+    return finalCheck;
+}
+
+function isEligibleForApplication(workOrder) {
+
+    if (isPaymentEligible(workOrder)) {
+        console.log('payment ok')
+        return isSlotAvailable(schedule, workOrder.time);
+
+    } else {
+        console.log('payment not ok')
+        return false
+    }
+
+}
+
+export default isEligibleForApplication;
 
 
 

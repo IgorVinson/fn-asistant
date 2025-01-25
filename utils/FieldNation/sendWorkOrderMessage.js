@@ -14,17 +14,20 @@ function getCookies() {
 }
 
 // Функція для виконання запиту і аналізу даних
-export async function sendWorkOrderMessage(url) {
+export async function sendWorkOrderMessage(url = 'https://app.fieldnation.com/workorders/16550330') {
     try {
         // Отримуємо куки
         const cookies = getCookies();
         const workOrderId = url.split('?')[0].split('/').pop();
 
         const message = 'Hello,\n' +
-            'I’m ready to assist with your project and have extensive experience in this field. Please find a link to my portfolio for your review. \n' +
-            'https://drive.google.com/drive/folders/1p_7aGla27KgB4GVIPRjf6wb7t7RN6AE7?usp=sharing\n' +
-            'If selected, I will ensure the highest quality work and your satisfaction.\n' +
-            'Thank you for your time and consideration!!';
+            'I’m new to Field Nation but bring extensive experience in networking, POS, data centers, and related fields. \n' +
+            'If you entrust me with this project, I am committed to exceeding your expectations. I have worked with companies such as Lululemon, Trader Joe’s, Home Depot, and many others.\n' +
+            '\n' +
+            'Here is photo of my last projects:\n' +
+            "https://drive.google.com/drive/folders/1p_7aGla27KgB4GVIPRjf6wb7t7RN6AE7?usp=sharing:\n" +
+            '\n' +
+            'Thank you for considering my application. I look forward to the opportunity!';
 
         // Виконуємо запит
         await fetch(`https://app.fieldnation.com/v2/workorders/${workOrderId}/messages`, {
@@ -54,7 +57,7 @@ export async function sendWorkOrderMessage(url) {
             }
         ).catch(
             error => {
-                console.error("Error sending work order request:", error);
+                console.error("Error sending message:", error);
             }
         )
 
@@ -65,3 +68,4 @@ export async function sendWorkOrderMessage(url) {
     }
 }
 
+sendWorkOrderMessage();
