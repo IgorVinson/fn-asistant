@@ -3,3 +3,5 @@
 /node_modules
 /WorkMarket/cookies.json
 /FieldNation/cookies.json
+.idea
+.vscode
