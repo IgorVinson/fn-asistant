@@ -104,7 +104,7 @@ function calculateCounterOffer(workOrder) {
 
   let shouldCounterOffer = false;
   let reason = [];
-  let payType = 'hourly';
+  let payType = workOrder.platform === 'WorkMarket' ? 'hourly' : 'fixed';
   let payAmount = workOrder.payRange.max;
   let travelExpense = 0;
 
@@ -125,7 +125,6 @@ function calculateCounterOffer(workOrder) {
 
   // Step 2: Calculate travel expense if distance is over threshold
   if (workOrder.distance > DISTANCE_THRESHOLD) {
-    // Changed: Use full distance for travel expense
     travelExpense = Math.round(workOrder.distance * TRAVEL_RATE_PER_MILE);
     shouldCounterOffer = true;
     reason.push('travel expense needed');
@@ -133,7 +132,7 @@ function calculateCounterOffer(workOrder) {
 
   return {
     shouldCounterOffer,
-    payType: shouldCounterOffer ? 'fixed' : null, // Changed to fixed since we want total amount
+    payType: workOrder.platform === 'WorkMarket' ? 'hourly' : 'fixed', // Keep hourly for WM
     payAmount: Math.round(payAmount),
     travelExpense,
     reason: reason.join(', '),

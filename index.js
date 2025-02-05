@@ -15,6 +15,7 @@ import normalizeDateFromWO from './utils/normalizedDateFromWO.js';
 import isEligibleForApplication from './utils/isEligibleForApplication.js';
 import { postFNCounterOffer } from './utils/FieldNation/postFNCounterOffer.js';
 import logger from './utils/logger.js';
+import { postWMCounterOffer } from './utils/WorkMarket/postWMCounterOffer.js';
 
 // Configure the server
 const app = express();
@@ -137,33 +138,33 @@ async function processOrder(orderLink) {
         normalizedData.id
       );
 
-      if (normalizedData.platform === 'FieldNation') {
-        try {
+      try {
+        if (normalizedData.platform === 'FieldNation') {
           await postFNCounterOffer(
             normalizedData.id,
-            eligibilityResult.counterOffer.payAmount,
+            normalizedData.payRange.max,
             eligibilityResult.counterOffer.travelExpense,
-            eligibilityResult.counterOffer.payType,
-            normalizedData.estLaborHours
+            'fixed'
           );
-          logger.info(
-            `Counter offer sent - ${
-              eligibilityResult.counterOffer.payType === 'fixed'
-                ? 'Fixed Rate'
-                : `Hourly Rate (${normalizedData.estLaborHours}hr)`
-            }: $${eligibilityResult.counterOffer.payAmount}, Travel: $${
-              eligibilityResult.counterOffer.travelExpense
-            }`,
-            normalizedData.platform,
-            normalizedData.id
-          );
-        } catch (error) {
-          logger.error(
-            `Failed to send counter offer: ${error.message}`,
-            normalizedData.platform,
-            normalizedData.id
+        } else if (normalizedData.platform === 'WorkMarket') {
+          await postWMCounterOffer(
+            normalizedData.id,
+            normalizedData.payRange.max,
+            eligibilityResult.counterOffer.travelExpense
           );
         }
+
+        logger.info(
+          `Counter offer sent - Original Rate: $${normalizedData.payRange.max}, Travel: $${eligibilityResult.counterOffer.travelExpense}`,
+          normalizedData.platform,
+          normalizedData.id
+        );
+      } catch (error) {
+        logger.error(
+          `Failed to send counter offer: ${error.message}`,
+          normalizedData.platform,
+          normalizedData.id
+        );
       }
     } else {
       logger.info(
