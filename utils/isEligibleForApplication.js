@@ -98,50 +98,46 @@ function isSlotAvailable(schedule, workOrder) {
 
 function calculateCounterOffer(workOrder) {
   const MIN_TOTAL_PAY = 150;
-  const MIN_HOURLY_RATE = 40;
-  const DESIRED_HOURLY_RATE = 55;
+  const MIN_HOURLY_RATE = 50;
   const DISTANCE_THRESHOLD = 30;
   const TRAVEL_RATE_PER_MILE = 1;
 
   let shouldCounterOffer = false;
   let reason = [];
   let payType = 'hourly';
-  let payAmount = workOrder.payRange.max / workOrder.estLaborHours;
+  let payAmount = workOrder.payRange.max;
   let travelExpense = 0;
 
-  // Calculate travel expense if distance is over threshold
+  // Step 1: Check if total pay and hourly rate meet minimum requirements
+  const hourlyRate = workOrder.payRange.max / workOrder.estLaborHours;
+
+  if (workOrder.payRange.max < MIN_TOTAL_PAY || hourlyRate < MIN_HOURLY_RATE) {
+    // If job doesn't meet minimum requirements, reject without counter
+    return {
+      shouldCounterOffer: false,
+      payType: null,
+      payAmount: 0,
+      travelExpense: 0,
+      reason: 'pay below minimum requirements',
+      originalRate: hourlyRate,
+    };
+  }
+
+  // Step 2: Calculate travel expense if distance is over threshold
   if (workOrder.distance > DISTANCE_THRESHOLD) {
-    travelExpense = Math.round(
-      (workOrder.distance - DISTANCE_THRESHOLD) * TRAVEL_RATE_PER_MILE
-    );
+    // Changed: Use full distance for travel expense
+    travelExpense = Math.round(workOrder.distance * TRAVEL_RATE_PER_MILE);
     shouldCounterOffer = true;
     reason.push('travel expense needed');
   }
 
-  // Check total pay for short jobs (less than 3 hours)
-  if (workOrder.estLaborHours < 3 && workOrder.payRange.max < MIN_TOTAL_PAY) {
-    payType = 'fixed';
-    payAmount = MIN_TOTAL_PAY;
-    shouldCounterOffer = true;
-    reason.push('minimum total pay for short job');
-  } else if (
-    workOrder.payRange.max / workOrder.estLaborHours <
-    MIN_HOURLY_RATE
-  ) {
-    // Only check hourly rate for longer jobs
-    payType = 'hourly';
-    payAmount = DESIRED_HOURLY_RATE;
-    shouldCounterOffer = true;
-    reason.push('hourly rate too low');
-  }
-
   return {
     shouldCounterOffer,
-    payType,
+    payType: shouldCounterOffer ? 'fixed' : null, // Changed to fixed since we want total amount
     payAmount: Math.round(payAmount),
     travelExpense,
     reason: reason.join(', '),
-    originalRate: workOrder.payRange.max / workOrder.estLaborHours,
+    originalRate: hourlyRate,
   };
 }
 
