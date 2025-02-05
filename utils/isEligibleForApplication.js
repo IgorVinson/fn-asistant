@@ -1,5 +1,5 @@
 import { currentMonth as schedule } from '../schedule.js';
-import { logger } from './logger.js';
+import logger from './logger.js';
 
 function isPaymentEligible(workOrder) {
   const SPEED = 50; // Average speed in miles per hour
@@ -43,7 +43,11 @@ function isSlotAvailable(schedule, workOrder) {
   ).getTime();
 
   if (stampStartTime < WORK_START || stampEndTime > WORK_END) {
-    logger.info('Time is not available: Outside work hours', workOrder.platform, workOrder.id);
+    logger.info(
+      'Time is not available: Outside work hours',
+      workOrder.platform,
+      workOrder.id
+    );
     return false;
   }
 
@@ -82,20 +86,101 @@ function isSlotAvailable(schedule, workOrder) {
     stampEndTime <= WORK_END;
 
   if (!finalCheck) {
-    logger.info('Time is not available: Conflicts with existing schedule', workOrder.platform, workOrder.id);
+    logger.info(
+      'Time is not available: Conflicts with existing schedule',
+      workOrder.platform,
+      workOrder.id
+    );
   }
 
   return finalCheck;
 }
 
+function calculateCounterOffer(workOrder) {
+  const MIN_TOTAL_PAY = 150;
+  const MIN_HOURLY_RATE = 50;
+  const DISTANCE_THRESHOLD = 30;
+  const TRAVEL_RATE_PER_MILE = 1;
+
+  let shouldCounterOffer = false;
+  let reason = [];
+  let payType = 'hourly';
+  let payAmount = workOrder.payRange.max;
+  let travelExpense = 0;
+
+  // Step 1: Check if total pay and hourly rate meet minimum requirements
+  const hourlyRate = workOrder.payRange.max / workOrder.estLaborHours;
+
+  if (workOrder.payRange.max < MIN_TOTAL_PAY || hourlyRate < MIN_HOURLY_RATE) {
+    // If job doesn't meet minimum requirements, reject without counter
+    return {
+      shouldCounterOffer: false,
+      payType: null,
+      payAmount: 0,
+      travelExpense: 0,
+      reason: 'pay below minimum requirements',
+      originalRate: hourlyRate,
+    };
+  }
+
+  // Step 2: Calculate travel expense if distance is over threshold
+  if (workOrder.distance > DISTANCE_THRESHOLD) {
+    // Changed: Use full distance for travel expense
+    travelExpense = Math.round(workOrder.distance * TRAVEL_RATE_PER_MILE);
+    shouldCounterOffer = true;
+    reason.push('travel expense needed');
+  }
+
+  return {
+    shouldCounterOffer,
+    payType: shouldCounterOffer ? 'fixed' : null, // Changed to fixed since we want total amount
+    payAmount: Math.round(payAmount),
+    travelExpense,
+    reason: reason.join(', '),
+    originalRate: hourlyRate,
+  };
+}
+
 function isEligibleForApplication(workOrder) {
+  const hourlyRate = workOrder.payRange.max / workOrder.estLaborHours;
+
+  // Log the initial values we're checking
+  logger.info(
+    `Checking eligibility - Total Pay: $${workOrder.payRange.max}, Hourly Rate: $${hourlyRate}, Distance: ${workOrder.distance}mi`,
+    workOrder.platform,
+    workOrder.id
+  );
+
+  const counterOffer = calculateCounterOffer(workOrder);
+
+  if (counterOffer.shouldCounterOffer) {
+    logger.info(
+      `Counter offer triggered - Reason: ${counterOffer.reason} - Rate: $${counterOffer.payAmount}/hr, Travel: $${counterOffer.travelExpense}`,
+      workOrder.platform,
+      workOrder.id
+    );
+
+    return {
+      eligible: false,
+      counterOffer,
+    };
+  }
+
+  // If no counter offer needed, check if eligible for direct application
   if (isPaymentEligible(workOrder)) {
     logger.info('Payment criteria met', workOrder.platform, workOrder.id);
-    return isSlotAvailable(schedule, workOrder);
-  } else {
-    logger.info('Payment criteria not met', workOrder.platform, workOrder.id);
-    return false;
+    const slotAvailable = isSlotAvailable(schedule, workOrder);
+    return {
+      eligible: slotAvailable,
+      counterOffer: null,
+    };
   }
+
+  logger.info('Payment criteria not met', workOrder.platform, workOrder.id);
+  return {
+    eligible: false,
+    counterOffer: null,
+  };
 }
 
 export default isEligibleForApplication;
