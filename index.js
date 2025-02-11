@@ -130,7 +130,7 @@ async function processOrder(orderLink) {
         normalizedData.estLaborHours,
         normalizedData.id
       );
-    } else if (eligibilityResult.counterOffer?.shouldCounterOffer) {
+    } else if (eligibilityResult.counterOffer) {
       logger.info(
         `Attempting counter offer for ${normalizedData.id}`,
         normalizedData.platform,

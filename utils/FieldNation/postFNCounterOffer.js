@@ -22,6 +22,15 @@ export async function postFNCounterOffer(
 ) {
   try {
     const cookies = getCookies();
+    console.log('Starting counter offer with params:', {
+      workOrderId,
+      baseAmount,
+      travelExpense,
+      payType,
+      baseHours,
+      additionalHours,
+      additionalAmount,
+    });
 
     const requestBody = {
       technician: { id: CONFIG.PLATFORMS.FIELD_NATION.USER_ID },
