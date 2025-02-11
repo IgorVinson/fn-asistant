@@ -23,7 +23,7 @@ const port = 3001;
 let browser; // Declare a browser instance
 
 // Initialize Puppeteer and log in to FieldNation and WorkMarket
-async function initialize() {
+async function saveCookies() {
   browser = await puppeteer.launch({ headless: false }); // Set headless: false to see the browser
   await loginToFieldNation(browser);
   await loginToWorkMarket(browser);
@@ -141,19 +141,18 @@ async function processOrder(orderLink) {
         try {
           await postFNCounterOffer(
             normalizedData.id,
-            eligibilityResult.counterOffer.payAmount,
+            eligibilityResult.counterOffer.baseAmount,
             eligibilityResult.counterOffer.travelExpense,
             eligibilityResult.counterOffer.payType,
-            normalizedData.estLaborHours
+            eligibilityResult.counterOffer.baseHours,
+            eligibilityResult.counterOffer.additionalHours,
+            eligibilityResult.counterOffer.additionalAmount
           );
+
           logger.info(
-            `Counter offer sent - ${
-              eligibilityResult.counterOffer.payType === 'fixed'
-                ? 'Fixed Rate'
-                : `Hourly Rate (${normalizedData.estLaborHours}hr)`
-            }: $${eligibilityResult.counterOffer.payAmount}, Travel: $${
-              eligibilityResult.counterOffer.travelExpense
-            }`,
+            `Counter offer sent - Base: $${eligibilityResult.counterOffer.baseAmount} (${eligibilityResult.counterOffer.baseHours}hr), ` +
+              `Additional: $${eligibilityResult.counterOffer.additionalAmount}/hr (${eligibilityResult.counterOffer.additionalHours}hr), ` +
+              `Travel: $${eligibilityResult.counterOffer.travelExpense}`,
             normalizedData.platform,
             normalizedData.id
           );
@@ -183,6 +182,6 @@ async function processOrder(orderLink) {
 // Start the server
 app.listen(port, async () => {
   console.log(`Server running on port ${port}`);
-  // await initialize();
+  // await saveCookies();
   await periodicCheck();
 });
