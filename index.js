@@ -137,7 +137,7 @@ async function processOrder(orderLink) {
       try {
         await postWMCounterOffer(
           normalizedData.id,
-          50, // hourly rate
+          normalizedData.payRange.min,
           normalizedData.estLaborHours,
           normalizedData.distance
         );
