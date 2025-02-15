@@ -13,13 +13,24 @@ function getCookies() {
 
 export async function postFNCounterOffer(
   workOrderId,
-  payAmount,
-  travelExpense = 0,
-  payType = 'fixed', // default to fixed rate
-  laborHours = 1 // Add labor hours parameter
+  baseAmount,
+  travelExpense,
+  payType,
+  baseHours,
+  additionalHours,
+  additionalAmount
 ) {
   try {
     const cookies = getCookies();
+    console.log('Starting counter offer with params:', {
+      workOrderId,
+      baseAmount,
+      travelExpense,
+      payType,
+      baseHours,
+      additionalHours,
+      additionalAmount,
+    });
 
     const requestBody = {
       technician: { id: CONFIG.PLATFORMS.FIELD_NATION.USER_ID },
@@ -27,60 +38,55 @@ export async function postFNCounterOffer(
       active: true,
       expiryTime: 0,
       expenses: [],
-      notes: '',
+      notes:
+        "Hi there! I hope you're doing well. I was wondering if it would be possible to add travel expenses and provide the total payment amount. Thank you so much!",
       pay: {
         type: payType,
         base: {
-          units: payType === 'hourly' ? laborHours : 0, // Use actual labor hours
-          amount: payAmount,
+          units: parseInt(baseHours),
+          amount: parseFloat(baseAmount),
         },
         additional: {
-          units: 0,
-          amount: 0,
+          units: parseInt(additionalHours),
+          amount: parseFloat(additionalAmount),
         },
       },
     };
 
-    // Add travel expenses if needed
     if (travelExpense > 0) {
       requestBody.expenses.push({
         description: 'travel',
-        amount: travelExpense,
+        amount: parseFloat(travelExpense),
         quantity: 1,
         category: {
           uid: 2,
           id: 2,
         },
       });
-      requestBody.notes = 'Including travel expenses';
     }
 
+    console.log(
+      'Counter offer request body:',
+      JSON.stringify(requestBody, null, 2)
+    );
+
     const response = await fetch(
-      `https://app.fieldnation.com/v2/workorders/${workOrderId}/requests?acting_user_id=983643&clientPayTermsAccepted=true`,
+      `https://app.fieldnation.com/v2/workorders/${workOrderId}/requests?acting_user_id=${CONFIG.PLATFORMS.FIELD_NATION.USER_ID}&clientPayTermsAccepted=true`,
       {
         method: 'POST',
         headers: {
           accept: 'application/json',
-          'accept-language':
-            'en-US,en;q=0.9,uk-UA;q=0.8,uk;q=0.7,ru-UA;q=0.6,ru;q=0.5',
           'content-type': 'application/json',
-          priority: 'u=1, i',
-          'sec-ch-ua':
-            '"Google Chrome";v="131", "Chromium";v="131", "Not_A Brand";v="24"',
-          'sec-ch-ua-mobile': '?0',
-          'sec-ch-ua-platform': '"macOS"',
-          'sec-fetch-dest': 'empty',
-          'sec-fetch-mode': 'cors',
-          'sec-fetch-site': 'same-origin',
           cookie: cookies,
           Referer: `https://app.fieldnation.com/workorders/${workOrderId}`,
-          'Referrer-Policy': 'strict-origin-when-cross-origin',
         },
         body: JSON.stringify(requestBody),
       }
     );
 
     if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Counter offer error response:', errorText);
       throw new Error(`HTTP error! status: ${response.status}`);
     }
 
