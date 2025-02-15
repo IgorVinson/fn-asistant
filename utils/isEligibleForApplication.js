@@ -1,37 +1,68 @@
 import { currentMonth as schedule } from '../schedule.js';
 import logger from './logger.js';
+import { CONFIG } from '../config.js';
 
 function isPaymentEligible(workOrder) {
-  const SPEED = 50; // Average speed in miles per hour
-  const FREE_TRAVEL_LIMIT = 50 / 60; // Free travel time in hours
-  const TRAVEL_RATE = 30; // Rate per hour of travel
-  const MIN_PAY_THRESHOLD = 150; // Minimum pay for a trip
+  // If no labor hours specified, assume 4 hours
+  let estLaborHours = workOrder.estLaborHours || 4;
+  const TRAVEL_THRESHOLD = 30;
 
-  const travelTime = Math.max(
-    0,
-    (workOrder.distance / SPEED) * 2 - FREE_TRAVEL_LIMIT
+  // Calculate required pay
+  let requiredPay;
+  let laborPay;
+
+  // For jobs over 2 hours
+  if (estLaborHours > 2) {
+    laborPay = 150 + (estLaborHours - 2) * 55;
+    requiredPay = laborPay;
+    console.log(
+      `Labor calculation: $150 base + (${
+        estLaborHours - 2
+      }hrs × $55) = $${laborPay}`
+    );
+  } else {
+    // For jobs 2 hours or less
+    laborPay = 150;
+    requiredPay = laborPay;
+    console.log(`Labor calculation: Fixed rate $150`);
+  }
+
+  // Add travel expense if distance > 30 miles
+  if (workOrder.distance > TRAVEL_THRESHOLD) {
+    requiredPay += workOrder.distance; // $1 per mile
+    console.log(
+      `Added travel expense: ${workOrder.distance} miles = $${workOrder.distance}`
+    );
+  }
+
+  console.log(
+    `Total required pay: $${requiredPay} vs Offered pay: $${workOrder.payRange.max}`
   );
 
-  const minPay =
-    workOrder.distance < 20
-      ? MIN_PAY_THRESHOLD
-      : MIN_PAY_THRESHOLD + travelTime * TRAVEL_RATE;
-
-  let estLaborHours = workOrder.estLaborHours;
-  if (!workOrder.estLaborHours) estLaborHours = 4;
-
-  return (
-    workOrder.payRange.max / estLaborHours >= 50 &&
-    workOrder.payRange.max >= minPay
-  );
+  // Return true only if offered pay meets or exceeds required pay
+  return workOrder.payRange.max >= requiredPay;
 }
 
 function isSlotAvailable(schedule, workOrder) {
   const DAY_WORK_START_TIME = '07:59';
-  const DAY_WORK_END_TIME = '23:00';
+  const DAY_WORK_END_TIME = '19:00';
   const MIN_BUFFER_MINUTES = 30;
 
   const { start: startTime, end: endTime } = workOrder.time;
+  const orderDate = new Date(startTime);
+  const orderDay = orderDate.getDate();
+  const orderMonth = orderDate.getMonth() + 1;
+
+  // Debug logging
+  console.log('Checking availability for:', {
+    date: `${orderMonth}/${orderDay}`,
+    startTime,
+    endTime,
+    existingEvents: Object.values(schedule).flatMap(week =>
+      Object.entries(week).map(([day, events]) => ({ day, events }))
+    ),
+  });
+
   const stampStartTime = new Date(startTime).getTime();
   const stampEndTime = new Date(endTime).getTime();
 
@@ -44,13 +75,14 @@ function isSlotAvailable(schedule, workOrder) {
 
   if (stampStartTime < WORK_START || stampEndTime > WORK_END) {
     logger.info(
-      'Time is not available: Outside work hours',
+      `Time is not available: Outside work hours (${DAY_WORK_START_TIME}-${DAY_WORK_END_TIME})`,
       workOrder.platform,
       workOrder.id
     );
     return false;
   }
 
+  // Get all events for comparison
   const allEvents = Object.values(schedule).flatMap(week =>
     Object.entries(week).flatMap(([day, events]) => {
       return events.map(event => ({
@@ -61,16 +93,26 @@ function isSlotAvailable(schedule, workOrder) {
     })
   );
 
+  // Filter events for the same day AND month
   const sameDayEvents = allEvents.filter(event => {
-    const eventDay = event.day.split(' ')[1];
-    const workOrderDay = new Date(startTime).getDate();
-    return parseInt(eventDay, 10) === workOrderDay;
+    const eventDate = new Date(event.start);
+    return (
+      eventDate.getDate() === orderDay &&
+      eventDate.getMonth() === orderDate.getMonth()
+    );
   });
 
+  // If no events on this day, the slot is available
+  if (sameDayEvents.length === 0) {
+    return true;
+  }
+
+  // Sort events by start time
   const sortedEvents = sameDayEvents.sort((a, b) => a.start - b.start);
 
   let prevEndTime = WORK_START;
 
+  // Check for conflicts with existing events
   for (const event of sortedEvents) {
     if (
       stampStartTime >= prevEndTime + MIN_BUFFER_MINUTES * 60 * 1000 &&
@@ -81,102 +123,62 @@ function isSlotAvailable(schedule, workOrder) {
     prevEndTime = event.end;
   }
 
-  const finalCheck =
+  // Final check for end of day
+  return (
     stampStartTime >= prevEndTime + MIN_BUFFER_MINUTES * 60 * 1000 &&
-    stampEndTime <= WORK_END;
-
-  if (!finalCheck) {
-    logger.info(
-      'Time is not available: Conflicts with existing schedule',
-      workOrder.platform,
-      workOrder.id
-    );
-  }
-
-  return finalCheck;
+    stampEndTime <= WORK_END
+  );
 }
 
 function calculateCounterOffer(workOrder) {
-  const MIN_TOTAL_PAY = 150;
-  const MIN_HOURLY_RATE = 50;
-  const DISTANCE_THRESHOLD = 30;
-  const TRAVEL_RATE_PER_MILE = 1;
+  const BASE_HOURS = 2;
+  const BASE_RATE = 150;
+  const ADDITIONAL_HOURLY_RATE = 55;
+  const TRAVEL_THRESHOLD = 30;
 
-  let shouldCounterOffer = false;
-  let reason = [];
-  let payType = 'hourly';
-  let payAmount = workOrder.payRange.max;
-  let travelExpense = 0;
+  const travelExpense =
+    workOrder.distance > TRAVEL_THRESHOLD ? Math.round(workOrder.distance) : 0;
 
-  // Step 1: Check if total pay and hourly rate meet minimum requirements
-  const hourlyRate = workOrder.payRange.max / workOrder.estLaborHours;
+  const isFixedRate = workOrder.estLaborHours <= 2;
 
-  if (workOrder.payRange.max < MIN_TOTAL_PAY || hourlyRate < MIN_HOURLY_RATE) {
-    // If job doesn't meet minimum requirements, reject without counter
-    return {
-      shouldCounterOffer: false,
-      payType: null,
-      payAmount: 0,
-      travelExpense: 0,
-      reason: 'pay below minimum requirements',
-      originalRate: hourlyRate,
-    };
-  }
-
-  // Step 2: Calculate travel expense if distance is over threshold
-  if (workOrder.distance > DISTANCE_THRESHOLD) {
-    // Changed: Use full distance for travel expense
-    travelExpense = Math.round(workOrder.distance * TRAVEL_RATE_PER_MILE);
-    shouldCounterOffer = true;
-    reason.push('travel expense needed');
-  }
+  const additionalHours = isFixedRate
+    ? 0
+    : Math.max(1, workOrder.estLaborHours - BASE_HOURS);
 
   return {
-    shouldCounterOffer,
-    payType: shouldCounterOffer ? 'fixed' : null, // Changed to fixed since we want total amount
-    payAmount: Math.round(payAmount),
-    travelExpense,
-    reason: reason.join(', '),
-    originalRate: hourlyRate,
+    shouldCounterOffer: true,
+    payType: isFixedRate ? 'fixed' : 'blended',
+    baseHours: isFixedRate ? 0 : BASE_HOURS,
+    baseAmount: BASE_RATE,
+    additionalHours: additionalHours,
+    additionalAmount: isFixedRate ? 0 : ADDITIONAL_HOURLY_RATE,
+    travelExpense: travelExpense,
   };
 }
 
 function isEligibleForApplication(workOrder) {
-  const hourlyRate = workOrder.payRange.max / workOrder.estLaborHours;
-
-  // Log the initial values we're checking
   logger.info(
-    `Checking eligibility - Total Pay: $${workOrder.payRange.max}, Hourly Rate: $${hourlyRate}, Distance: ${workOrder.distance}mi`,
+    `Checking eligibility - Distance: ${workOrder.distance}mi, Est. Hours: ${workOrder.estLaborHours}`,
     workOrder.platform,
     workOrder.id
   );
 
-  const counterOffer = calculateCounterOffer(workOrder);
-
-  if (counterOffer.shouldCounterOffer) {
-    logger.info(
-      `Counter offer triggered - Reason: ${counterOffer.reason} - Rate: $${counterOffer.payAmount}/hr, Travel: $${counterOffer.travelExpense}`,
-      workOrder.platform,
-      workOrder.id
-    );
-
-    return {
-      eligible: false,
-      counterOffer,
-    };
+  if (workOrder.platform === 'FieldNation') {
+    if (isPaymentEligible(workOrder)) {
+      const slotAvailable = isSlotAvailable(schedule, workOrder);
+      return {
+        eligible: slotAvailable,
+        counterOffer: null,
+      };
+    } else {
+      // If payment is not good, generate counter offer
+      return {
+        eligible: false,
+        counterOffer: calculateCounterOffer(workOrder),
+      };
+    }
   }
 
-  // If no counter offer needed, check if eligible for direct application
-  if (isPaymentEligible(workOrder)) {
-    logger.info('Payment criteria met', workOrder.platform, workOrder.id);
-    const slotAvailable = isSlotAvailable(schedule, workOrder);
-    return {
-      eligible: slotAvailable,
-      counterOffer: null,
-    };
-  }
-
-  logger.info('Payment criteria not met', workOrder.platform, workOrder.id);
   return {
     eligible: false,
     counterOffer: null,
