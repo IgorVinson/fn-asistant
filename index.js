@@ -15,6 +15,7 @@ import normalizeDateFromWO from './utils/normalizedDateFromWO.js';
 import isEligibleForApplication from './utils/isEligibleForApplication.js';
 import { postFNCounterOffer } from './utils/FieldNation/postFNCounterOffer.js';
 import logger from './utils/logger.js';
+import { postWMCounterOffer } from './utils/WorkMarket/postWMCounterOffer.js';
 
 // Configure the server
 const app = express();
@@ -101,8 +102,7 @@ async function applyForJob(orderLink, startDateAndTime, estLaborHours, id) {
 async function processOrder(orderLink) {
   try {
     const platform = determinePlatform(orderLink);
-
-    let data = null;
+    let data;
 
     if (platform === 'FieldNation') {
       data = await getFNorderData(orderLink);
@@ -118,7 +118,6 @@ async function processOrder(orderLink) {
     }
 
     const normalizedData = normalizeDateFromWO(data);
-
     console.log(normalizedData);
 
     const eligibilityResult = isEligibleForApplication(normalizedData);
@@ -130,6 +129,33 @@ async function processOrder(orderLink) {
         normalizedData.estLaborHours,
         normalizedData.id
       );
+    } else if (
+      normalizedData.platform === 'WorkMarket' &&
+      normalizedData.distance > 30
+    ) {
+      // Handle WorkMarket counter offer
+      try {
+        await postWMCounterOffer(
+          normalizedData.id,
+          50, // hourly rate
+          normalizedData.estLaborHours,
+          normalizedData.distance
+        );
+
+        logger.info(
+          `Counter offer sent with travel expenses: $${Math.round(
+            normalizedData.distance
+          )}`,
+          normalizedData.platform,
+          normalizedData.id
+        );
+      } catch (error) {
+        logger.error(
+          `Failed to send counter offer: ${error.message}`,
+          normalizedData.platform,
+          normalizedData.id
+        );
+      }
     } else if (eligibilityResult.counterOffer) {
       logger.info(
         `Attempting counter offer for ${normalizedData.id}`,
@@ -183,5 +209,5 @@ async function processOrder(orderLink) {
 app.listen(port, async () => {
   console.log(`Server running on port ${port}`);
   // await saveCookies();
-  await periodicCheck();
+  // await periodicCheck();
 });
