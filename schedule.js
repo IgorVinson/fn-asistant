@@ -42,8 +42,28 @@ const currentMonth = {
     'SUN 16': [],
   },
   week4: {
-    'MON 17': [],
-    'TUE 18': [],
+    'MON 17': [
+      {
+        id: '',
+        platform: 'FieldNation',
+        title: 'Printer data run ',
+        time: {
+          start: '2025-02-17T09:00:00',
+          end: '2025-02-10T17:00:00',
+        },
+      },
+    ],
+    'TUE 18': [
+      {
+        id: '',
+        platform: 'FieldNation',
+        title: 'REOPLACEMENT DATA REMOTE INSTALL/ MUST HAVE BUTT-SET-DIS117971 ',
+        time: {
+          start: '2025-02-18T09:00:00',
+          end: '2025-02-18T11:00:00',
+        },
+      },
+    ],
     'WED 19': [],
     'THU 20': [],
     'FRI 21': [],
