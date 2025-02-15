@@ -209,5 +209,5 @@ async function processOrder(orderLink) {
 app.listen(port, async () => {
   console.log(`Server running on port ${port}`);
   // await saveCookies();
-  // await periodicCheck();
+  await periodicCheck();
 });
