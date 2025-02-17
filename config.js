@@ -2,7 +2,7 @@ export const CONFIG = {
   // Payment and Rate Settings
   RATES: {
     // Base rates
-    BASE_RATE: 150, // Base rate for jobs up to 2 hours (FieldNation)
+    BASE_RATE: 120, // Base rate for jobs up to 2 hours (FieldNation)
     BASE_HOURS: 2, // Number of hours covered by base rate (FieldNation)
     ADDITIONAL_HOURLY_RATE: 55, // Rate per additional hour after base hours (FieldNation)
     BASE_HOURLY_RATE: 50, // Standard hourly rate for WorkMarket
@@ -14,7 +14,7 @@ export const CONFIG = {
 
   // Work Schedule Settings
   SCHEDULE: {
-    WORK_START_TIME: '07:59', // Daily work start time
+    WORK_START_TIME: '08:59', // Daily work start time
     WORK_END_TIME: '19:00', // Daily work end time
     MIN_BUFFER_MINUTES: 30, // Minimum buffer time between jobs
   },
