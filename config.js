@@ -1,41 +1,47 @@
 export const CONFIG = {
   // Payment and Rate Settings
   RATES: {
-    BASE_HOURLY_RATE: 50, // Minimum desired hourly rate
-    MIN_PAY_THRESHOLD: 150, // Minimum total pay for a job
-    TRAVEL_RATE: 30, // Rate per hour of travel
-  },
+    // Base rates
+    BASE_RATE: 120, // Base rate for jobs up to 2 hours (FieldNation)
+    BASE_HOURS: 2, // Number of hours covered by base rate (FieldNation)
+    ADDITIONAL_HOURLY_RATE: 55, // Rate per additional hour after base hours (FieldNation)
+    BASE_HOURLY_RATE: 50, // Standard hourly rate for WorkMarket
 
-  // Distance and Travel Settings
-  DISTANCE: {
+    // Travel related
     TRAVEL_THRESHOLD_MILES: 30, // Miles before charging travel expenses
     TRAVEL_RATE_PER_MILE: 1, // Amount to charge per mile over threshold
-    FREE_TRAVEL_LIMIT: 50 / 60, // Free travel time in hours (50 minutes)
-    AVERAGE_SPEED: 50, // Average travel speed in miles per hour
   },
 
-  // Time and Schedule Settings
-  TIME: {
-    DEFAULT_LABOR_HOURS: 4, // Default estimated labor hours if not specified
-    MIN_HOURS_BETWEEN_JOBS: 2, // Minimum hours required between jobs
+  // Work Schedule Settings
+  SCHEDULE: {
+    WORK_START_TIME: '08:59', // Daily work start time
+    WORK_END_TIME: '19:00', // Daily work end time
+    MIN_BUFFER_MINUTES: 30, // Minimum buffer time between jobs
+  },
+
+  // Default Values
+  DEFAULTS: {
+    LABOR_HOURS: 4, // Default labor hours if not specified
+    COMPANY_NAME: 'Unknown Company',
+    PLATFORM_NAME: 'Unknown',
   },
 
   // Platform-specific Settings
   PLATFORMS: {
     FIELD_NATION: {
-      USER_ID: 983643, // Your Field Nation user ID
-      API_ENDPOINTS: {
-        REQUESTS: 'https://app.fieldnation.com/v2/workorders',
+      USER_ID: 983643,
+      COUNTER_OFFER: {
+        NOTE: "Hi there! I hope you're doing well. I was wondering if it would be possible to add travel expenses and provide the total payment amount. Thank you so much!",
+        TRAVEL_EXPENSE_CATEGORY: {
+          uid: 2,
+          id: 2,
+        },
       },
     },
     WORK_MARKET: {
-      // Add WorkMarket specific settings here
+      COUNTER_OFFER: {
+        NOTE: 'Hi! Could you please submit my counteroffer with travel expenses?',
+      },
     },
-  },
-
-  // Default Values
-  DEFAULTS: {
-    COMPANY_NAME: 'Unknown Company',
-    PLATFORM_NAME: 'Unknown',
   },
 };
