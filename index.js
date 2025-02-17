@@ -208,6 +208,6 @@ async function processOrder(orderLink) {
 // Start the server
 app.listen(port, async () => {
   console.log(`Server running on port ${port}`);
-  // await saveCookies();
+  await saveCookies();
   await periodicCheck();
 });
