@@ -103,138 +103,113 @@ async function applyForJob(orderLink, startDateAndTime, estLaborHours, id) {
 async function processOrder(orderLink) {
   try {
     const platform = determinePlatform(orderLink);
-    let data;
-
-    if (platform === 'FieldNation') {
-      data = await getFNorderData(orderLink);
-    } else if (platform === 'WorkMarket') {
-      data = await getWMorderData(orderLink);
-    } else {
-      throw new Error('Unsupported platform or invalid order link.');
-    }
+    let data = await (platform === 'FieldNation'
+      ? getFNorderData(orderLink)
+      : getWMorderData(orderLink));
 
     if (!data) {
-      console.error('Failed to retrieve order data.');
+      logger.error('Failed to retrieve order data');
       return null;
     }
 
     const normalizedData = normalizeDateFromWO(data);
+    const { id, company, title, time, payRange, estLaborHours, distance } =
+      normalizedData;
 
-    // Log order details
+    // Only log the order details
     logger.info(
-      `New Order - Platform: ${normalizedData.platform}, ID: ${
-        normalizedData.id
-      }
-       Company: ${normalizedData.company}
-       Title: ${normalizedData.title}
-       Time: ${new Date(
-         normalizedData.time.start
-       ).toLocaleString()} - ${new Date(
-        normalizedData.time.end
+      `New Order [${id}]: ${company} - ${title}
+       Time: ${new Date(time.start).toLocaleString()} - ${new Date(
+        time.end
       ).toLocaleString()}
-       Pay Range: $${normalizedData.payRange.min}-$${
-        normalizedData.payRange.max
-      }
-       Est. Hours: ${normalizedData.estLaborHours}
-       Distance: ${normalizedData.distance}mi`,
-      normalizedData.platform,
-      normalizedData.id
+       Pay: $${payRange.min}-$${
+        payRange.max
+      } | Hours: ${estLaborHours} | Distance: ${distance}mi`,
+      platform
     );
 
     const eligibilityResult = isEligibleForApplication(normalizedData);
 
-    // Process the order based on eligibility
-    if (eligibilityResult.eligible) {
-      logger.info(
-        `Action: Direct Application - Order meets all criteria`,
-        normalizedData.platform,
-        normalizedData.id
+    if (
+      platform === 'WorkMarket' &&
+      distance > CONFIG.RATES.TRAVEL_THRESHOLD_MILES
+    ) {
+      const success = await postWMCounterOffer(
+        id,
+        payRange.min,
+        estLaborHours,
+        distance
       );
 
-      await applyForJob(
-        orderLink,
-        normalizedData.time,
-        normalizedData.estLaborHours,
-        normalizedData.id
-      );
-    } else if (
-      normalizedData.platform === 'WorkMarket' &&
-      normalizedData.distance > CONFIG.RATES.TRAVEL_THRESHOLD_MILES
-    ) {
+      if (success) {
+        logger.info(
+          `Decision [${id}]: Counter Offer with travel ($${Math.round(
+            distance
+          )}) - Accepted`,
+          platform
+        );
+      } else {
+        logger.error(
+          `Decision [${id}]: Counter Offer with travel ($${Math.round(
+            distance
+          )}) - Rejected`,
+          platform
+        );
+      }
+    }
+
+    // Process based on eligibility
+    if (eligibilityResult.eligible) {
+      logger.info(`Decision [${id}]: Direct Application`, platform);
+      await applyForJob(orderLink, time, estLaborHours, id);
+    } else if (eligibilityResult.counterOffer && platform === 'FieldNation') {
+      const {
+        baseAmount,
+        travelExpense,
+        baseHours,
+        additionalHours,
+        additionalAmount,
+      } = eligibilityResult.counterOffer;
       logger.info(
-        `Action: Counter Offer - Adding travel expenses for ${normalizedData.distance} miles`,
-        normalizedData.platform,
-        normalizedData.id
+        `Decision [${id}]: Counter Offer with adjusted rates`,
+        platform
       );
 
       try {
-        await postWMCounterOffer(
-          normalizedData.id,
-          normalizedData.payRange.min,
-          normalizedData.estLaborHours,
-          normalizedData.distance
+        const result = await postFNCounterOffer(
+          id,
+          baseAmount,
+          travelExpense,
+          'blended',
+          baseHours,
+          additionalHours,
+          additionalAmount
         );
 
-        logger.info(
-          `Result: Counter offer sent successfully with $${Math.round(
-            normalizedData.distance
-          )} travel expenses`,
-          normalizedData.platform,
-          normalizedData.id
-        );
-      } catch (error) {
-        logger.error(
-          `Result: Failed to send counter offer - ${error.message}`,
-          normalizedData.platform,
-          normalizedData.id
-        );
-      }
-    } else if (eligibilityResult.counterOffer) {
-      if (normalizedData.platform === 'FieldNation') {
-        logger.info(
-          `Action: Counter Offer - Adjusting rates and adding travel expenses`,
-          normalizedData.platform,
-          normalizedData.id
-        );
-
-        try {
-          await postFNCounterOffer(
-            normalizedData.id,
-            eligibilityResult.counterOffer.baseAmount,
-            eligibilityResult.counterOffer.travelExpense,
-            eligibilityResult.counterOffer.payType,
-            eligibilityResult.counterOffer.baseHours,
-            eligibilityResult.counterOffer.additionalHours,
-            eligibilityResult.counterOffer.additionalAmount
-          );
-
+        if (result && result.id) {
           logger.info(
-            `Result: Counter offer sent successfully
-             Base: $${eligibilityResult.counterOffer.baseAmount} (${eligibilityResult.counterOffer.baseHours}hr)
-             Additional: $${eligibilityResult.counterOffer.additionalAmount}/hr (${eligibilityResult.counterOffer.additionalHours}hr)
-             Travel: $${eligibilityResult.counterOffer.travelExpense}`,
-            normalizedData.platform,
-            normalizedData.id
+            `Result [${id}]: Counter offer accepted ($${baseAmount}/${baseHours}hr + $${additionalAmount}/${additionalHours}hr + $${travelExpense} travel)`,
+            platform
           );
-        } catch (error) {
+        } else {
           logger.error(
-            `Result: Failed to send counter offer - ${error.message}`,
-            normalizedData.platform,
-            normalizedData.id
+            `Result [${id}]: Counter offer failed - Server rejected`,
+            platform
           );
         }
+      } catch (error) {
+        logger.error(
+          `Result [${id}]: Counter offer failed - ${error.message}`,
+          platform
+        );
       }
     } else {
-      logger.info(
-        `Action: No Action - Order does not meet criteria and is not eligible for counter offer`,
-        normalizedData.platform,
-        normalizedData.id
-      );
+      logger.info(`Decision [${id}]: No Action - Criteria not met`, platform);
     }
 
     return normalizedData;
   } catch (error) {
-    console.error('Error processing order:', error);
+    logger.error(`Error processing order: ${error.message}`);
     return null;
   }
 }

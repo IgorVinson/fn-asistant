@@ -167,84 +167,15 @@ function calculateCounterOffer(workOrder) {
   };
 }
 
-function isEligibleForApplication(workOrder) {
-  logger.info(
-    `Checking eligibility - Distance: ${workOrder.distance}mi, Est. Hours: ${workOrder.estLaborHours}, Pay Range: $${workOrder.payRange.min}-$${workOrder.payRange.max}`,
-    workOrder.platform,
-    workOrder.id
-  );
+export default function isEligibleForApplication(normalizedData) {
+  // Remove console.log and unnecessary logging
+  const paymentEligible = isPaymentEligible(normalizedData);
+  const slotAvailable = isSlotAvailable(schedule, normalizedData);
 
-  // Check payment eligibility for both platforms
-  const paymentEligible = isPaymentEligible(workOrder);
-
-  // Check schedule availability for both platforms
-  const slotAvailable = isSlotAvailable(schedule, workOrder);
-
-  // Determine application status
-  let statusMessage = '';
-  if (
-    workOrder.platform === 'WorkMarket' &&
-    !paymentEligible &&
-    workOrder.distance > CONFIG.RATES.TRAVEL_THRESHOLD_MILES
-  ) {
-    statusMessage =
-      'Not eligible for direct application - Will attempt counter offer with travel expenses';
-  } else if (!paymentEligible) {
-    statusMessage =
-      'Not eligible - Insufficient payment. See calculation above.';
-  } else if (!slotAvailable) {
-    statusMessage = 'Not eligible - Schedule conflict or outside work hours.';
-  }
-
-  if (workOrder.platform === 'FieldNation') {
-    if (paymentEligible && slotAvailable) {
-      logger.info(
-        'Order meets all criteria - Eligible for direct application',
-        workOrder.platform,
-        workOrder.id
-      );
-      return {
-        eligible: true,
-        counterOffer: null,
-      };
-    } else {
-      logger.info(statusMessage, workOrder.platform, workOrder.id);
-      return {
-        eligible: false,
-        counterOffer: !paymentEligible
-          ? calculateCounterOffer(workOrder)
-          : null,
-      };
-    }
-  } else if (workOrder.platform === 'WorkMarket') {
-    if (paymentEligible && slotAvailable) {
-      logger.info(
-        'Order meets all criteria - Eligible for direct application',
-        workOrder.platform,
-        workOrder.id
-      );
-      return {
-        eligible: true,
-        counterOffer: null,
-      };
-    } else {
-      logger.info(statusMessage, workOrder.platform, workOrder.id);
-      return {
-        eligible: false,
-        counterOffer: null, // WorkMarket counter offers handled in index.js
-      };
-    }
-  }
-
-  logger.info(
-    `Not eligible - Unsupported platform (${workOrder.platform})`,
-    workOrder.platform,
-    workOrder.id
-  );
   return {
-    eligible: false,
-    counterOffer: null,
+    eligible: paymentEligible && slotAvailable,
+    counterOffer: !paymentEligible
+      ? calculateCounterOffer(normalizedData)
+      : null,
   };
 }
-
-export default isEligibleForApplication;

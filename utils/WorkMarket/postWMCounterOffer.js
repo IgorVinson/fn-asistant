@@ -100,18 +100,21 @@ export async function postWMCounterOffer(
     );
 
     if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(
-        `Counter offer request failed with status ${response.status}: ${errorText}`
-      );
+      throw new Error(`HTTP error: ${response.status}`);
     }
 
-    console.log(
-      `Counter offer sent successfully for work order ${workOrderId}`
-    );
-    return true;
+    const responseText = await response.text();
+    
+    // Check for specific success indicators in the response
+    if (responseText.includes('Your counter offer has been submitted') || 
+        responseText.includes('negotiation successful') ||
+        response.url.includes(`/assignments/details/${workOrderId}/success`)) {
+      return true;
+    }
+
+    return false;
   } catch (error) {
     console.error('Error sending counter offer:', error.message);
-    throw error;
+    return false;
   }
 }
