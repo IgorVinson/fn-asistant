@@ -3,50 +3,35 @@ import logger from './logger.js';
 import { CONFIG } from '../config.js';
 
 function isPaymentEligible(workOrder) {
-  // If no labor hours specified, use default
-  let estLaborHours = workOrder.estLaborHours || CONFIG.DEFAULTS.LABOR_HOURS;
-  const TRAVEL_THRESHOLD = CONFIG.RATES.TRAVEL_THRESHOLD_MILES;
+  // If no labor hours specified, assume 4 hours
+  let estLaborHours = workOrder.estLaborHours || 4;
+  const TRAVEL_THRESHOLD = 30;
 
   // Calculate required pay
   let requiredPay;
   let laborPay;
 
-  if (workOrder.platform === 'WorkMarket') {
-    // WorkMarket uses simple hourly rate calculation
-    laborPay = estLaborHours * CONFIG.RATES.BASE_HOURLY_RATE;
+  // For jobs over 2 hours
+  if (estLaborHours > 2) {
+    laborPay = 150 + (estLaborHours - 2) * 55;
     requiredPay = laborPay;
     console.log(
-      `WorkMarket labor calculation: ${estLaborHours}hrs × $${CONFIG.RATES.BASE_HOURLY_RATE}/hr = $${laborPay}`
+      `Labor calculation: $150 base + (${
+        estLaborHours - 2
+      }hrs × $55) = $${laborPay}`
     );
   } else {
-    // FieldNation uses base rate + additional hours calculation
-    if (estLaborHours > CONFIG.RATES.BASE_HOURS) {
-      laborPay =
-        CONFIG.RATES.BASE_RATE +
-        (estLaborHours - CONFIG.RATES.BASE_HOURS) *
-          CONFIG.RATES.ADDITIONAL_HOURLY_RATE;
-      requiredPay = laborPay;
-      console.log(
-        `FieldNation labor calculation: $${CONFIG.RATES.BASE_RATE} base + (${
-          estLaborHours - CONFIG.RATES.BASE_HOURS
-        }hrs × $${CONFIG.RATES.ADDITIONAL_HOURLY_RATE}) = $${laborPay}`
-      );
-    } else {
-      laborPay = CONFIG.RATES.BASE_RATE;
-      requiredPay = laborPay;
-      console.log(
-        `FieldNation labor calculation: Fixed rate $${CONFIG.RATES.BASE_RATE}`
-      );
-    }
+    // For jobs 2 hours or less
+    laborPay = 150;
+    requiredPay = laborPay;
+    console.log(`Labor calculation: Fixed rate $150`);
   }
 
-  // Add travel expense if distance > threshold
+  // Add travel expense if distance > 30 miles
   if (workOrder.distance > TRAVEL_THRESHOLD) {
-    requiredPay += workOrder.distance * CONFIG.RATES.TRAVEL_RATE_PER_MILE;
+    requiredPay += workOrder.distance; // $1 per mile
     console.log(
-      `Added travel expense: ${workOrder.distance} miles = $${
-        workOrder.distance * CONFIG.RATES.TRAVEL_RATE_PER_MILE
-      }`
+      `Added travel expense: ${workOrder.distance} miles = $${workOrder.distance}`
     );
   }
 
@@ -54,13 +39,14 @@ function isPaymentEligible(workOrder) {
     `Total required pay: $${requiredPay} vs Offered pay: $${workOrder.payRange.max}`
   );
 
+  // Return true only if offered pay meets or exceeds required pay
   return workOrder.payRange.max >= requiredPay;
 }
 
 function isSlotAvailable(schedule, workOrder) {
-  const DAY_WORK_START_TIME = CONFIG.SCHEDULE.WORK_START_TIME;
-  const DAY_WORK_END_TIME = CONFIG.SCHEDULE.WORK_END_TIME;
-  const MIN_BUFFER_MINUTES = CONFIG.SCHEDULE.MIN_BUFFER_MINUTES;
+  const DAY_WORK_START_TIME = '07:59';
+  const DAY_WORK_END_TIME = '19:00';
+  const MIN_BUFFER_MINUTES = 30;
 
   const { start: startTime, end: endTime } = workOrder.time;
   const orderDate = new Date(startTime);
@@ -145,102 +131,54 @@ function isSlotAvailable(schedule, workOrder) {
 }
 
 function calculateCounterOffer(workOrder) {
-  const travelExpense =
-    workOrder.distance > CONFIG.RATES.TRAVEL_THRESHOLD_MILES
-      ? Math.round(workOrder.distance * CONFIG.RATES.TRAVEL_RATE_PER_MILE)
-      : 0;
+  const BASE_HOURS = 2;
+  const BASE_RATE = 150;
+  const ADDITIONAL_HOURLY_RATE = 55;
+  const TRAVEL_THRESHOLD = 30;
 
-  const isFixedRate = workOrder.estLaborHours <= CONFIG.RATES.BASE_HOURS;
+  const travelExpense =
+    workOrder.distance > TRAVEL_THRESHOLD ? Math.round(workOrder.distance) : 0;
+
+  const isFixedRate = workOrder.estLaborHours <= 2;
 
   const additionalHours = isFixedRate
     ? 0
-    : Math.max(1, workOrder.estLaborHours - CONFIG.RATES.BASE_HOURS);
+    : Math.max(1, workOrder.estLaborHours - BASE_HOURS);
 
   return {
     shouldCounterOffer: true,
     payType: isFixedRate ? 'fixed' : 'blended',
-    baseHours: isFixedRate ? 0 : CONFIG.RATES.BASE_HOURS,
-    baseAmount: CONFIG.RATES.BASE_RATE,
+    baseHours: isFixedRate ? 0 : BASE_HOURS,
+    baseAmount: BASE_RATE,
     additionalHours: additionalHours,
-    additionalAmount: isFixedRate ? 0 : CONFIG.RATES.ADDITIONAL_HOURLY_RATE,
+    additionalAmount: isFixedRate ? 0 : ADDITIONAL_HOURLY_RATE,
     travelExpense: travelExpense,
   };
 }
 
 function isEligibleForApplication(workOrder) {
   logger.info(
-    `Checking eligibility - Distance: ${workOrder.distance}mi, Est. Hours: ${workOrder.estLaborHours}, Pay Range: $${workOrder.payRange.min}-$${workOrder.payRange.max}`,
+    `Checking eligibility - Distance: ${workOrder.distance}mi, Est. Hours: ${workOrder.estLaborHours}`,
     workOrder.platform,
     workOrder.id
   );
-
-  // Check payment eligibility for both platforms
-  const paymentEligible = isPaymentEligible(workOrder);
-
-  // Check schedule availability for both platforms
-  const slotAvailable = isSlotAvailable(schedule, workOrder);
-
-  // Determine application status
-  let statusMessage = '';
-  if (
-    workOrder.platform === 'WorkMarket' &&
-    !paymentEligible &&
-    workOrder.distance > CONFIG.RATES.TRAVEL_THRESHOLD_MILES
-  ) {
-    statusMessage =
-      'Not eligible for direct application - Will attempt counter offer with travel expenses';
-  } else if (!paymentEligible) {
-    statusMessage =
-      'Not eligible - Insufficient payment. See calculation above.';
-  } else if (!slotAvailable) {
-    statusMessage = 'Not eligible - Schedule conflict or outside work hours.';
-  }
 
   if (workOrder.platform === 'FieldNation') {
-    if (paymentEligible && slotAvailable) {
-      logger.info(
-        'Order meets all criteria - Eligible for direct application',
-        workOrder.platform,
-        workOrder.id
-      );
+    if (isPaymentEligible(workOrder)) {
+      const slotAvailable = isSlotAvailable(schedule, workOrder);
       return {
-        eligible: true,
+        eligible: slotAvailable,
         counterOffer: null,
       };
     } else {
-      logger.info(statusMessage, workOrder.platform, workOrder.id);
+      // If payment is not good, generate counter offer
       return {
         eligible: false,
-        counterOffer: !paymentEligible
-          ? calculateCounterOffer(workOrder)
-          : null,
-      };
-    }
-  } else if (workOrder.platform === 'WorkMarket') {
-    if (paymentEligible && slotAvailable) {
-      logger.info(
-        'Order meets all criteria - Eligible for direct application',
-        workOrder.platform,
-        workOrder.id
-      );
-      return {
-        eligible: true,
-        counterOffer: null,
-      };
-    } else {
-      logger.info(statusMessage, workOrder.platform, workOrder.id);
-      return {
-        eligible: false,
-        counterOffer: null, // WorkMarket counter offers handled in index.js
+        counterOffer: calculateCounterOffer(workOrder),
       };
     }
   }
 
-  logger.info(
-    `Not eligible - Unsupported platform (${workOrder.platform})`,
-    workOrder.platform,
-    workOrder.id
-  );
   return {
     eligible: false,
     counterOffer: null,
