@@ -1,6 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import CONFIG from '../../config.js';
 
 // Get the directory name properly in ES modules
 const __filename = fileURLToPath(import.meta.url);

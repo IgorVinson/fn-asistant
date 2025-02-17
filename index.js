@@ -16,6 +16,7 @@ import isEligibleForApplication from './utils/isEligibleForApplication.js';
 import { postFNCounterOffer } from './utils/FieldNation/postFNCounterOffer.js';
 import logger from './utils/logger.js';
 import { postWMCounterOffer } from './utils/WorkMarket/postWMCounterOffer.js';
+import CONFIG from './config.js';
 
 // Configure the server
 const app = express();

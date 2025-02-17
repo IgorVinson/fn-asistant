@@ -1,6 +1,6 @@
 import fs from 'fs';
 import path from 'path';
-import { CONFIG } from '../../config.js';
+import CONFIG from '../../config.js';
 
 function getCookies() {
   const cookiesFilePath = path.resolve('utils', 'FieldNation', 'cookies.json');

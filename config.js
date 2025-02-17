@@ -1,4 +1,4 @@
-export const CONFIG = {
+export default {
   // Payment and Rate Settings
   RATES: {
     // Base rates

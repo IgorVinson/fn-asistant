@@ -1,4 +1,5 @@
 import {saveCookies} from "../saveCookies.js";
+import CONFIG from '../../config.js';
 
 
 export async function loginToWorkMarket(browser) {

@@ -1,6 +1,6 @@
 import { currentMonth as schedule } from '../schedule.js';
 import logger from './logger.js';
-import { CONFIG } from '../config.js';
+import CONFIG from '../config.js';
 
 function isPaymentEligible(workOrder) {
   // If no labor hours specified, use default
