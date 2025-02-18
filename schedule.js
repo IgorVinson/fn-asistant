@@ -57,16 +57,47 @@ const currentMonth = {
       {
         id: '',
         platform: 'FieldNation',
-        title: 'REOPLACEMENT DATA REMOTE INSTALL/ MUST HAVE BUTT-SET-DIS117971 ',
+        title:
+          'REOPLACEMENT DATA REMOTE INSTALL/ MUST HAVE BUTT-SET-DIS117971 ',
         time: {
           start: '2025-02-18T09:00:00',
           end: '2025-02-18T11:00:00',
         },
       },
     ],
-    'WED 19': [],
-    'THU 20': [],
-    'FRI 21': [],
+    'WED 19': [
+      {
+        id: '',
+        platform: 'WM',
+        title: ' ',
+        time: {
+          start: '2025-02-19T09:00:00',
+          end: '2025-02-19T11:00:00',
+        },
+      },
+    ],
+    'THU 20': [
+      {
+        id: '',
+        platform: 'WM',
+        title: ' ',
+        time: {
+          start: '2025-02-20T14:00:00',
+          end: '2025-02-20T17:00:00',
+        },
+      },
+    ],
+    'FRI 21': [
+      {
+        id: '',
+        platform: 'WM',
+        title: ' ',
+        time: {
+          start: '2025-02-21T09:00:00',
+          end: '2025-02-21T11:00:00',
+        },
+      },
+    ],
     'SAT 22': [],
     'SUN 23': [],
   },

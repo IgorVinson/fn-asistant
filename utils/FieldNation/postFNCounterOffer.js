@@ -1,5 +1,6 @@
 import fs from 'fs';
 import path from 'path';
+import chalk from 'chalk';
 import CONFIG from '../../config.js';
 
 function getCookies() {
@@ -22,7 +23,7 @@ export async function postFNCounterOffer(
 ) {
   try {
     const cookies = getCookies();
-    console.log('Starting counter offer with params:', {
+    console.log(chalk.yellow('Starting counter offer with params:'), {
       workOrderId,
       baseAmount,
       travelExpense,
@@ -38,17 +39,16 @@ export async function postFNCounterOffer(
       active: true,
       expiryTime: 0,
       expenses: [],
-      notes:
-        "Hi there! I hope you're doing well. I was wondering if it would be possible to add travel expenses and provide the total payment amount. Thank you so much!",
+      notes: CONFIG.PLATFORMS.FIELD_NATION.COUNTER_OFFER.NOTE,
       pay: {
         type: payType,
         base: {
-          units: parseInt(baseHours),
-          amount: parseFloat(baseAmount),
+          units: Number(baseHours) || 2,
+          amount: Number(baseAmount) || CONFIG.RATES.BASE_RATE,
         },
         additional: {
-          units: parseInt(additionalHours),
-          amount: parseFloat(additionalAmount),
+          units: Number(additionalHours) || 0,
+          amount: Number(additionalAmount) || 0,
         },
       },
     };
@@ -86,13 +86,27 @@ export async function postFNCounterOffer(
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('Counter offer error response:', errorText);
+      try {
+        const errorJson = JSON.parse(errorText);
+        console.log(
+          chalk.red('Counter offer error:'),
+          chalk.yellow(errorJson.message)
+        );
+      } catch {
+        console.log(
+          chalk.red('Counter offer error response:'),
+          chalk.yellow(errorText)
+        );
+      }
       throw new Error(`HTTP error! status: ${response.status}`);
     }
 
     return await response.json();
   } catch (error) {
-    console.error('Error posting counter offer:', error);
+    console.error(
+      chalk.red('Error posting counter offer:'),
+      chalk.yellow(error.message)
+    );
     throw error;
   }
 }

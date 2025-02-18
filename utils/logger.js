@@ -23,31 +23,33 @@ class Logger {
       const [firstLine, ...otherLines] = message.split('\n');
       const formattedLines = otherLines.map(line => {
         if (line.includes('Time:')) {
-          return line.replace(/(\d{1,2}\/\d{1,2}\/\d{4})/g, chalk.red('$1'));
+          return chalk.yellow(line);
         }
         if (line.includes('Pay:')) {
-          return line.replace(/\$\d+(-\$\d+)?/g, match => chalk.green(match));
+          return chalk.green(line);
         }
         return line;
       });
       return [firstLine, ...formattedLines].join('\n');
     }
+    
+    if (message.includes('Decision') || message.includes('No Action')) {
+      return chalk.cyan(message);
+    }
+    
     return message;
   }
 
   log(message, type = 'INFO', platform = '', workOrderId = '') {
-    const timestamp = chalk.yellow(`[${new Date().toISOString()}]`);
-    const typeStr = chalk.yellow(`[${type}]`);
-    const platformInfo = platform ? chalk.cyan(`[${platform}]`) : '';
-    const orderInfo = workOrderId ? ` [Order: ${chalk.yellow(workOrderId)}]` : '';
+    const timestamp = `[${new Date().toISOString()}]`;
+    const typeStr = `[${type}]`;
+    const platformInfo = platform ? `[${platform}]` : '';
+    const orderInfo = workOrderId ? ` [Order: ${workOrderId}]` : '';
     
-    // Format the message with colors
     const formattedMessage = this.formatOrderDetails(message);
 
-    // Console output with colors
     console.log(`${timestamp} ${typeStr} ${platformInfo} ${orderInfo} ${formattedMessage}`);
 
-    // File output without colors
     const logEntry = `[${new Date().toISOString()}] [${type}] [${platform}] ${orderInfo} ${message}\n`;
     try {
       fs.appendFileSync(this.logFile, logEntry);

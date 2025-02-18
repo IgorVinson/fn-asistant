@@ -3,61 +3,34 @@ import logger from './logger.js';
 import CONFIG from '../config.js';
 import chalk from 'chalk';
 
-function isPaymentEligible(workOrder) {
-  // If no labor hours specified, use default
-  let estLaborHours = workOrder.estLaborHours || CONFIG.DEFAULTS.LABOR_HOURS;
+export function isPaymentEligible(workOrder) {
   const TRAVEL_THRESHOLD = CONFIG.RATES.TRAVEL_THRESHOLD_MILES;
 
-  // Calculate required pay
-  let requiredPay;
-  let laborPay;
+  // Calculate hourly rate from max payment
+  const hourlyRate = workOrder.payRange.max / workOrder.estLaborHours;
 
-  if (workOrder.platform === 'WorkMarket') {
-    // WorkMarket uses simple hourly rate calculation
-    laborPay = estLaborHours * CONFIG.RATES.BASE_HOURLY_RATE;
-    requiredPay = laborPay;
-    console.log(
-      `${chalk.cyan('WorkMarket')} labor calculation: ${estLaborHours}hrs × ${chalk.green('$' + CONFIG.RATES.BASE_HOURLY_RATE)}/hr = ${chalk.yellow('$' + laborPay)}`
-    );
-  } else {
-    // FieldNation uses base rate + additional hours calculation
-    if (estLaborHours > CONFIG.RATES.BASE_HOURS) {
-      laborPay =
-        CONFIG.RATES.BASE_RATE +
-        (estLaborHours - CONFIG.RATES.BASE_HOURS) *
-          CONFIG.RATES.ADDITIONAL_HOURLY_RATE;
-      requiredPay = laborPay;
-      console.log(
-        `${chalk.cyan('FieldNation')} labor calculation: ${chalk.green('$' + CONFIG.RATES.BASE_RATE)} base + (${
-          estLaborHours - CONFIG.RATES.BASE_HOURS
-        }hrs × ${chalk.green('$' + CONFIG.RATES.ADDITIONAL_HOURLY_RATE)}) = ${chalk.yellow('$' + laborPay)}`
-      );
-    } else {
-      laborPay = CONFIG.RATES.BASE_RATE;
-      requiredPay = laborPay;
-      console.log(
-        `${chalk.cyan('FieldNation')} labor calculation: Fixed rate ${chalk.green('$' + CONFIG.RATES.BASE_RATE)}`
-      );
-    }
-  }
+  // Check minimum hourly rate based on platform
+  const minHourlyRate =
+    workOrder.platform === 'FieldNation'
+      ? CONFIG.RATES.BASE_RATE / 2 // $120/2 = $60 per hour for FN
+      : CONFIG.RATES.BASE_HOURLY_RATE; // $50 per hour for WM
 
-  // Add travel expense if distance > threshold
-  if (workOrder.distance > TRAVEL_THRESHOLD) {
-    const travelExpense = workOrder.distance * CONFIG.RATES.TRAVEL_RATE_PER_MILE;
-    requiredPay += travelExpense;
-    console.log(
-      `Added travel expense: ${chalk.yellow(workOrder.distance)} miles = ${chalk.green('$' + travelExpense)}`
-    );
-  }
-
+  // Log the calculation
   console.log(
-    `Total ${chalk.yellow('required pay')}: ${chalk.green('$' + requiredPay)} vs ${chalk.yellow('Offered pay')}: ${chalk.green('$' + workOrder.payRange.max)}`
+    `Hourly rate check: ${chalk.green(
+      '$' + hourlyRate
+    )} per hour vs minimum ${chalk.yellow('$' + minHourlyRate)}`
   );
 
-  return workOrder.payRange.max >= requiredPay;
+  // Check if hourly rate meets minimum
+  if (hourlyRate < minHourlyRate) {
+    return false;
+  }
+
+  return true;
 }
 
-function isSlotAvailable(schedule, workOrder) {
+export function isSlotAvailable(schedule, workOrder) {
   const DAY_WORK_START_TIME = CONFIG.SCHEDULE.WORK_START_TIME;
   const DAY_WORK_END_TIME = CONFIG.SCHEDULE.WORK_END_TIME;
   const MIN_BUFFER_MINUTES = CONFIG.SCHEDULE.MIN_BUFFER_MINUTES;
@@ -152,39 +125,51 @@ function isSlotAvailable(schedule, workOrder) {
   );
 }
 
-function calculateCounterOffer(workOrder) {
+export function calculateCounterOffer(workOrder) {
   const travelExpense =
     workOrder.distance > CONFIG.RATES.TRAVEL_THRESHOLD_MILES
       ? Math.round(workOrder.distance * CONFIG.RATES.TRAVEL_RATE_PER_MILE)
       : 0;
 
-  const isFixedRate = workOrder.estLaborHours <= CONFIG.RATES.BASE_HOURS;
-
-  const additionalHours = isFixedRate
-    ? 0
-    : Math.max(1, workOrder.estLaborHours - CONFIG.RATES.BASE_HOURS);
-
-  return {
-    shouldCounterOffer: true,
-    payType: isFixedRate ? 'fixed' : 'blended',
-    baseHours: isFixedRate ? 0 : CONFIG.RATES.BASE_HOURS,
-    baseAmount: CONFIG.RATES.BASE_RATE,
-    additionalHours: additionalHours,
-    additionalAmount: isFixedRate ? 0 : CONFIG.RATES.ADDITIONAL_HOURLY_RATE,
-    travelExpense: travelExpense,
-  };
+  if (workOrder.platform === 'WorkMarket') {
+    return {
+      shouldCounterOffer: travelExpense > 0,
+      hourlyRate: workOrder.payRange.max / workOrder.estLaborHours, // Keep original hourly rate
+      hours: workOrder.estLaborHours,
+      travelExpense: travelExpense,
+    };
+  } else {
+    // For FieldNation
+    return {
+      shouldCounterOffer: travelExpense > 0,
+      payType: 'blended',
+      baseHours: Math.min(workOrder.estLaborHours, 2), // First 2 hours
+      baseAmount: workOrder.payRange.max, // Keep original amount
+      additionalHours: Math.max(0, workOrder.estLaborHours - 2), // Any hours over 2
+      additionalAmount: workOrder.payRange.max / workOrder.estLaborHours, // Keep original hourly rate
+      travelExpense: travelExpense,
+    };
+  }
 }
 
 export default function isEligibleForApplication(normalizedData) {
-  const paymentEligible = isPaymentEligible(normalizedData);
   const slotAvailable = isSlotAvailable(schedule, normalizedData);
+  if (!slotAvailable) {
+    return { eligible: false, counterOffer: null };
+  }
+
+  const paymentEligible = isPaymentEligible(normalizedData);
+  if (!paymentEligible) {
+    return { eligible: false, counterOffer: null };
+  }
+
+  // If we get here, schedule and payment are OK
+  // Check if we need to add travel expenses
+  const needsTravel =
+    normalizedData.distance > CONFIG.RATES.TRAVEL_THRESHOLD_MILES;
 
   return {
-    eligible: paymentEligible && slotAvailable,
-    // Only return counter offer if payment is not eligible BUT schedule is available
-    counterOffer:
-      !paymentEligible && slotAvailable
-        ? calculateCounterOffer(normalizedData)
-        : null,
+    eligible: !needsTravel, // Direct apply if no travel needed
+    counterOffer: needsTravel ? calculateCounterOffer(normalizedData) : null,
   };
 }

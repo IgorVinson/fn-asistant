@@ -12,11 +12,15 @@ import { sendWorkOrderMessage } from './utils/FieldNation/sendWorkOrderMessage.j
 import { loginToWorkMarket } from './utils/WorkMarket/loginToWorkMarket.js';
 import { getWMorderData } from './utils/WorkMarket/getWMorderData.js';
 import normalizeDateFromWO from './utils/normalizedDateFromWO.js';
-import isEligibleForApplication from './utils/isEligibleForApplication.js';
+import isEligibleForApplication, {
+  isSlotAvailable,
+  isPaymentEligible,
+} from './utils/isEligibleForApplication.js';
 import { postFNCounterOffer } from './utils/FieldNation/postFNCounterOffer.js';
 import logger from './utils/logger.js';
 import { postWMCounterOffer } from './utils/WorkMarket/postWMCounterOffer.js';
 import CONFIG from './config.js';
+import { currentMonth as schedule } from './schedule.js';
 
 // Configure the server
 const app = express();
@@ -116,7 +120,7 @@ async function processOrder(orderLink) {
     const { id, company, title, time, payRange, estLaborHours, distance } =
       normalizedData;
 
-    // Only log the order details
+    // Log the order details
     logger.info(
       `New Order [${id}]: ${company} - ${title}
        Time: ${new Date(time.start).toLocaleString()} - ${new Date(
@@ -127,6 +131,24 @@ async function processOrder(orderLink) {
       } | Hours: ${estLaborHours} | Distance: ${distance}mi`,
       platform
     );
+
+    const slotAvailable = isSlotAvailable(schedule, normalizedData);
+    if (!slotAvailable) {
+      logger.info(
+        `Decision [${id}]: No Action - Does not meet schedule criteria`,
+        platform
+      );
+      return normalizedData;
+    }
+
+    const paymentEligible = isPaymentEligible(normalizedData);
+    if (!paymentEligible) {
+      logger.info(
+        `Decision [${id}]: No Action - Does not meet minimum payment requirements`,
+        platform
+      );
+      return normalizedData;
+    }
 
     const eligibilityResult = isEligibleForApplication(normalizedData);
 
