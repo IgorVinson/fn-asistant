@@ -67,16 +67,6 @@ function isSlotAvailable(schedule, workOrder) {
   const orderDay = orderDate.getDate();
   const orderMonth = orderDate.getMonth() + 1;
 
-  // Debug logging
-  console.log('Checking availability for:', {
-    date: `${orderMonth}/${orderDay}`,
-    startTime,
-    endTime,
-    existingEvents: Object.values(schedule).flatMap(week =>
-      Object.entries(week).map(([day, events]) => ({ day, events }))
-    ),
-  });
-
   const stampStartTime = new Date(startTime).getTime();
   const stampEndTime = new Date(endTime).getTime();
 
@@ -87,13 +77,31 @@ function isSlotAvailable(schedule, workOrder) {
     `${startTime.split('T')[0]}T${DAY_WORK_END_TIME}:00`
   ).getTime();
 
-  if (stampStartTime < WORK_START || stampEndTime > WORK_END) {
-    logger.info(
-      `Time is not available: Outside work hours (${DAY_WORK_START_TIME}-${DAY_WORK_END_TIME})`,
-      workOrder.platform,
-      workOrder.id
-    );
-    return false;
+  // Different time validation based on platform
+  if (workOrder.platform === 'WorkMarket') {
+    // For WorkMarket, check if any part of the time window overlaps with our work hours
+    const hasValidTimeWindow =
+      (stampStartTime <= WORK_END && stampEndTime >= WORK_START) || // Window overlaps work hours
+      (stampStartTime >= WORK_START && stampStartTime <= WORK_END); // Start time is within work hours
+
+    if (!hasValidTimeWindow) {
+      logger.info(
+        `Time is not available: No overlap with work hours (${DAY_WORK_START_TIME}-${DAY_WORK_END_TIME})`,
+        workOrder.platform,
+        workOrder.id
+      );
+      return false;
+    }
+  } else {
+    // For FieldNation, be strict with start and end times
+    if (stampStartTime < WORK_START || stampEndTime > WORK_END) {
+      logger.info(
+        `Time is not available: Outside work hours (${DAY_WORK_START_TIME}-${DAY_WORK_END_TIME})`,
+        workOrder.platform,
+        workOrder.id
+      );
+      return false;
+    }
   }
 
   // Get all events for comparison
@@ -168,14 +176,15 @@ function calculateCounterOffer(workOrder) {
 }
 
 export default function isEligibleForApplication(normalizedData) {
-  // Remove console.log and unnecessary logging
   const paymentEligible = isPaymentEligible(normalizedData);
   const slotAvailable = isSlotAvailable(schedule, normalizedData);
 
   return {
     eligible: paymentEligible && slotAvailable,
-    counterOffer: !paymentEligible
-      ? calculateCounterOffer(normalizedData)
-      : null,
+    // Only return counter offer if payment is not eligible BUT schedule is available
+    counterOffer:
+      !paymentEligible && slotAvailable
+        ? calculateCounterOffer(normalizedData)
+        : null,
   };
 }

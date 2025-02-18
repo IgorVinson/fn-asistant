@@ -104,11 +104,13 @@ export async function postWMCounterOffer(
     }
 
     const responseText = await response.text();
-    
+
     // Check for specific success indicators in the response
-    if (responseText.includes('Your counter offer has been submitted') || 
-        responseText.includes('negotiation successful') ||
-        response.url.includes(`/assignments/details/${workOrderId}/success`)) {
+    if (
+      responseText.includes('Your counter offer has been submitted') ||
+      responseText.includes('negotiation successful') ||
+      response.url.includes(`/assignments/details/${workOrderId}/success`)
+    ) {
       return true;
     }
 

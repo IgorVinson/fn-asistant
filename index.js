@@ -162,49 +162,57 @@ async function processOrder(orderLink) {
     if (eligibilityResult.eligible) {
       logger.info(`Decision [${id}]: Direct Application`, platform);
       await applyForJob(orderLink, time, estLaborHours, id);
-    } else if (eligibilityResult.counterOffer && platform === 'FieldNation') {
-      const {
-        baseAmount,
-        travelExpense,
-        baseHours,
-        additionalHours,
-        additionalAmount,
-      } = eligibilityResult.counterOffer;
-      logger.info(
-        `Decision [${id}]: Counter Offer with adjusted rates`,
-        platform
-      );
-
-      try {
-        const result = await postFNCounterOffer(
-          id,
+    }
+    // Only attempt counter offer if we have one AND schedule is available
+    else if (eligibilityResult.counterOffer) {
+      if (platform === 'FieldNation') {
+        const {
           baseAmount,
           travelExpense,
-          'blended',
           baseHours,
           additionalHours,
-          additionalAmount
+          additionalAmount,
+        } = eligibilityResult.counterOffer;
+
+        logger.info(
+          `Decision [${id}]: Counter Offer with adjusted rates`,
+          platform
         );
 
-        if (result && result.id) {
-          logger.info(
-            `Result [${id}]: Counter offer accepted ($${baseAmount}/${baseHours}hr + $${additionalAmount}/${additionalHours}hr + $${travelExpense} travel)`,
-            platform
+        try {
+          const result = await postFNCounterOffer(
+            id,
+            baseAmount,
+            travelExpense,
+            'blended',
+            baseHours,
+            additionalHours,
+            additionalAmount
           );
-        } else {
+
+          if (result && result.id) {
+            logger.info(
+              `Result [${id}]: Counter offer accepted ($${baseAmount}/${baseHours}hr + $${additionalAmount}/${additionalHours}hr + $${travelExpense} travel)`,
+              platform
+            );
+          } else {
+            logger.error(
+              `Result [${id}]: Counter offer failed - Server rejected`,
+              platform
+            );
+          }
+        } catch (error) {
           logger.error(
-            `Result [${id}]: Counter offer failed - Server rejected`,
+            `Result [${id}]: Counter offer failed - ${error.message}`,
             platform
           );
         }
-      } catch (error) {
-        logger.error(
-          `Result [${id}]: Counter offer failed - ${error.message}`,
-          platform
-        );
       }
     } else {
-      logger.info(`Decision [${id}]: No Action - Criteria not met`, platform);
+      logger.info(
+        `Decision [${id}]: No Action - Does not meet schedule criteria`,
+        platform
+      );
     }
 
     return normalizedData;
