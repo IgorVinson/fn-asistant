@@ -1,6 +1,7 @@
 import { currentMonth as schedule } from '../schedule.js';
 import logger from './logger.js';
 import CONFIG from '../config.js';
+import chalk from 'chalk';
 
 function isPaymentEligible(workOrder) {
   // If no labor hours specified, use default
@@ -16,7 +17,7 @@ function isPaymentEligible(workOrder) {
     laborPay = estLaborHours * CONFIG.RATES.BASE_HOURLY_RATE;
     requiredPay = laborPay;
     console.log(
-      `WorkMarket labor calculation: ${estLaborHours}hrs × $${CONFIG.RATES.BASE_HOURLY_RATE}/hr = $${laborPay}`
+      `${chalk.cyan('WorkMarket')} labor calculation: ${estLaborHours}hrs × ${chalk.green('$' + CONFIG.RATES.BASE_HOURLY_RATE)}/hr = ${chalk.yellow('$' + laborPay)}`
     );
   } else {
     // FieldNation uses base rate + additional hours calculation
@@ -27,31 +28,30 @@ function isPaymentEligible(workOrder) {
           CONFIG.RATES.ADDITIONAL_HOURLY_RATE;
       requiredPay = laborPay;
       console.log(
-        `FieldNation labor calculation: $${CONFIG.RATES.BASE_RATE} base + (${
+        `${chalk.cyan('FieldNation')} labor calculation: ${chalk.green('$' + CONFIG.RATES.BASE_RATE)} base + (${
           estLaborHours - CONFIG.RATES.BASE_HOURS
-        }hrs × $${CONFIG.RATES.ADDITIONAL_HOURLY_RATE}) = $${laborPay}`
+        }hrs × ${chalk.green('$' + CONFIG.RATES.ADDITIONAL_HOURLY_RATE)}) = ${chalk.yellow('$' + laborPay)}`
       );
     } else {
       laborPay = CONFIG.RATES.BASE_RATE;
       requiredPay = laborPay;
       console.log(
-        `FieldNation labor calculation: Fixed rate $${CONFIG.RATES.BASE_RATE}`
+        `${chalk.cyan('FieldNation')} labor calculation: Fixed rate ${chalk.green('$' + CONFIG.RATES.BASE_RATE)}`
       );
     }
   }
 
   // Add travel expense if distance > threshold
   if (workOrder.distance > TRAVEL_THRESHOLD) {
-    requiredPay += workOrder.distance * CONFIG.RATES.TRAVEL_RATE_PER_MILE;
+    const travelExpense = workOrder.distance * CONFIG.RATES.TRAVEL_RATE_PER_MILE;
+    requiredPay += travelExpense;
     console.log(
-      `Added travel expense: ${workOrder.distance} miles = $${
-        workOrder.distance * CONFIG.RATES.TRAVEL_RATE_PER_MILE
-      }`
+      `Added travel expense: ${chalk.yellow(workOrder.distance)} miles = ${chalk.green('$' + travelExpense)}`
     );
   }
 
   console.log(
-    `Total required pay: $${requiredPay} vs Offered pay: $${workOrder.payRange.max}`
+    `Total ${chalk.yellow('required pay')}: ${chalk.green('$' + requiredPay)} vs ${chalk.yellow('Offered pay')}: ${chalk.green('$' + workOrder.payRange.max)}`
   );
 
   return workOrder.payRange.max >= requiredPay;

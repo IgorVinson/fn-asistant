@@ -1,5 +1,6 @@
 import fs from 'fs';
 import path from 'path';
+import chalk from 'chalk';
 
 class Logger {
   constructor() {
@@ -17,16 +18,37 @@ class Logger {
     }
   }
 
+  formatOrderDetails(message) {
+    if (message.includes('New Order')) {
+      const [firstLine, ...otherLines] = message.split('\n');
+      const formattedLines = otherLines.map(line => {
+        if (line.includes('Time:')) {
+          return line.replace(/(\d{1,2}\/\d{1,2}\/\d{4})/g, chalk.red('$1'));
+        }
+        if (line.includes('Pay:')) {
+          return line.replace(/\$\d+(-\$\d+)?/g, match => chalk.green(match));
+        }
+        return line;
+      });
+      return [firstLine, ...formattedLines].join('\n');
+    }
+    return message;
+  }
+
   log(message, type = 'INFO', platform = '', workOrderId = '') {
-    const timestamp = new Date().toISOString();
-    const platformInfo = platform ? `[${platform}]` : '';
-    const orderInfo = workOrderId ? `[Order: ${workOrderId}]` : '';
-    const logEntry = `[${timestamp}] [${type}] ${platformInfo} ${orderInfo} ${message}\n`;
+    const timestamp = chalk.yellow(`[${new Date().toISOString()}]`);
+    const typeStr = chalk.yellow(`[${type}]`);
+    const platformInfo = platform ? chalk.cyan(`[${platform}]`) : '';
+    const orderInfo = workOrderId ? ` [Order: ${chalk.yellow(workOrderId)}]` : '';
+    
+    // Format the message with colors
+    const formattedMessage = this.formatOrderDetails(message);
 
-    // Console output
-    console.log(logEntry.trim());
+    // Console output with colors
+    console.log(`${timestamp} ${typeStr} ${platformInfo} ${orderInfo} ${formattedMessage}`);
 
-    // File output
+    // File output without colors
+    const logEntry = `[${new Date().toISOString()}] [${type}] [${platform}] ${orderInfo} ${message}\n`;
     try {
       fs.appendFileSync(this.logFile, logEntry);
     } catch (error) {
