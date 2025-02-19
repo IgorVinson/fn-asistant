@@ -37,6 +37,15 @@ export default {
           id: 2,
         },
       },
+      MESSAGES: {
+        INTRODUCTION:
+          'Hello,\n' +
+          "If you entrust me with this project, I am committed to exceeding your expectations. I work with companies such as Lululemon, Trader Joe's, Home Depot, Marshals and others.\n" +
+          'Here is photo of my last projects:\n' +
+          'https://drive.google.com/drive/folders/1p_7aGla27KgB4GVIPRjf6wb7t7RN6AE7?usp=sharing:\n' +
+          '\n' +
+          'Thank you for considering my application. I look forward to the opportunity work with you!',
+      },
     },
     WORK_MARKET: {
       COUNTER_OFFER: {

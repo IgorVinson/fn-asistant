@@ -188,34 +188,26 @@ async function processOrder(orderLink) {
     // Only attempt counter offer if we have one AND schedule is available
     else if (eligibilityResult.counterOffer) {
       if (platform === 'FieldNation') {
-        const {
-          baseAmount,
-          travelExpense,
-          baseHours,
-          additionalHours,
-          additionalAmount,
-        } = eligibilityResult.counterOffer;
+        const travelExpense = Math.round(
+          distance * CONFIG.RATES.TRAVEL_RATE_PER_MILE
+        );
 
         logger.info(
-          `Decision [${id}]: Counter Offer with adjusted rates`,
+          `Decision [${id}]: Counter Offer with travel expenses ($${travelExpense})`,
           platform
         );
 
         try {
-          const result = await postFNCounterOffer(
-            id,
-            baseAmount,
-            travelExpense,
-            'blended',
-            baseHours,
-            additionalHours,
-            additionalAmount
-          );
+          const result = await postFNCounterOffer(id, travelExpense);
 
           if (result && result.id) {
             logger.info(
-              `Result [${id}]: Counter offer accepted ($${baseAmount}/${baseHours}hr + $${additionalAmount}/${additionalHours}hr + $${travelExpense} travel)`,
+              `Result [${id}]: Counter offer accepted with $${travelExpense} travel expenses`,
               platform
+            );
+            // Send message after successful counter offer
+            await sendWorkOrderMessage(
+              `https://app.fieldnation.com/workorders/${id}`
             );
           } else {
             logger.error(

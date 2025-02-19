@@ -12,25 +12,12 @@ function getCookies() {
   return cookiesJson.map(cookie => `${cookie.name}=${cookie.value}`).join('; ');
 }
 
-export async function postFNCounterOffer(
-  workOrderId,
-  baseAmount,
-  travelExpense,
-  payType,
-  baseHours,
-  additionalHours,
-  additionalAmount
-) {
+export async function postFNCounterOffer(workOrderId, travelExpense) {
   try {
     const cookies = getCookies();
-    console.log(chalk.yellow('Starting counter offer with params:'), {
+    console.log(chalk.yellow('Starting counter offer with travel expense:'), {
       workOrderId,
-      baseAmount,
       travelExpense,
-      payType,
-      baseHours,
-      additionalHours,
-      additionalAmount,
     });
 
     const requestBody = {
@@ -38,32 +25,19 @@ export async function postFNCounterOffer(
       counter: true,
       active: true,
       expiryTime: 0,
-      expenses: [],
+      expenses: [
+        {
+          description: 'travel',
+          amount: parseFloat(travelExpense),
+          quantity: 1,
+          category: {
+            uid: 2,
+            id: 2,
+          },
+        },
+      ],
       notes: CONFIG.PLATFORMS.FIELD_NATION.COUNTER_OFFER.NOTE,
-      pay: {
-        type: payType,
-        base: {
-          units: Number(baseHours) || 2,
-          amount: Number(baseAmount) || CONFIG.RATES.BASE_RATE,
-        },
-        additional: {
-          units: Number(additionalHours) || 0,
-          amount: Number(additionalAmount) || 0,
-        },
-      },
     };
-
-    if (travelExpense > 0) {
-      requestBody.expenses.push({
-        description: 'travel',
-        amount: parseFloat(travelExpense),
-        quantity: 1,
-        category: {
-          uid: 2,
-          id: 2,
-        },
-      });
-    }
 
     console.log(
       'Counter offer request body:',
@@ -86,18 +60,10 @@ export async function postFNCounterOffer(
 
     if (!response.ok) {
       const errorText = await response.text();
-      try {
-        const errorJson = JSON.parse(errorText);
-        console.log(
-          chalk.red('Counter offer error:'),
-          chalk.yellow(errorJson.message)
-        );
-      } catch {
-        console.log(
-          chalk.red('Counter offer error response:'),
-          chalk.yellow(errorText)
-        );
-      }
+      console.log(
+        chalk.red('Counter offer error response:'),
+        chalk.yellow(errorText)
+      );
       throw new Error(`HTTP error! status: ${response.status}`);
     }
 
