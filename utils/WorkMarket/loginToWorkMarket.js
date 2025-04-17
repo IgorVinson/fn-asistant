@@ -1,3 +1,4 @@
+import { timeout } from "puppeteer";
 import {saveCookies} from "../saveCookies.js";
 
 
@@ -11,7 +12,7 @@ export async function loginToWorkMarket(browser) {
         await page.goto(url, {waitUntil: 'load'});
 
         // Введення username
-        await page.waitForSelector('#login-email'); // Чекаємо на появу поля username
+        await page.waitForSelector('#login-email', {visible: true}); // Чекаємо на появу поля username
         await page.type('#login-email', 'igorvinson@gmail.com', {delay: Math.random() * 100}); // Вводимо username (емейл)
         // await page.click('button[type="submit"]'); // Натискаємо кнопку "Submit" після введення username
 

@@ -1,45 +1,45 @@
-import { currentMonth as schedule } from '../schedule.js';
+import schedule from '../schedule.js';
 import logger from './logger.js';
 import { CONFIG } from '../config.js';
 
 function isPaymentEligible(workOrder) {
-  // If no labor hours specified, assume 4 hours
-  let estLaborHours = workOrder.estLaborHours || 4;
-  const TRAVEL_THRESHOLD = 30;
+  // If no labor hours specified, use default from config
+  let estLaborHours = workOrder.estLaborHours || CONFIG.TIME.DEFAULT_LABOR_HOURS;
+  const TRAVEL_THRESHOLD = CONFIG.DISTANCE.TRAVEL_THRESHOLD_MILES;
 
   // Calculate required pay
-  let requiredPay;
-  let laborPay;
+  let requiredPay = workOrder.payRange.max; // Start with offered pay
+  let decisionReason = '';
 
-  // For jobs over 2 hours
-  if (estLaborHours > 2) {
-    laborPay = 150 + (estLaborHours - 2) * 55;
-    requiredPay = laborPay;
-    console.log(
-      `Labor calculation: $150 base + (${
-        estLaborHours - 2
-      }hrs × $55) = $${laborPay}`
-    );
+  // If offered pay is less than minimum threshold, check if we can add travel expenses
+  if (workOrder.payRange.max < CONFIG.RATES.MIN_PAY_THRESHOLD) {
+    // Only add travel expenses if distance exceeds threshold
+    if (workOrder.distance > TRAVEL_THRESHOLD) {
+      const travelExpense = (workOrder.distance - TRAVEL_THRESHOLD) * CONFIG.DISTANCE.TRAVEL_RATE_PER_MILE;
+      requiredPay = CONFIG.RATES.MIN_PAY_THRESHOLD + travelExpense;
+      decisionReason = `Base pay too low ($${workOrder.payRange.max} < $${CONFIG.RATES.MIN_PAY_THRESHOLD}), adding travel expenses: ${workOrder.distance - TRAVEL_THRESHOLD} miles × $${CONFIG.DISTANCE.TRAVEL_RATE_PER_MILE}/mile = $${travelExpense}`;
+    } else {
+      requiredPay = CONFIG.RATES.MIN_PAY_THRESHOLD;
+      decisionReason = `Base pay too low ($${workOrder.payRange.max} < $${CONFIG.RATES.MIN_PAY_THRESHOLD}) and distance (${workOrder.distance} miles) is within free travel limit (${TRAVEL_THRESHOLD} miles)`;
+    }
   } else {
-    // For jobs 2 hours or less
-    laborPay = 150;
-    requiredPay = laborPay;
-    console.log(`Labor calculation: Fixed rate $150`);
+    decisionReason = `Base pay acceptable: $${workOrder.payRange.max} >= $${CONFIG.RATES.MIN_PAY_THRESHOLD}`;
   }
 
-  // Add travel expense if distance > 30 miles
-  if (workOrder.distance > TRAVEL_THRESHOLD) {
-    requiredPay += workOrder.distance; // $1 per mile
-    console.log(
-      `Added travel expense: ${workOrder.distance} miles = $${workOrder.distance}`
-    );
-  }
-
-  console.log(
-    `Total required pay: $${requiredPay} vs Offered pay: $${workOrder.payRange.max}`
+  // Log the decision
+  logger.info(
+    `Payment Analysis:
+    - Offered Pay: $${workOrder.payRange.max}
+    - Minimum Threshold: $${CONFIG.RATES.MIN_PAY_THRESHOLD}
+    - Distance: ${workOrder.distance} miles
+    - Travel Threshold: ${TRAVEL_THRESHOLD} miles
+    - Required Pay: $${requiredPay}
+    - Decision: ${workOrder.payRange.max >= requiredPay ? 'ACCEPT' : 'REJECT'}
+    - Reason: ${decisionReason}`,
+    workOrder.platform,
+    workOrder.id
   );
 
-  // Return true only if offered pay meets or exceeds required pay
   return workOrder.payRange.max >= requiredPay;
 }
 
@@ -54,14 +54,15 @@ function isSlotAvailable(schedule, workOrder) {
   const orderMonth = orderDate.getMonth() + 1;
 
   // Debug logging
-  console.log('Checking availability for:', {
-    date: `${orderMonth}/${orderDay}`,
-    startTime,
-    endTime,
-    existingEvents: Object.values(schedule).flatMap(week =>
-      Object.entries(week).map(([day, events]) => ({ day, events }))
-    ),
-  });
+  logger.info(
+    `Schedule Check:
+    - Date: ${orderMonth}/${orderDay}
+    - Time: ${startTime} - ${endTime}
+    - Work Hours: ${DAY_WORK_START_TIME} - ${DAY_WORK_END_TIME}
+    - Buffer: ${MIN_BUFFER_MINUTES} minutes`,
+    workOrder.platform,
+    workOrder.id
+  );
 
   const stampStartTime = new Date(startTime).getTime();
   const stampEndTime = new Date(endTime).getTime();
@@ -104,6 +105,11 @@ function isSlotAvailable(schedule, workOrder) {
 
   // If no events on this day, the slot is available
   if (sameDayEvents.length === 0) {
+    logger.info(
+      `Time is available: No other events scheduled for this day`,
+      workOrder.platform,
+      workOrder.id
+    );
     return true;
   }
 
@@ -118,16 +124,26 @@ function isSlotAvailable(schedule, workOrder) {
       stampStartTime >= prevEndTime + MIN_BUFFER_MINUTES * 60 * 1000 &&
       stampEndTime <= event.start - MIN_BUFFER_MINUTES * 60 * 1000
     ) {
+      logger.info(
+        `Time is available: Slot found between ${new Date(prevEndTime).toLocaleTimeString()} and ${new Date(event.start).toLocaleTimeString()}`,
+        workOrder.platform,
+        workOrder.id
+      );
       return true;
     }
     prevEndTime = event.end;
   }
 
   // Final check for end of day
-  return (
-    stampStartTime >= prevEndTime + MIN_BUFFER_MINUTES * 60 * 1000 &&
-    stampEndTime <= WORK_END
+  const isAvailable = stampStartTime >= prevEndTime + MIN_BUFFER_MINUTES * 60 * 1000 && stampEndTime <= WORK_END;
+  
+  logger.info(
+    `Time ${isAvailable ? 'is' : 'is not'} available: ${isAvailable ? 'Slot found at end of day' : 'No available slots found'}`,
+    workOrder.platform,
+    workOrder.id
   );
+  
+  return isAvailable;
 }
 
 function calculateCounterOffer(workOrder) {
@@ -163,7 +179,8 @@ function isEligibleForApplication(workOrder) {
     workOrder.id
   );
 
-  if (workOrder.platform === 'FieldNation') {
+  // Check eligibility for both FieldNation and WorkMarket
+  if (workOrder.platform === 'FieldNation' || workOrder.platform === 'WorkMarket') {
     if (isPaymentEligible(workOrder)) {
       const slotAvailable = isSlotAvailable(schedule, workOrder);
       return {
@@ -179,6 +196,13 @@ function isEligibleForApplication(workOrder) {
     }
   }
 
+  // Unknown platform
+  logger.info(
+    `Unknown platform: ${workOrder.platform}`,
+    workOrder.platform,
+    workOrder.id
+  );
+  
   return {
     eligible: false,
     counterOffer: null,
