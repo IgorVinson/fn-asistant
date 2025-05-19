@@ -17,6 +17,7 @@ import { postFNCounterOffer } from './utils/FieldNation/postFNCounterOffer.js';
 import logger from './utils/logger.js';
 import { postWMCounterOffer } from './utils/WorkMarket/postWMCounterOffer.js';
 import { CONFIG } from './config.js';
+import playSound from './utils/playSound.js';
 
 // Configure the server
 const app = express();
@@ -36,6 +37,10 @@ async function periodicCheck() {
   const auth = await authorize();
   const gmail = google.gmail({ version: 'v1', auth });
 
+  // Initial announcement sound
+  console.log("Starting to monitor for new job orders...");
+  playSound('notification');
+
   setInterval(async () => {
     try {
       const lastEmailBody = await getLastUnreadEmail(auth, gmail);
@@ -45,6 +50,9 @@ async function periodicCheck() {
         if (orderLink) {
           console.log('Order link extracted:', orderLink);
           await processOrder(orderLink);
+          
+          // Add a delay to ensure sounds can finish playing
+          await new Promise(resolve => setTimeout(resolve, 3000));
         } else {
           console.log('No valid order link found in email.');
         }
@@ -76,6 +84,7 @@ function determinePlatform(orderLink) {
   return null;
 }
 
+
 // Apply for the job
 async function applyForJob(orderLink, startDateAndTime, estLaborHours, id) {
   const platform = determinePlatform(orderLink);
@@ -84,6 +93,9 @@ async function applyForJob(orderLink, startDateAndTime, estLaborHours, id) {
     if (platform === 'FieldNation') {
       await postFNworkOrderRequest(orderLink, startDateAndTime, estLaborHours);
       await sendWorkOrderMessage(orderLink);
+      // Play success sound for FieldNation application
+      playSound('applied');
+      logger.info(`🔊 Sound notification: Application submitted for FieldNation job`, platform, id);
     }
 
     if (platform === 'WorkMarket') {
@@ -93,9 +105,14 @@ async function applyForJob(orderLink, startDateAndTime, estLaborHours, id) {
         estLaborHours,
         id
       );
+      // Play success sound for WorkMarket application
+      playSound('applied');
+      logger.info(`🔊 Sound notification: Application submitted for WorkMarket job`, platform, id);
     }
   } catch (error) {
     console.error('Error applying for the job:', error);
+    // Play error sound on failure
+    playSound('error');
   }
 }
 
@@ -158,8 +175,22 @@ async function processOrder(orderLink) {
         normalizedData.id
       );
     } else if (
+      eligibilityResult.reason === 'OUTSIDE_WORKING_HOURS'
+    ) {
+      // Do not send counter-offer for jobs outside working hours
+      logger.info(
+        `Action: No Action - Job is outside working hours (${CONFIG.TIME.WORK_START_TIME}-${CONFIG.TIME.WORK_END_TIME})`,
+        normalizedData.platform,
+        normalizedData.id
+      );
+      
+      // Sound for rejection
+      playSound('error');
+      
+    } else if (
       normalizedData.platform === 'WorkMarket' &&
-      normalizedData.distance > CONFIG.RATES.TRAVEL_THRESHOLD_MILES
+      normalizedData.distance > CONFIG.DISTANCE.TRAVEL_THRESHOLD_MILES &&
+      eligibilityResult.reason === 'PAYMENT_INSUFFICIENT'
     ) {
       logger.info(
         `Action: Counter Offer - Adding travel expenses for ${normalizedData.distance} miles`,
@@ -175,10 +206,12 @@ async function processOrder(orderLink) {
           normalizedData.distance
         );
 
+        // Sound for counter-offer
+        playSound('applied');
         logger.info(
           `Result: Counter offer sent successfully with $${Math.round(
             normalizedData.distance
-          )} travel expenses`,
+          )} travel expenses 🔊`,
           normalizedData.platform,
           normalizedData.id
         );
@@ -188,8 +221,9 @@ async function processOrder(orderLink) {
           normalizedData.platform,
           normalizedData.id
         );
+        playSound('error');
       }
-    } else if (eligibilityResult.counterOffer) {
+    } else if (eligibilityResult.counterOffer && eligibilityResult.reason === 'PAYMENT_INSUFFICIENT') {
       if (normalizedData.platform === 'FieldNation') {
         logger.info(
           `Action: Counter Offer - Adjusting rates and adding travel expenses`,
@@ -208,8 +242,10 @@ async function processOrder(orderLink) {
             eligibilityResult.counterOffer.additionalAmount
           );
 
+          // Sound for counter-offer
+          playSound('applied');
           logger.info(
-            `Result: Counter offer sent successfully
+            `Result: Counter offer sent successfully 🔊
              Base: $${eligibilityResult.counterOffer.baseAmount} (${eligibilityResult.counterOffer.baseHours}hr)
              Additional: $${eligibilityResult.counterOffer.additionalAmount}/hr (${eligibilityResult.counterOffer.additionalHours}hr)
              Travel: $${eligibilityResult.counterOffer.travelExpense}`,
@@ -222,14 +258,19 @@ async function processOrder(orderLink) {
             normalizedData.platform,
             normalizedData.id
           );
+          playSound('error');
         }
       }
     } else {
       logger.info(
-        `Action: No Action - Order does not meet criteria and is not eligible for counter offer`,
+        `Action: No Action - Order does not meet criteria (Reason: ${eligibilityResult.reason})`,
         normalizedData.platform,
         normalizedData.id
       );
+      
+      // All rejections use error sound
+      console.log(`DEBUG: Playing error sound for ${normalizedData.platform} order ${normalizedData.id}, reason: ${eligibilityResult.reason}`);
+      playSound('error');
     }
 
     return normalizedData;

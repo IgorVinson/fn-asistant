@@ -27,10 +27,42 @@ const currentMonth = {
   },
   "week4": {
     "MON 21": [],
-    "TUE 22": [],
-    "WED 23": [],
-    "THU 24": [],
-    "FRI 25": [],
+    "TUE 22": [{
+      id: '',
+      platform: 'FieldNation',
+      title: 'cabling',
+      time: {
+          start: '2025-04-22T12:00:00',
+          end: '2025-04-22T15:00:00'
+      },
+  }],
+    "WED 23": [{
+      id: '',
+      platform: 'FieldNation',
+      title: 'cabling',
+      time: {
+          start: '2025-04-23T08:00:00',
+          end: '2025-04-23T16:00:00'
+      },
+  }],
+    "THU 24": [{
+      id: '',
+      platform: 'FieldNation',
+      title: 'cabling',
+      time: {
+          start: '2025-04-24T09:00:00',
+          end: '2025-04-24T12:00:00'
+      },
+  }],
+    "FRI 25": [{
+      id: '',
+      platform: 'FieldNation',
+      title: 'cabling',
+      time: {
+          start: '2025-04-25T08:00:00',
+          end: '2025-04-25T16:00:00'
+      },
+  }],
     "SAT 26": [],
     "SUN 27": []
   },

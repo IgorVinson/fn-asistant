@@ -2,24 +2,38 @@ import schedule from '../schedule.js';
 import logger from './logger.js';
 import { CONFIG } from '../config.js';
 
+// Function to check if time is within working hours
+function isWithinWorkingHours(startTime, endTime) {
+  const workStartTime = CONFIG.TIME.WORK_START_TIME;
+  const workEndTime = CONFIG.TIME.WORK_END_TIME;
+  
+  const jobDate = startTime.split('T')[0];
+  
+  const jobStartTime = new Date(startTime).getTime();
+  const jobEndTime = new Date(endTime).getTime();
+  
+  const dayWorkStart = new Date(`${jobDate}T${workStartTime}:00`).getTime();
+  const dayWorkEnd = new Date(`${jobDate}T${workEndTime}:00`).getTime();
+  
+  return jobStartTime >= dayWorkStart && jobEndTime <= dayWorkEnd;
+}
+
 function isPaymentEligible(workOrder) {
   // If no labor hours specified, use default from config
   let estLaborHours = workOrder.estLaborHours || CONFIG.TIME.DEFAULT_LABOR_HOURS;
   const TRAVEL_THRESHOLD = CONFIG.DISTANCE.TRAVEL_THRESHOLD_MILES;
 
   // Calculate required pay
-  let requiredPay = workOrder.payRange.max; // Start with offered pay
+  let requiredPay = CONFIG.RATES.MIN_PAY_THRESHOLD; // Minimum acceptable pay
   let decisionReason = '';
 
-  // If offered pay is less than minimum threshold, check if we can add travel expenses
+  // Check if minimum pay meets our requirements
   if (workOrder.payRange.max < CONFIG.RATES.MIN_PAY_THRESHOLD) {
-    // Only add travel expenses if distance exceeds threshold
+    // Only consider counter-offer if distance exceeds threshold
     if (workOrder.distance > TRAVEL_THRESHOLD) {
       const travelExpense = (workOrder.distance - TRAVEL_THRESHOLD) * CONFIG.DISTANCE.TRAVEL_RATE_PER_MILE;
-      requiredPay = CONFIG.RATES.MIN_PAY_THRESHOLD + travelExpense;
       decisionReason = `Base pay too low ($${workOrder.payRange.max} < $${CONFIG.RATES.MIN_PAY_THRESHOLD}), adding travel expenses: ${workOrder.distance - TRAVEL_THRESHOLD} miles × $${CONFIG.DISTANCE.TRAVEL_RATE_PER_MILE}/mile = $${travelExpense}`;
     } else {
-      requiredPay = CONFIG.RATES.MIN_PAY_THRESHOLD;
       decisionReason = `Base pay too low ($${workOrder.payRange.max} < $${CONFIG.RATES.MIN_PAY_THRESHOLD}) and distance (${workOrder.distance} miles) is within free travel limit (${TRAVEL_THRESHOLD} miles)`;
     }
   } else {
@@ -44,9 +58,9 @@ function isPaymentEligible(workOrder) {
 }
 
 function isSlotAvailable(schedule, workOrder) {
-  const DAY_WORK_START_TIME = '07:59';
-  const DAY_WORK_END_TIME = '19:00';
-  const MIN_BUFFER_MINUTES = 30;
+  const DAY_WORK_START_TIME = CONFIG.TIME.WORK_START_TIME;
+  const DAY_WORK_END_TIME = CONFIG.TIME.WORK_END_TIME;
+  const MIN_BUFFER_MINUTES = CONFIG.TIME.BUFFER_MINUTES;
 
   const { start: startTime, end: endTime } = workOrder.time;
   const orderDate = new Date(startTime);
@@ -179,6 +193,23 @@ function isEligibleForApplication(workOrder) {
     workOrder.id
   );
 
+  // First check if the job is within working hours
+  const isInWorkingHours = isWithinWorkingHours(workOrder.time.start, workOrder.time.end);
+  
+  // If outside working hours, not eligible for direct application or counter-offer
+  if (!isInWorkingHours) {
+    logger.info(
+      `Job rejected: Outside working hours (${CONFIG.TIME.WORK_START_TIME}-${CONFIG.TIME.WORK_END_TIME})`,
+      workOrder.platform,
+      workOrder.id
+    );
+    return {
+      eligible: false,
+      counterOffer: null, // No counter-offer for jobs outside working hours
+      reason: 'OUTSIDE_WORKING_HOURS'
+    };
+  }
+
   // Check eligibility for both FieldNation and WorkMarket
   if (workOrder.platform === 'FieldNation' || workOrder.platform === 'WorkMarket') {
     if (isPaymentEligible(workOrder)) {
@@ -186,12 +217,14 @@ function isEligibleForApplication(workOrder) {
       return {
         eligible: slotAvailable,
         counterOffer: null,
+        reason: slotAvailable ? 'ELIGIBLE' : 'SLOT_UNAVAILABLE'
       };
     } else {
       // If payment is not good, generate counter offer
       return {
         eligible: false,
         counterOffer: calculateCounterOffer(workOrder),
+        reason: 'PAYMENT_INSUFFICIENT'
       };
     }
   }
@@ -206,6 +239,7 @@ function isEligibleForApplication(workOrder) {
   return {
     eligible: false,
     counterOffer: null,
+    reason: 'UNKNOWN_PLATFORM'
   };
 }
 
