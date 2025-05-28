@@ -57,7 +57,128 @@ function isPaymentEligible(workOrder) {
   return workOrder.payRange.max >= requiredPay;
 }
 
-function isSlotAvailable(schedule, workOrder) {
+// New function using Google Calendar for availability checking
+async function isSlotAvailableCalendar(workOrder) {
+  const MIN_BUFFER_MINUTES = CONFIG.TIME.BUFFER_MINUTES;
+  const { start: startTime, end: endTime } = workOrder.time;
+
+  try {
+    // Use the same simple approach as showAllCalendarsEvents.js
+    const { authorize } = await import('./gmail/login.js');
+    const { google } = await import('googleapis');
+    
+    const auth = await authorize();
+    const calendar = google.calendar({ version: 'v3', auth });
+    
+    // Get work order time details
+    const workOrderStart = new Date(startTime);
+    const workOrderEnd = new Date(endTime);
+    const workOrderDate = new Date(workOrderStart.getFullYear(), workOrderStart.getMonth(), workOrderStart.getDate());
+    
+    // Get all calendars
+    const calendarList = await calendar.calendarList.list();
+    const allCalendars = calendarList.data.items || [];
+    
+    logger.info(
+      `Multi-Calendar Check: Found ${allCalendars.length} calendars to check for conflicts`,
+      workOrder.platform,
+      workOrder.id
+    );
+    
+    let totalEvents = 0;
+    let totalConflicts = 0;
+    const conflicts = [];
+    
+    // Get today's date range
+    const timeMin = new Date(workOrderDate.getFullYear(), workOrderDate.getMonth(), workOrderDate.getDate()).toISOString();
+    const timeMax = new Date(workOrderDate.getFullYear(), workOrderDate.getMonth(), workOrderDate.getDate() + 1).toISOString();
+    
+    // Check each calendar for conflicts (same as showAllCalendarsEvents.js)
+    for (const cal of allCalendars) {
+      try {
+        const events = await calendar.events.list({
+          calendarId: cal.id,
+          timeMin: timeMin,
+          timeMax: timeMax,
+          singleEvents: true,
+          orderBy: 'startTime',
+        });
+        
+        const todayEvents = events.data.items || [];
+        totalEvents += todayEvents.length;
+        
+        // Check each event for conflicts
+        for (const event of todayEvents) {
+          // Skip cancelled or transparent (free) events
+          if (event.status === 'cancelled' || event.transparency === 'transparent') {
+            continue;
+          }
+          
+          const eventStart = new Date(event.start.dateTime || event.start.date);
+          const eventEnd = new Date(event.end.dateTime || event.end.date);
+          
+          // Add buffer time
+          const bufferedWorkStart = new Date(workOrderStart.getTime() - MIN_BUFFER_MINUTES * 60 * 1000);
+          const bufferedWorkEnd = new Date(workOrderEnd.getTime() + MIN_BUFFER_MINUTES * 60 * 1000);
+          
+          // Check for overlap
+          if (bufferedWorkStart < eventEnd && bufferedWorkEnd > eventStart) {
+            conflicts.push({
+              eventSummary: event.summary || 'No title',
+              calendarName: cal.summary,
+              eventStart: eventStart.toLocaleTimeString(),
+              eventEnd: eventEnd.toLocaleTimeString()
+            });
+            totalConflicts++;
+          }
+        }
+        
+      } catch (error) {
+        logger.info(`Could not check calendar "${cal.summary}": ${error.message}`, workOrder.platform, workOrder.id);
+      }
+    }
+    
+    const isAvailable = totalConflicts === 0;
+    
+    logger.info(
+      `Simple Multi-Calendar Check:
+      - Time: ${workOrderStart.toLocaleTimeString()} - ${workOrderEnd.toLocaleTimeString()}
+      - Buffer: ${MIN_BUFFER_MINUTES} minutes
+      - Calendars Checked: ${allCalendars.length}
+      - Total Events: ${totalEvents}
+      - Conflicts Found: ${totalConflicts}
+      - Decision: ${isAvailable ? 'AVAILABLE' : 'CONFLICT'}`,
+      workOrder.platform,
+      workOrder.id
+    );
+    
+    if (!isAvailable && conflicts.length > 0) {
+      logger.info(
+        `Calendar conflicts:
+        ${conflicts.map((conflict, index) => 
+          `  ${index + 1}. "${conflict.eventSummary}" [${conflict.calendarName}] (${conflict.eventStart} - ${conflict.eventEnd})`
+        ).join('\n        ')}`,
+        workOrder.platform,
+        workOrder.id
+      );
+    }
+
+    return isAvailable;
+
+  } catch (error) {
+    logger.error(
+      `Error checking calendar availability: ${error.message}. Falling back to static schedule.`,
+      workOrder.platform,
+      workOrder.id
+    );
+    
+    // Fallback to static schedule if calendar check fails
+    return isSlotAvailableStatic(workOrder);
+  }
+}
+
+// Renamed original function as fallback
+function isSlotAvailableStatic(workOrder) {
   const DAY_WORK_START_TIME = CONFIG.TIME.WORK_START_TIME;
   const DAY_WORK_END_TIME = CONFIG.TIME.WORK_END_TIME;
   const MIN_BUFFER_MINUTES = CONFIG.TIME.BUFFER_MINUTES;
@@ -186,7 +307,7 @@ function calculateCounterOffer(workOrder) {
   };
 }
 
-function isEligibleForApplication(workOrder) {
+async function isEligibleForApplication(workOrder) {
   logger.info(
     `Checking eligibility - Distance: ${workOrder.distance}mi, Est. Hours: ${workOrder.estLaborHours}`,
     workOrder.platform,
@@ -213,7 +334,7 @@ function isEligibleForApplication(workOrder) {
   // Check eligibility for both FieldNation and WorkMarket
   if (workOrder.platform === 'FieldNation' || workOrder.platform === 'WorkMarket') {
     if (isPaymentEligible(workOrder)) {
-      const slotAvailable = isSlotAvailable(schedule, workOrder);
+      const slotAvailable = await isSlotAvailableCalendar(workOrder);
       return {
         eligible: slotAvailable,
         counterOffer: null,

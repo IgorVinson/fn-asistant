@@ -158,7 +158,7 @@ async function processOrder(orderLink) {
       normalizedData.id
     );
 
-    const eligibilityResult = isEligibleForApplication(normalizedData);
+    const eligibilityResult = await isEligibleForApplication(normalizedData);
 
     // Process the order based on eligibility
     if (eligibilityResult.eligible) {
