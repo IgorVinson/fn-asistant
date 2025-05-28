@@ -283,9 +283,7 @@ export async function getAllCalendars() {
 
     const calendarList = await calendar.calendarList.list();
 
-    logger.info(
-      `Found ${calendarList.data.items.length} calendars in account`
-    );
+    logger.info(`Found ${calendarList.data.items.length} calendars in account`);
 
     return calendarList.data.items || [];
   } catch (error) {
@@ -403,7 +401,9 @@ export async function checkTimeConflictAllCalendars(
           `Calendar "${cal.summary}": ${events.length} events, ${busyEvents.length} busy, ${calendarConflicts.length} conflicts`
         );
       } catch (error) {
-        logger.error(`Error checking calendar "${cal.summary}": ${error.message}`);
+        logger.error(
+          `Error checking calendar "${cal.summary}": ${error.message}`
+        );
         // Continue with other calendars even if one fails
         calendarResults.push({
           calendarId: cal.id,
@@ -419,7 +419,9 @@ export async function checkTimeConflictAllCalendars(
     logger.info(
       `Multi-calendar conflict check result: ${
         hasConflict ? "CONFLICT" : "NO CONFLICT"
-      } - Found ${allConflicts.length} conflicts across ${calendarsToCheck.length} calendars`
+      } - Found ${allConflicts.length} conflicts across ${
+        calendarsToCheck.length
+      } calendars`
     );
 
     return {
@@ -432,7 +434,9 @@ export async function checkTimeConflictAllCalendars(
       checkedTimeRange: { startTime, endTime, bufferMinutes },
     };
   } catch (error) {
-    logger.error(`Error checking time conflict across all calendars: ${error.message}`);
+    logger.error(
+      `Error checking time conflict across all calendars: ${error.message}`
+    );
     throw error;
   }
 }
