@@ -1,23 +1,23 @@
-import express from 'express';
-import { google } from 'googleapis';
-import puppeteer from 'puppeteer';
-import { getLastUnreadEmail } from './utils/gmail/getLastUnreadEmail.js';
-import { authorize } from './utils/gmail/login.js';
-import { getOrderLink } from './utils/gmail/getOrderLink.js';
-import { loginToFieldNation } from './utils/FieldNation/loginToFieldNation.js';
-import { getFNorderData } from './utils/FieldNation/getFNorderData.js';
-import { postFNworkOrderRequest } from './utils/FieldNation/postFNworkOrderRequest.js';
-import { postWMworkOrderRequest } from './utils/WorkMarket/postWMworkOrderRequest.js';
-import { sendWorkOrderMessage } from './utils/FieldNation/sendWorkOrderMessage.js';
-import { loginToWorkMarket } from './utils/WorkMarket/loginToWorkMarket.js';
-import { getWMorderData } from './utils/WorkMarket/getWMorderData.js';
-import normalizeDateFromWO from './utils/normalizedDateFromWO.js';
-import isEligibleForApplication from './utils/isEligibleForApplication.js';
-import { postFNCounterOffer } from './utils/FieldNation/postFNCounterOffer.js';
-import logger from './utils/logger.js';
-import { postWMCounterOffer } from './utils/WorkMarket/postWMCounterOffer.js';
-import { CONFIG } from './config.js';
-import playSound from './utils/playSound.js';
+import express from "express";
+import { google } from "googleapis";
+import puppeteer from "puppeteer";
+import { CONFIG } from "./config.js";
+import { getFNorderData } from "./utils/FieldNation/getFNorderData.js";
+import { loginToFieldNation } from "./utils/FieldNation/loginToFieldNation.js";
+import { postFNCounterOffer } from "./utils/FieldNation/postFNCounterOffer.js";
+import { postFNworkOrderRequest } from "./utils/FieldNation/postFNworkOrderRequest.js";
+import { sendWorkOrderMessage } from "./utils/FieldNation/sendWorkOrderMessage.js";
+import { getLastUnreadEmail } from "./utils/gmail/getLastUnreadEmail.js";
+import { getOrderLink } from "./utils/gmail/getOrderLink.js";
+import { authorize } from "./utils/gmail/login.js";
+import isEligibleForApplication from "./utils/isEligibleForApplication.js";
+import logger from "./utils/logger.js";
+import normalizeDateFromWO from "./utils/normalizedDateFromWO.js";
+import playSound from "./utils/playSound.js";
+import { getWMorderData } from "./utils/WorkMarket/getWMorderData.js";
+import { loginToWorkMarket } from "./utils/WorkMarket/loginToWorkMarket.js";
+import { postWMCounterOffer } from "./utils/WorkMarket/postWMCounterOffer.js";
+import { postWMworkOrderRequest } from "./utils/WorkMarket/postWMworkOrderRequest.js";
 
 // Configure the server
 const app = express();
@@ -35,32 +35,32 @@ async function saveCookies() {
 // Periodically check for unread emails
 async function periodicCheck() {
   const auth = await authorize();
-  const gmail = google.gmail({ version: 'v1', auth });
+  const gmail = google.gmail({ version: "v1", auth });
 
   // Initial announcement sound
   console.log("Starting to monitor for new job orders...");
-  playSound('notification');
+  playSound("notification");
 
   setInterval(async () => {
     try {
       const lastEmailBody = await getLastUnreadEmail(auth, gmail);
       if (lastEmailBody) {
-        console.log('Email body received.');
+        console.log("Email body received.");
         const orderLink = extractOrderLink(lastEmailBody);
         if (orderLink) {
-          console.log('Order link extracted:', orderLink);
+          console.log("Order link extracted:", orderLink);
           await processOrder(orderLink);
-          
+
           // Add a delay to ensure sounds can finish playing
           await new Promise(resolve => setTimeout(resolve, 3000));
         } else {
-          console.log('No valid order link found in email.');
+          console.log("No valid order link found in email.");
         }
       } else {
-        console.log('No unread emails found.');
+        console.log("No unread emails found.");
       }
     } catch (error) {
-      console.error('Error during email check:', error);
+      console.error("Error during email check:", error);
     }
   }, 1000); // Check every sec
 }
@@ -70,35 +70,38 @@ function extractOrderLink(emailBody) {
   try {
     return getOrderLink(emailBody);
   } catch (error) {
-    console.error('Error extracting order link:', error);
+    console.error("Error extracting order link:", error);
     return null;
   }
 }
 
 function determinePlatform(orderLink) {
-  if (orderLink.includes('fieldnation')) {
-    return 'FieldNation';
-  } else if (orderLink.includes('workmarket')) {
-    return 'WorkMarket';
+  if (orderLink.includes("fieldnation")) {
+    return "FieldNation";
+  } else if (orderLink.includes("workmarket")) {
+    return "WorkMarket";
   }
   return null;
 }
-
 
 // Apply for the job
 async function applyForJob(orderLink, startDateAndTime, estLaborHours, id) {
   const platform = determinePlatform(orderLink);
 
   try {
-    if (platform === 'FieldNation') {
+    if (platform === "FieldNation") {
       await postFNworkOrderRequest(orderLink, startDateAndTime, estLaborHours);
       await sendWorkOrderMessage(orderLink);
       // Play success sound for FieldNation application
-      playSound('applied');
-      logger.info(`🔊 Sound notification: Application submitted for FieldNation job`, platform, id);
+      playSound("applied");
+      logger.info(
+        `🔊 Sound notification: Application submitted for FieldNation job`,
+        platform,
+        id
+      );
     }
 
-    if (platform === 'WorkMarket') {
+    if (platform === "WorkMarket") {
       await postWMworkOrderRequest(
         orderLink,
         startDateAndTime,
@@ -106,13 +109,17 @@ async function applyForJob(orderLink, startDateAndTime, estLaborHours, id) {
         id
       );
       // Play success sound for WorkMarket application
-      playSound('applied');
-      logger.info(`🔊 Sound notification: Application submitted for WorkMarket job`, platform, id);
+      playSound("applied");
+      logger.info(
+        `🔊 Sound notification: Application submitted for WorkMarket job`,
+        platform,
+        id
+      );
     }
   } catch (error) {
-    console.error('Error applying for the job:', error);
+    console.error("Error applying for the job:", error);
     // Play error sound on failure
-    playSound('error');
+    playSound("error");
   }
 }
 
@@ -122,16 +129,16 @@ async function processOrder(orderLink) {
     const platform = determinePlatform(orderLink);
     let data;
 
-    if (platform === 'FieldNation') {
+    if (platform === "FieldNation") {
       data = await getFNorderData(orderLink);
-    } else if (platform === 'WorkMarket') {
+    } else if (platform === "WorkMarket") {
       data = await getWMorderData(orderLink);
     } else {
-      throw new Error('Unsupported platform or invalid order link.');
+      throw new Error("Unsupported platform or invalid order link.");
     }
 
     if (!data) {
-      console.error('Failed to retrieve order data.');
+      console.error("Failed to retrieve order data.");
       return null;
     }
 
@@ -174,23 +181,20 @@ async function processOrder(orderLink) {
         normalizedData.estLaborHours,
         normalizedData.id
       );
-    } else if (
-      eligibilityResult.reason === 'OUTSIDE_WORKING_HOURS'
-    ) {
+    } else if (eligibilityResult.reason === "OUTSIDE_WORKING_HOURS") {
       // Do not send counter-offer for jobs outside working hours
       logger.info(
         `Action: No Action - Job is outside working hours (${CONFIG.TIME.WORK_START_TIME}-${CONFIG.TIME.WORK_END_TIME})`,
         normalizedData.platform,
         normalizedData.id
       );
-      
+
       // Sound for rejection
-      playSound('error');
-      
+      playSound("error");
     } else if (
-      normalizedData.platform === 'WorkMarket' &&
+      normalizedData.platform === "WorkMarket" &&
       normalizedData.distance > CONFIG.DISTANCE.TRAVEL_THRESHOLD_MILES &&
-      eligibilityResult.reason === 'PAYMENT_INSUFFICIENT'
+      eligibilityResult.reason === "PAYMENT_INSUFFICIENT"
     ) {
       logger.info(
         `Action: Counter Offer - Adding travel expenses for ${normalizedData.distance} miles`,
@@ -207,7 +211,7 @@ async function processOrder(orderLink) {
         );
 
         // Sound for counter-offer
-        playSound('applied');
+        playSound("applied");
         logger.info(
           `Result: Counter offer sent successfully with $${Math.round(
             normalizedData.distance
@@ -221,10 +225,13 @@ async function processOrder(orderLink) {
           normalizedData.platform,
           normalizedData.id
         );
-        playSound('error');
+        playSound("error");
       }
-    } else if (eligibilityResult.counterOffer && eligibilityResult.reason === 'PAYMENT_INSUFFICIENT') {
-      if (normalizedData.platform === 'FieldNation') {
+    } else if (
+      eligibilityResult.counterOffer &&
+      eligibilityResult.reason === "PAYMENT_INSUFFICIENT"
+    ) {
+      if (normalizedData.platform === "FieldNation") {
         logger.info(
           `Action: Counter Offer - Adjusting rates and adding travel expenses`,
           normalizedData.platform,
@@ -243,7 +250,7 @@ async function processOrder(orderLink) {
           );
 
           // Sound for counter-offer
-          playSound('applied');
+          playSound("applied");
           logger.info(
             `Result: Counter offer sent successfully 🔊
              Base: $${eligibilityResult.counterOffer.baseAmount} (${eligibilityResult.counterOffer.baseHours}hr)
@@ -258,7 +265,7 @@ async function processOrder(orderLink) {
             normalizedData.platform,
             normalizedData.id
           );
-          playSound('error');
+          playSound("error");
         }
       }
     } else {
@@ -267,15 +274,17 @@ async function processOrder(orderLink) {
         normalizedData.platform,
         normalizedData.id
       );
-      
+
       // All rejections use error sound
-      console.log(`DEBUG: Playing error sound for ${normalizedData.platform} order ${normalizedData.id}, reason: ${eligibilityResult.reason}`);
-      playSound('error');
+      console.log(
+        `DEBUG: Playing error sound for ${normalizedData.platform} order ${normalizedData.id}, reason: ${eligibilityResult.reason}`
+      );
+      playSound("error");
     }
 
     return normalizedData;
   } catch (error) {
-    console.error('Error processing order:', error);
+    console.error("Error processing order:", error);
     return null;
   }
 }
