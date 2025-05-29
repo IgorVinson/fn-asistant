@@ -37,7 +37,9 @@ export async function loginWMAuto(
     // Step 3: Enter password
     console.log("🔐 Entering password...");
     await page.waitForSelector("#login-password", { visible: true });
-    await page.type("#login-password", password, { delay: Math.random() * 100 });
+    await page.type("#login-password", password, {
+      delay: Math.random() * 100,
+    });
 
     // Step 4: Click login button
     console.log("🔘 Clicking login button...");
@@ -62,15 +64,15 @@ export async function loginWMAuto(
     // Additional debugging: Check what elements are actually on the page
     console.log("🔍 Debugging page elements...");
     const pageElements = await page.evaluate(() => {
-      const sdfInputs = document.querySelectorAll('sdf-input');
-      const allInputs = document.querySelectorAll('input');
-      const allButtons = document.querySelectorAll('button, sdf-button');
-      
+      const sdfInputs = document.querySelectorAll("sdf-input");
+      const allInputs = document.querySelectorAll("input");
+      const allButtons = document.querySelectorAll("button, sdf-button");
+
       return {
         sdfInputs: Array.from(sdfInputs).map(el => ({
           id: el.id,
-          name: el.name || el.getAttribute('name'),
-          innerHTML: el.innerHTML.substring(0, 200)
+          name: el.name || el.getAttribute("name"),
+          innerHTML: el.innerHTML.substring(0, 200),
         })),
         inputs: Array.from(allInputs).map(el => ({
           id: el.id,
@@ -78,25 +80,34 @@ export async function loginWMAuto(
           type: el.type,
           autocomplete: el.autocomplete,
           placeholder: el.placeholder,
-          className: el.className
+          className: el.className,
         })),
         buttons: Array.from(allButtons).map(el => ({
           id: el.id,
           textContent: el.textContent?.trim(),
-          ariaLabel: el.getAttribute('aria-label'),
-          className: el.className
-        }))
+          ariaLabel: el.getAttribute("aria-label"),
+          className: el.className,
+        })),
       };
     });
-    
-    console.log("🔍 Found sdf-input elements:", JSON.stringify(pageElements.sdfInputs, null, 2));
-    console.log("🔍 Found input elements:", JSON.stringify(pageElements.inputs, null, 2));
-    console.log("🔍 Found button elements:", JSON.stringify(pageElements.buttons, null, 2));
+
+    console.log(
+      "🔍 Found sdf-input elements:",
+      JSON.stringify(pageElements.sdfInputs, null, 2)
+    );
+    console.log(
+      "🔍 Found input elements:",
+      JSON.stringify(pageElements.inputs, null, 2)
+    );
+    console.log(
+      "🔍 Found button elements:",
+      JSON.stringify(pageElements.buttons, null, 2)
+    );
 
     const codeInputSelectors = [
       'sdf-input[name="tfaToken"]',
-      'sdf-input#tfaToken',
-      '#tfaToken',
+      "sdf-input#tfaToken",
+      "#tfaToken",
       'sdf-input input[autocomplete="one-time-code"]',
       'input[name="tfaToken"]',
       'input[autocomplete="one-time-code"]',
@@ -157,78 +168,91 @@ export async function loginWMAuto(
 
       if (verificationCode) {
         console.log("🔤 Entering verification code...");
-        
+
         // Handle sdf-input web component differently
-        if (codeInputSelector.includes('sdf-input')) {
+        if (codeInputSelector.includes("sdf-input")) {
           console.log("🔧 Handling sdf-input web component...");
-          
+
           // Method 1: Try to set the value attribute directly
-          await page.evaluate((selector, code) => {
-            const sdfInput = document.querySelector(selector);
-            if (sdfInput) {
-              // Try to set the value property
-              sdfInput.value = code;
-              
-              // Try to set the value attribute
-              sdfInput.setAttribute('value', code);
-              
-              // Try to dispatch input events
-              const inputEvent = new Event('input', { bubbles: true });
-              const changeEvent = new Event('change', { bubbles: true });
-              sdfInput.dispatchEvent(inputEvent);
-              sdfInput.dispatchEvent(changeEvent);
-              
-              return true;
-            }
-            return false;
-          }, codeInputSelector, verificationCode);
-          
-          // Method 2: Try to find and interact with the inner input
-          const innerInputSet = await page.evaluate((selector, code) => {
-            const sdfInput = document.querySelector(selector);
-            if (sdfInput) {
-              // Try to find inner input in various ways
-              let innerInput = sdfInput.querySelector('input');
-              
-              if (!innerInput && sdfInput.shadowRoot) {
-                innerInput = sdfInput.shadowRoot.querySelector('input');
-              }
-              
-              if (!innerInput) {
-                // Try to find by traversing children
-                const allInputs = sdfInput.querySelectorAll('*');
-                for (let el of allInputs) {
-                  if (el.tagName === 'INPUT') {
-                    innerInput = el;
-                    break;
-                  }
-                }
-              }
-              
-              if (innerInput) {
-                innerInput.value = code;
-                innerInput.focus();
-                
-                // Dispatch events on the inner input
-                const inputEvent = new Event('input', { bubbles: true });
-                const changeEvent = new Event('change', { bubbles: true });
-                innerInput.dispatchEvent(inputEvent);
-                innerInput.dispatchEvent(changeEvent);
-                
+          await page.evaluate(
+            (selector, code) => {
+              const sdfInput = document.querySelector(selector);
+              if (sdfInput) {
+                // Try to set the value property
+                sdfInput.value = code;
+
+                // Try to set the value attribute
+                sdfInput.setAttribute("value", code);
+
+                // Try to dispatch input events
+                const inputEvent = new Event("input", { bubbles: true });
+                const changeEvent = new Event("change", { bubbles: true });
+                sdfInput.dispatchEvent(inputEvent);
+                sdfInput.dispatchEvent(changeEvent);
+
                 return true;
               }
-            }
-            return false;
-          }, codeInputSelector, verificationCode);
-          
+              return false;
+            },
+            codeInputSelector,
+            verificationCode
+          );
+
+          // Method 2: Try to find and interact with the inner input
+          const innerInputSet = await page.evaluate(
+            (selector, code) => {
+              const sdfInput = document.querySelector(selector);
+              if (sdfInput) {
+                // Try to find inner input in various ways
+                let innerInput = sdfInput.querySelector("input");
+
+                if (!innerInput && sdfInput.shadowRoot) {
+                  innerInput = sdfInput.shadowRoot.querySelector("input");
+                }
+
+                if (!innerInput) {
+                  // Try to find by traversing children
+                  const allInputs = sdfInput.querySelectorAll("*");
+                  for (let el of allInputs) {
+                    if (el.tagName === "INPUT") {
+                      innerInput = el;
+                      break;
+                    }
+                  }
+                }
+
+                if (innerInput) {
+                  innerInput.value = code;
+                  innerInput.focus();
+
+                  // Dispatch events on the inner input
+                  const inputEvent = new Event("input", { bubbles: true });
+                  const changeEvent = new Event("change", { bubbles: true });
+                  innerInput.dispatchEvent(inputEvent);
+                  innerInput.dispatchEvent(changeEvent);
+
+                  return true;
+                }
+              }
+              return false;
+            },
+            codeInputSelector,
+            verificationCode
+          );
+
           if (!innerInputSet) {
-            console.log("⚠️ Could not set value using web component methods, trying to type...");
+            console.log(
+              "⚠️ Could not set value using web component methods, trying to type..."
+            );
             // Fallback: try to click and type
             try {
               await page.click(codeInputSelector);
               await page.keyboard.type(verificationCode, { delay: 100 });
             } catch (typeError) {
-              console.log("⚠️ Failed to type into sdf-input:", typeError.message);
+              console.log(
+                "⚠️ Failed to type into sdf-input:",
+                typeError.message
+              );
             }
           }
         } else {
@@ -237,7 +261,7 @@ export async function loginWMAuto(
           await page.evaluate(selector => {
             const input = document.querySelector(selector);
             if (input) {
-              input.value = '';
+              input.value = "";
             }
           }, codeInputSelector);
 
@@ -250,7 +274,7 @@ export async function loginWMAuto(
 
         // Step 6: Click the Verify button
         console.log("✅ Clicking Verify button...");
-        
+
         const verifySelectors = [
           'sdf-button[data-attr-id="submit"]',
           'sdf-button[aria-label="Verify"]',
@@ -280,10 +304,15 @@ export async function loginWMAuto(
         if (!verifyButtonClicked) {
           try {
             await page.evaluate(() => {
-              const buttons = document.querySelectorAll('sdf-button, button');
+              const buttons = document.querySelectorAll("sdf-button, button");
               for (const button of buttons) {
-                if (button.textContent.trim().toLowerCase().includes('verify') || 
-                    button.getAttribute('aria-label')?.toLowerCase().includes('verify')) {
+                if (
+                  button.textContent.trim().toLowerCase().includes("verify") ||
+                  button
+                    .getAttribute("aria-label")
+                    ?.toLowerCase()
+                    .includes("verify")
+                ) {
                   button.click();
                   return true;
                 }
@@ -293,12 +322,16 @@ export async function loginWMAuto(
             console.log("✅ Clicked verify button using text content search");
             verifyButtonClicked = true;
           } catch (error) {
-            console.log(`⚠️ Failed to click verify button by text: ${error.message}`);
+            console.log(
+              `⚠️ Failed to click verify button by text: ${error.message}`
+            );
           }
         }
 
         if (!verifyButtonClicked) {
-          console.log("⚠️ Couldn't find verify button. Verification code may still be accepted.");
+          console.log(
+            "⚠️ Couldn't find verify button. Verification code may still be accepted."
+          );
         }
 
         // Wait for navigation after submitting code
@@ -310,7 +343,6 @@ export async function loginWMAuto(
             "⚠️ Navigation timeout after submitting code, but continuing..."
           );
         }
-
       } else if (waitForCode) {
         console.log("⏳ Waiting for manual code entry...");
         // Wait for manual code entry and Verify button click
@@ -328,7 +360,9 @@ export async function loginWMAuto(
         );
       }
     } else {
-      console.log("ℹ️ No verification code screen found, login may be complete");
+      console.log(
+        "ℹ️ No verification code screen found, login may be complete"
+      );
       // Take a screenshot to see what happened
       await page.screenshot({
         path: "./utils/WorkMarket/no_verification_screen.png",
@@ -344,7 +378,6 @@ export async function loginWMAuto(
       page: page,
       message: "WorkMarket login completed successfully",
     };
-
   } catch (error) {
     console.error("❌ Error during WorkMarket login:", error.message);
 
