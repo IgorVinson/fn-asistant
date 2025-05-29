@@ -50,10 +50,7 @@ export async function loginWMAuto(
     await new Promise(resolve => setTimeout(resolve, 3000));
 
     // Take a screenshot for debugging
-    console.log("🔍 Taking screenshot for debugging...");
-    await page.screenshot({
-      path: "./utils/WorkMarket/current_page_debug.png",
-    });
+    console.log("🔍 Debug screenshot disabled");
 
     console.log("📝 Page title:", await page.title());
     console.log("🌐 Current URL:", page.url());
@@ -363,10 +360,7 @@ export async function loginWMAuto(
       console.log(
         "ℹ️ No verification code screen found, login may be complete"
       );
-      // Take a screenshot to see what happened
-      await page.screenshot({
-        path: "./utils/WorkMarket/no_verification_screen.png",
-      });
+      // Debug screenshot disabled
     }
 
     // Step 7: Save cookies as autoCookies.json
@@ -382,17 +376,7 @@ export async function loginWMAuto(
     console.error("❌ Error during WorkMarket login:", error.message);
 
     // Take screenshot on error for debugging
-    try {
-      await page.screenshot({
-        path: "./utils/WorkMarket/login_error_screenshot.png",
-      });
-      console.log("📸 Error screenshot saved to login_error_screenshot.png");
-    } catch (screenshotError) {
-      console.error(
-        "Failed to take error screenshot:",
-        screenshotError.message
-      );
-    }
+    console.log("📸 Error screenshot disabled");
 
     return {
       success: false,
