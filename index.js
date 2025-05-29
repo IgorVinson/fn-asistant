@@ -2,6 +2,7 @@ import express from "express";
 import { google } from "googleapis";
 import puppeteer from "puppeteer";
 import { CONFIG } from "./config.js";
+import telegramBot from "./utils/telegram/telegramBot.js";
 import { getFNorderData } from "./utils/FieldNation/getFNorderData.js";
 import { loginFnAuto } from "./utils/FieldNation/loginFnAuto.js";
 import { postFNCounterOffer } from "./utils/FieldNation/postFNCounterOffer.js";
@@ -25,6 +26,7 @@ const port = 3001;
 
 let browser; // Declare a browser instance
 let reloginTimeout; // Timeout for the relogin scheduler
+let monitoringInterval; // Store the monitoring interval
 
 // Function to schedule a relogin with a 4-hour interval + random variance
 function scheduleRelogin() {
@@ -147,9 +149,14 @@ async function periodicCheck() {
 
   // Initial announcement sound
   console.log("Starting to monitor for new job orders...");
+  telegramBot.sendMessage("🚀 Job monitoring started!");
   playSound("notification");
 
-  setInterval(async () => {
+  monitoringInterval = setInterval(async () => {
+    if (!telegramBot.isMonitoring) {
+      return; // Skip if monitoring is disabled via Telegram
+    }
+
     try {
       const lastEmailBody = await getLastUnreadEmail(auth, gmail);
       if (lastEmailBody) {
@@ -169,8 +176,25 @@ async function periodicCheck() {
       }
     } catch (error) {
       console.error("Error during email check:", error);
+      telegramBot.sendMessage(`❌ Error during monitoring: ${error.message}`);
     }
   }, 1000); // Check every sec
+}
+
+function startMonitoring() {
+  if (!monitoringInterval) {
+    periodicCheck();
+  }
+  telegramBot.isMonitoring = true;
+}
+
+function stopMonitoring() {
+  if (monitoringInterval) {
+    clearInterval(monitoringInterval);
+    monitoringInterval = null;
+  }
+  telegramBot.isMonitoring = false;
+  telegramBot.sendMessage("⏹️ Job monitoring stopped!");
 }
 
 // Extract order link from email
@@ -283,6 +307,7 @@ async function processOrder(orderLink) {
         normalizedData.id
       );
 
+      telegramBot.sendOrderNotification(normalizedData, "✅ APPLIED", "Order meets all criteria");
       await applyForJob(
         orderLink,
         normalizedData.time,
@@ -297,7 +322,7 @@ async function processOrder(orderLink) {
         normalizedData.id
       );
 
-      // Sound for rejection
+      telegramBot.sendOrderNotification(normalizedData, "❌ REJECTED", "Outside working hours");
       playSound("error");
     } else if (
       normalizedData.platform === "WorkMarket" &&
@@ -318,7 +343,7 @@ async function processOrder(orderLink) {
           normalizedData.distance
         );
 
-        // Sound for counter-offer
+        telegramBot.sendOrderNotification(normalizedData, "💰 COUNTER OFFER", `Travel expenses: $${Math.round(normalizedData.distance)}`);
         playSound("applied");
         logger.info(
           `Result: Counter offer sent successfully with $${Math.round(
@@ -333,6 +358,7 @@ async function processOrder(orderLink) {
           normalizedData.platform,
           normalizedData.id
         );
+        telegramBot.sendMessage(`❌ Failed to send counter offer: ${error.message}`);
         playSound("error");
       }
     } else if (
@@ -357,7 +383,8 @@ async function processOrder(orderLink) {
             eligibilityResult.counterOffer.additionalAmount
           );
 
-          // Sound for counter-offer
+          const counterDetails = `Base: $${eligibilityResult.counterOffer.baseAmount}\nTravel: $${eligibilityResult.counterOffer.travelExpense}`;
+          telegramBot.sendOrderNotification(normalizedData, "💰 COUNTER OFFER", counterDetails);
           playSound("applied");
           logger.info(
             `Result: Counter offer sent successfully 🔊
@@ -373,6 +400,7 @@ async function processOrder(orderLink) {
             normalizedData.platform,
             normalizedData.id
           );
+          telegramBot.sendMessage(`❌ Failed to send counter offer: ${error.message}`);
           playSound("error");
         }
       }
@@ -383,7 +411,7 @@ async function processOrder(orderLink) {
         normalizedData.id
       );
 
-      // All rejections use error sound
+      telegramBot.sendOrderNotification(normalizedData, "❌ REJECTED", `Reason: ${eligibilityResult.reason}`);
       console.log(
         `DEBUG: Playing error sound for ${normalizedData.platform} order ${normalizedData.id}, reason: ${eligibilityResult.reason}`
       );
@@ -393,14 +421,22 @@ async function processOrder(orderLink) {
     return normalizedData;
   } catch (error) {
     console.error("Error processing order:", error);
+    telegramBot.sendMessage(`❌ Error processing order: ${error.message}`);
     return null;
   }
 }
 
+// Set up Telegram bot event handlers
+telegramBot.onStartMonitoring = startMonitoring;
+telegramBot.onStopMonitoring = stopMonitoring;
+telegramBot.onProcessOrder = processOrder;
+telegramBot.onRelogin = saveCookies;
+
 // Start the server
 app.listen(port, async () => {
   console.log(`Server running on port ${port}`);
+  telegramBot.sendMessage(`🚀 Server started on port ${port}\nUse /help for available commands`);
   // await saveCookies();
-  await periodicCheck();
+  // await periodicCheck(); // Don't auto-start, wait for Telegram command
   // scheduleRelogin();
 });
