@@ -36,6 +36,20 @@ export const CONFIG = {
     },
   },
 
+  // Telegram Bot Settings
+  TELEGRAM: {
+    BOT_TOKEN: '8018594226:AAFjb09j1uXwurHiABXNVWDWzmXJehUZsaA',
+    CHAT_ID: '271352684',
+    COMMANDS: {
+      START_MONITORING: '/start',
+      STOP_MONITORING: '/stop',
+      STATUS: '/status',
+      PROCESS_ORDER: '/process',
+      HELP: '/help',
+      RELOGIN: '/relogin'
+    }
+  },
+
   // Default Values
   DEFAULTS: {
     COMPANY_NAME: 'Unknown Company',
