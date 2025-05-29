@@ -1,6 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { CONFIG } from '../../config.js';
 
 // Get the directory name properly in ES modules
 const __filename = fileURLToPath(import.meta.url);
@@ -62,8 +63,10 @@ export async function postWMCounterOffer(
     }
     const CSRFToken = csrfCookie.split('=')[1];
 
-    // Calculate travel expenses if distance > 30 miles
-    const travelExpenses = distance > 30 ? Math.round(distance) : 0;
+    // Calculate travel expenses if distance > threshold miles
+    const travelExpenses = distance > CONFIG.DISTANCE.TRAVEL_THRESHOLD_MILES 
+      ? Math.round(distance * CONFIG.DISTANCE.TRAVEL_RATE_PER_MILE) 
+      : 0;
 
     const formData = new URLSearchParams({
       _tk: CSRFToken,

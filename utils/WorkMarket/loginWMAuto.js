@@ -371,7 +371,7 @@ export async function loginWMAuto(
 
     // Step 7: Save cookies as autoCookies.json
     console.log("🍪 Saving cookies as autoCookies.json...");
-    await saveCookiesCustom(page, "WorkMarket", "autoCookies.json");
+    await saveCookiesCustom(page, "WorkMarket", "cookies.json");
 
     return {
       success: true,
