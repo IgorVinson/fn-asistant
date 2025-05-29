@@ -24,11 +24,57 @@ const app = express();
 const port = 3001;
 
 let browser; // Declare a browser instance
+let reloginTimeout; // Timeout for the relogin scheduler
+
+// Function to schedule a relogin with a 4-hour interval + random variance
+function scheduleRelogin() {
+  // Clear any existing timeout
+  if (reloginTimeout) {
+    clearTimeout(reloginTimeout);
+  }
+
+  // Base interval: 4 hours in milliseconds
+  const baseInterval = 4 * 60 * 60 * 1000;
+
+  // Random variance: +/- 10 minutes in milliseconds
+  const variance = (Math.random() * 20 - 10) * 60 * 1000;
+
+  // Calculate the next relogin time
+  const nextReloginTime = baseInterval + variance;
+
+  // Schedule the next relogin
+  reloginTimeout = setTimeout(async () => {
+    console.log("⏰ Scheduled relogin triggered...");
+    await saveCookies();
+    // Schedule the next relogin after this one completes
+    scheduleRelogin();
+  }, nextReloginTime);
+
+  // Log the next relogin time
+  const nextReloginHours = Math.floor(nextReloginTime / (60 * 60 * 1000));
+  const nextReloginMinutes = Math.floor(
+    (nextReloginTime % (60 * 60 * 1000)) / (60 * 1000)
+  );
+  console.log(
+    `🔄 Next relogin scheduled in ${nextReloginHours} hours and ${nextReloginMinutes} minutes`
+  );
+}
 
 // Initialize Puppeteer and log in to FieldNation and WorkMarket
 async function saveCookies() {
   try {
     console.log("🚀 Starting automated login process...");
+
+    // Close the existing browser instance if it exists
+    if (browser) {
+      try {
+        await browser.close();
+        console.log("🔒 Closed existing browser instance");
+      } catch (err) {
+        console.error("Error closing browser:", err);
+      }
+    }
+
     browser = await puppeteer.launch({
       headless: true,
       args: [
@@ -45,7 +91,7 @@ async function saveCookies() {
         "--force-device-scale-factor=1",
         "--disable-extensions-except",
         "--disable-plugins-discovery",
-                "--enable-blink-features=ShadowDOMV0", // Additional shadow DOM support
+        "--enable-blink-features=ShadowDOMV0", // Additional shadow DOM support
         "--force-device-scale-factor=1",
         "--disable-extensions-except",
         "--disable-plugins-discovery",
@@ -354,6 +400,7 @@ async function processOrder(orderLink) {
 // Start the server
 app.listen(port, async () => {
   console.log(`Server running on port ${port}`);
-  await saveCookies();
-  // await periodicCheck();
+  // await saveCookies();
+  await periodicCheck();
+  // scheduleRelogin();
 });
