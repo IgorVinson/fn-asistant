@@ -16,13 +16,12 @@ async function testGetWMcode() {
     // Test getting the code
     console.log("🔍 Attempting to get WorkMarket verification code...");
     const code = await getWMcode(gmailAuth);
-    
+
     if (code) {
       console.log(`✅ SUCCESS: Found verification code: ${code}`);
     } else {
       console.log("❌ FAILED: No verification code found");
     }
-
   } catch (error) {
     console.error("❌ Error:", error.message);
     console.error("📊 Full error:", error);
