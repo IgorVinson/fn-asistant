@@ -58,10 +58,7 @@ export async function loginFnAuto(
     await new Promise(resolve => setTimeout(resolve, 3000));
 
     // First, let's see what's actually on the page
-    console.log("🔍 Taking screenshot for debugging...");
-    await page.screenshot({
-      path: "./utils/FieldNation/current_page_debug.png",
-    });
+    console.log("🔍 Debug screenshot disabled");
 
     // Get page content to help debug
     console.log("📄 Getting page content for debugging...");
@@ -237,19 +234,13 @@ export async function loginFnAuto(
         await new Promise(resolve => setTimeout(resolve, 3000));
       } catch (error) {
         console.log(`⚠️ Error clicking email option: ${error.message}`);
-        // Take a screenshot to debug the issue
-        await page.screenshot({
-          path: "./utils/FieldNation/email_selection_error.png",
-        });
+        // Debug screenshot disabled
       }
     } else {
       console.log(
         "ℹ️ Email selection screen not found, we may already be at verification code screen"
       );
-      // Take a screenshot to see what we're actually looking at
-      await page.screenshot({
-        path: "./utils/FieldNation/no_email_selector_found.png",
-      });
+      // Debug screenshot disabled
     }
 
     // Step 5: Handle verification code
@@ -459,10 +450,7 @@ export async function loginFnAuto(
       }
     } else {
       console.log("⚠️ Verification code input fields not found");
-      // Take a screenshot to see what happened
-      await page.screenshot({
-        path: "./utils/FieldNation/verification_screen_issue.png",
-      });
+      // Debug screenshot disabled
     }
 
     // Step 6: Save cookies as autoCookies.json
@@ -478,17 +466,7 @@ export async function loginFnAuto(
     console.error("❌ Error during login:", error.message);
 
     // Take screenshot on error for debugging
-    try {
-      await page.screenshot({
-        path: "./utils/FieldNation/login_error_screenshot.png",
-      });
-      console.log("📸 Error screenshot saved to login_error_screenshot.png");
-    } catch (screenshotError) {
-      console.error(
-        "Failed to take error screenshot:",
-        screenshotError.message
-      );
-    }
+    console.log("📸 Error screenshot disabled");
 
     return {
       success: false,
