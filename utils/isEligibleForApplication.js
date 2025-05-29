@@ -7,15 +7,30 @@ function isWithinWorkingHours(startTime, endTime) {
   const workStartTime = CONFIG.TIME.WORK_START_TIME;
   const workEndTime = CONFIG.TIME.WORK_END_TIME;
 
-  const jobDate = startTime.split("T")[0];
+  // Parse the job times properly
+  const jobStart = new Date(startTime);
+  const jobEnd = new Date(endTime);
+  
+  // Get the date in YYYY-MM-DD format for consistent time zone handling
+  const jobDate = jobStart.toISOString().split('T')[0];
 
-  const jobStartTime = new Date(startTime).getTime();
-  const jobEndTime = new Date(endTime).getTime();
+  // Create work start/end times for the job date
+  const dayWorkStart = new Date(`${jobDate}T${workStartTime}:00`);
+  const dayWorkEnd = new Date(`${jobDate}T${workEndTime}:00`);
 
-  const dayWorkStart = new Date(`${jobDate}T${workStartTime}:00`).getTime();
-  const dayWorkEnd = new Date(`${jobDate}T${workEndTime}:00`).getTime();
+  // Check if job times fall within working hours
+  const isWithinHours = jobStart >= dayWorkStart && jobEnd <= dayWorkEnd;
+  
+  logger.info(
+    `Working Hours Check:
+    - Job Date: ${jobDate}
+    - Job Time: ${jobStart.toLocaleTimeString()} - ${jobEnd.toLocaleTimeString()}
+    - Work Hours: ${workStartTime} - ${workEndTime}
+    - Within Hours: ${isWithinHours}`,
+    'SCHEDULE_CHECK'
+  );
 
-  return jobStartTime >= dayWorkStart && jobEndTime <= dayWorkEnd;
+  return isWithinHours;
 }
 
 function isPaymentEligible(workOrder) {
@@ -79,9 +94,11 @@ async function isSlotAvailableCalendar(workOrder) {
     const auth = await authorize();
     const calendar = google.calendar({ version: "v3", auth });
 
-    // Get work order time details
+    // Get work order time details with proper date handling
     const workOrderStart = new Date(startTime);
     const workOrderEnd = new Date(endTime);
+    
+    // Get the work order date in local time zone
     const workOrderDate = new Date(
       workOrderStart.getFullYear(),
       workOrderStart.getMonth(),
@@ -102,19 +119,15 @@ async function isSlotAvailableCalendar(workOrder) {
     let totalConflicts = 0;
     const conflicts = [];
 
-    // Get today's date range
-    const timeMin = new Date(
-      workOrderDate.getFullYear(),
-      workOrderDate.getMonth(),
-      workOrderDate.getDate()
-    ).toISOString();
+    // Get the date range for the work order day (start of day to end of day)
+    const timeMin = new Date(workOrderDate).toISOString();
     const timeMax = new Date(
       workOrderDate.getFullYear(),
       workOrderDate.getMonth(),
       workOrderDate.getDate() + 1
     ).toISOString();
 
-    // Check each calendar for conflicts (same as showAllCalendarsEvents.js)
+    // Check each calendar for conflicts
     for (const cal of allCalendars) {
       try {
         const events = await calendar.events.list({
@@ -138,10 +151,28 @@ async function isSlotAvailableCalendar(workOrder) {
             continue;
           }
 
-          const eventStart = new Date(event.start.dateTime || event.start.date);
-          const eventEnd = new Date(event.end.dateTime || event.end.date);
+          // Handle both dateTime and date formats properly
+          let eventStart, eventEnd;
+          
+          if (event.start.dateTime) {
+            eventStart = new Date(event.start.dateTime);
+          } else if (event.start.date) {
+            // All-day events - use the full day
+            eventStart = new Date(event.start.date + 'T00:00:00');
+          } else {
+            continue; // Skip invalid events
+          }
+          
+          if (event.end.dateTime) {
+            eventEnd = new Date(event.end.dateTime);
+          } else if (event.end.date) {
+            // All-day events - end at start of next day
+            eventEnd = new Date(event.end.date + 'T00:00:00');
+          } else {
+            continue; // Skip invalid events
+          }
 
-          // Add buffer time
+          // Add buffer time to work order times
           const bufferedWorkStart = new Date(
             workOrderStart.getTime() - MIN_BUFFER_MINUTES * 60 * 1000
           );
@@ -154,8 +185,10 @@ async function isSlotAvailableCalendar(workOrder) {
             conflicts.push({
               eventSummary: event.summary || "No title",
               calendarName: cal.summary,
-              eventStart: eventStart.toLocaleTimeString(),
-              eventEnd: eventEnd.toLocaleTimeString(),
+              eventStart: eventStart.toLocaleString(),
+              eventEnd: eventEnd.toLocaleString(),
+              workOrderStart: workOrderStart.toLocaleString(),
+              workOrderEnd: workOrderEnd.toLocaleString(),
             });
             totalConflicts++;
           }
@@ -172,11 +205,12 @@ async function isSlotAvailableCalendar(workOrder) {
     const isAvailable = totalConflicts === 0;
 
     logger.info(
-      `Simple Multi-Calendar Check:
-      - Time: ${workOrderStart.toLocaleTimeString()} - ${workOrderEnd.toLocaleTimeString()}
+      `Calendar Availability Check:
+      - Work Order Date: ${workOrderDate.toDateString()}
+      - Work Order Time: ${workOrderStart.toLocaleTimeString()} - ${workOrderEnd.toLocaleTimeString()}
       - Buffer: ${MIN_BUFFER_MINUTES} minutes
       - Calendars Checked: ${allCalendars.length}
-      - Total Events: ${totalEvents}
+      - Total Events Found: ${totalEvents}
       - Conflicts Found: ${totalConflicts}
       - Decision: ${isAvailable ? "AVAILABLE" : "CONFLICT"}`,
       workOrder.platform,
@@ -185,13 +219,13 @@ async function isSlotAvailableCalendar(workOrder) {
 
     if (!isAvailable && conflicts.length > 0) {
       logger.info(
-        `Calendar conflicts:
+        `Calendar conflicts details:
         ${conflicts
           .map(
             (conflict, index) =>
-              `  ${index + 1}. "${conflict.eventSummary}" [${
-                conflict.calendarName
-              }] (${conflict.eventStart} - ${conflict.eventEnd})`
+              `  ${index + 1}. "${conflict.eventSummary}" [${conflict.calendarName}]
+              Event: ${conflict.eventStart} - ${conflict.eventEnd}
+              Work Order: ${conflict.workOrderStart} - ${conflict.workOrderEnd}`
           )
           .join("\n        ")}`,
         workOrder.platform,
@@ -219,30 +253,28 @@ function isSlotAvailableStatic(workOrder) {
   const MIN_BUFFER_MINUTES = CONFIG.TIME.BUFFER_MINUTES;
 
   const { start: startTime, end: endTime } = workOrder.time;
-  const orderDate = new Date(startTime);
-  const orderDay = orderDate.getDate();
-  const orderMonth = orderDate.getMonth() + 1;
+  const orderStart = new Date(startTime);
+  const orderEnd = new Date(endTime);
+  const orderDate = new Date(orderStart.getFullYear(), orderStart.getMonth(), orderStart.getDate());
 
-  // Debug logging
+  // Debug logging with better date formatting
   logger.info(
-    `Schedule Check:
-    - Date: ${orderMonth}/${orderDay}
-    - Time: ${startTime} - ${endTime}
+    `Static Schedule Check:
+    - Order Date: ${orderDate.toDateString()}
+    - Order Time: ${orderStart.toLocaleTimeString()} - ${orderEnd.toLocaleTimeString()}
     - Work Hours: ${DAY_WORK_START_TIME} - ${DAY_WORK_END_TIME}
     - Buffer: ${MIN_BUFFER_MINUTES} minutes`,
     workOrder.platform,
     workOrder.id
   );
 
-  const stampStartTime = new Date(startTime).getTime();
-  const stampEndTime = new Date(endTime).getTime();
+  const stampStartTime = orderStart.getTime();
+  const stampEndTime = orderEnd.getTime();
 
-  const WORK_START = new Date(
-    `${startTime.split("T")[0]}T${DAY_WORK_START_TIME}:00`
-  ).getTime();
-  const WORK_END = new Date(
-    `${startTime.split("T")[0]}T${DAY_WORK_END_TIME}:00`
-  ).getTime();
+  // Create work hours boundaries for the order date
+  const workDate = orderStart.toISOString().split('T')[0];
+  const WORK_START = new Date(`${workDate}T${DAY_WORK_START_TIME}:00`).getTime();
+  const WORK_END = new Date(`${workDate}T${DAY_WORK_END_TIME}:00`).getTime();
 
   if (stampStartTime < WORK_START || stampEndTime > WORK_END) {
     logger.info(
@@ -264,19 +296,20 @@ function isSlotAvailableStatic(workOrder) {
     })
   );
 
-  // Filter events for the same day AND month
+  // Filter events for the same date (year, month, day)
   const sameDayEvents = allEvents.filter(event => {
     const eventDate = new Date(event.start);
     return (
-      eventDate.getDate() === orderDay &&
-      eventDate.getMonth() === orderDate.getMonth()
+      eventDate.getDate() === orderDate.getDate() &&
+      eventDate.getMonth() === orderDate.getMonth() &&
+      eventDate.getFullYear() === orderDate.getFullYear()
     );
   });
 
   // If no events on this day, the slot is available
   if (sameDayEvents.length === 0) {
     logger.info(
-      `Time is available: No other events scheduled for this day`,
+      `Time is available: No other events scheduled for ${orderDate.toDateString()}`,
       workOrder.platform,
       workOrder.id
     );
