@@ -8,6 +8,24 @@ class TelegramBotService {
     this.chatId = CONFIG.TELEGRAM.CHAT_ID;
     this.isMonitoring = false;
     this.setupCommands();
+    this.setupPersistentMenu();
+  }
+
+  async setupPersistentMenu() {
+    try {
+      // Set up the persistent bot menu (hamburger menu)
+      await this.bot.setMyCommands([
+        { command: "start", description: "🚀 Start job monitoring" },
+        { command: "stop", description: "⏹️ Stop job monitoring" },
+        { command: "status", description: "📊 Check monitoring status" },
+        { command: "relogin", description: "🔄 Trigger relogin to platforms" },
+        { command: "process", description: "🔄 Process specific order link" },
+        { command: "help", description: "❓ Show help information" },
+      ]);
+      console.log("✅ Persistent menu commands set successfully");
+    } catch (error) {
+      logger.error(`Failed to set bot commands: ${error.message}`);
+    }
   }
 
   setupCommands() {
@@ -65,20 +83,28 @@ class TelegramBotService {
     // Help command
     this.bot.onText(/\/help/, msg => {
       if (msg.chat.id.toString() === this.chatId) {
+        const status = this.isMonitoring ? "🟢 Active" : "🔴 Stopped";
         const helpText = `
-🤖 Available Commands:
+🤖 *Job Monitoring Bot*
 
+*Current Status:* ${status}
+
+*Available Commands:*
 /start - Start job monitoring
-/stop - Stop job monitoring
+/stop - Stop job monitoring  
 /status - Check monitoring status
-/process <order_link> - Process specific order
 /relogin - Trigger relogin to platforms
-/help - Show this help message
+/process <link> - Process specific order
+/help - Show this help
 
-Example:
-/process https://app.fieldnation.com/workorder/12345
+*Example:*
+\`/process https://app.fieldnation.com/workorder/12345\`
+
+💡 *Tip:* Use the menu button (☰) next to the message input to access commands quickly!
         `;
-        this.sendMessage(helpText);
+        this.bot.sendMessage(this.chatId, helpText, {
+          parse_mode: "Markdown",
+        });
       }
     });
   }

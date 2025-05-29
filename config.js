@@ -2,7 +2,7 @@ export const CONFIG = {
   // Payment and Rate Settings
   RATES: {
     BASE_HOURLY_RATE: 50, // Minimum desired hourly rate
-    MIN_PAY_THRESHOLD: 100, // Minimum total pay for a job
+    MIN_PAY_THRESHOLD: 150, // Minimum total pay for a job
     TRAVEL_RATE: 30, // Rate per hour of travel
   },
 

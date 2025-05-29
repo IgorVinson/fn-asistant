@@ -223,7 +223,9 @@ async function isSlotAvailableCalendar(workOrder) {
         ${conflicts
           .map(
             (conflict, index) =>
-              `  ${index + 1}. "${conflict.eventSummary}" [${conflict.calendarName}]
+              `  ${index + 1}. "${conflict.eventSummary}" [${
+                conflict.calendarName
+              }]
               Event: ${conflict.eventStart} - ${conflict.eventEnd}
               Work Order: ${conflict.workOrderStart} - ${conflict.workOrderEnd}`
           )
@@ -424,7 +426,7 @@ async function isEligibleForApplication(workOrder) {
   ) {
     // STEP 1: Check calendar availability FIRST
     const slotAvailable = await isSlotAvailableCalendar(workOrder);
-    
+
     if (!slotAvailable) {
       logger.info(
         `Job rejected: Calendar conflict detected`,
