@@ -48,15 +48,12 @@ function isPaymentEligible(workOrder) {
     // Only consider counter-offer if distance exceeds threshold
     if (workOrder.distance > TRAVEL_THRESHOLD) {
       const travelExpense =
-        (workOrder.distance - TRAVEL_THRESHOLD) *
-        CONFIG.DISTANCE.TRAVEL_RATE_PER_MILE;
+        workOrder.distance * CONFIG.DISTANCE.TRAVEL_RATE_PER_MILE;
       decisionReason = `Base pay too low ($${workOrder.payRange.max} < $${
         CONFIG.RATES.MIN_PAY_THRESHOLD
-      }), adding travel expenses: ${
-        workOrder.distance - TRAVEL_THRESHOLD
-      } miles × $${
+      }), adding travel expenses: ${workOrder.distance} miles × $${
         CONFIG.DISTANCE.TRAVEL_RATE_PER_MILE
-      }/mile = $${travelExpense}`;
+      }/mile = $${travelExpense.toFixed(2)}`;
     } else {
       decisionReason = `Base pay too low ($${workOrder.payRange.max} < $${CONFIG.RATES.MIN_PAY_THRESHOLD}) and distance (${workOrder.distance} miles) is within free travel limit (${TRAVEL_THRESHOLD} miles)`;
     }
@@ -367,7 +364,6 @@ function isSlotAvailableStatic(workOrder) {
 
 function calculateCounterOffer(workOrder) {
   const BASE_HOURS = 2;
-  const BASE_RATE = 150;
   const ADDITIONAL_HOURLY_RATE = 55;
 
   const travelExpense =
@@ -381,11 +377,22 @@ function calculateCounterOffer(workOrder) {
     ? 0
     : Math.max(1, workOrder.estLaborHours - BASE_HOURS);
 
+  // Base amount should be the minimum threshold, travel is ADDITIONAL
+  let baseAmount = CONFIG.RATES.MIN_PAY_THRESHOLD;
+
+  logger.info(
+    `Counter offer calculation: Base: $${baseAmount} (minimum threshold) + Travel: $${travelExpense} = Total: $${
+      baseAmount + travelExpense
+    }`,
+    workOrder.platform,
+    workOrder.id
+  );
+
   return {
     shouldCounterOffer: true,
     payType: isFixedRate ? "fixed" : "blended",
     baseHours: isFixedRate ? 0 : BASE_HOURS,
-    baseAmount: BASE_RATE,
+    baseAmount: baseAmount,
     additionalHours: additionalHours,
     additionalAmount: isFixedRate ? 0 : ADDITIONAL_HOURLY_RATE,
     travelExpense: travelExpense,
