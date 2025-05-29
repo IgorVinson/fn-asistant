@@ -223,9 +223,7 @@ async function isSlotAvailableCalendar(workOrder) {
         ${conflicts
           .map(
             (conflict, index) =>
-              `  ${index + 1}. "${conflict.eventSummary}" [${
-                conflict.calendarName
-              }]
+              `  ${index + 1}. "${conflict.eventSummary}" [${conflict.calendarName}]
               Event: ${conflict.eventStart} - ${conflict.eventEnd}
               Work Order: ${conflict.workOrderStart} - ${conflict.workOrderEnd}`
           )
@@ -424,15 +422,37 @@ async function isEligibleForApplication(workOrder) {
     workOrder.platform === "FieldNation" ||
     workOrder.platform === "WorkMarket"
   ) {
-    if (isPaymentEligible(workOrder)) {
-      const slotAvailable = await isSlotAvailableCalendar(workOrder);
+    // STEP 1: Check calendar availability FIRST
+    const slotAvailable = await isSlotAvailableCalendar(workOrder);
+    
+    if (!slotAvailable) {
+      logger.info(
+        `Job rejected: Calendar conflict detected`,
+        workOrder.platform,
+        workOrder.id
+      );
       return {
-        eligible: slotAvailable,
+        eligible: false,
+        counterOffer: null, // No counter-offer if calendar has conflicts
+        reason: "SLOT_UNAVAILABLE",
+      };
+    }
+
+    // STEP 2: Check payment eligibility ONLY if calendar is available
+    if (isPaymentEligible(workOrder)) {
+      // Both calendar and payment are good - apply directly
+      return {
+        eligible: true,
         counterOffer: null,
-        reason: slotAvailable ? "ELIGIBLE" : "SLOT_UNAVAILABLE",
+        reason: "ELIGIBLE",
       };
     } else {
-      // If payment is not good, generate counter offer
+      // Calendar is available but payment is insufficient - generate counter offer
+      logger.info(
+        `Calendar available but payment insufficient - generating counter offer`,
+        workOrder.platform,
+        workOrder.id
+      );
       return {
         eligible: false,
         counterOffer: calculateCounterOffer(workOrder),
