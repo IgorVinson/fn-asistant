@@ -10,9 +10,9 @@ function isWithinWorkingHours(startTime, endTime) {
   // Parse the job times properly
   const jobStart = new Date(startTime);
   const jobEnd = new Date(endTime);
-  
+
   // Get the date in YYYY-MM-DD format for consistent time zone handling
-  const jobDate = jobStart.toISOString().split('T')[0];
+  const jobDate = jobStart.toISOString().split("T")[0];
 
   // Create work start/end times for the job date
   const dayWorkStart = new Date(`${jobDate}T${workStartTime}:00`);
@@ -20,14 +20,14 @@ function isWithinWorkingHours(startTime, endTime) {
 
   // Check if job times fall within working hours
   const isWithinHours = jobStart >= dayWorkStart && jobEnd <= dayWorkEnd;
-  
+
   logger.info(
     `Working Hours Check:
     - Job Date: ${jobDate}
     - Job Time: ${jobStart.toLocaleTimeString()} - ${jobEnd.toLocaleTimeString()}
     - Work Hours: ${workStartTime} - ${workEndTime}
     - Within Hours: ${isWithinHours}`,
-    'SCHEDULE_CHECK'
+    "SCHEDULE_CHECK"
   );
 
   return isWithinHours;
@@ -97,7 +97,7 @@ async function isSlotAvailableCalendar(workOrder) {
     // Get work order time details with proper date handling
     const workOrderStart = new Date(startTime);
     const workOrderEnd = new Date(endTime);
-    
+
     // Get the work order date in local time zone
     const workOrderDate = new Date(
       workOrderStart.getFullYear(),
@@ -153,21 +153,21 @@ async function isSlotAvailableCalendar(workOrder) {
 
           // Handle both dateTime and date formats properly
           let eventStart, eventEnd;
-          
+
           if (event.start.dateTime) {
             eventStart = new Date(event.start.dateTime);
           } else if (event.start.date) {
             // All-day events - use the full day
-            eventStart = new Date(event.start.date + 'T00:00:00');
+            eventStart = new Date(event.start.date + "T00:00:00");
           } else {
             continue; // Skip invalid events
           }
-          
+
           if (event.end.dateTime) {
             eventEnd = new Date(event.end.dateTime);
           } else if (event.end.date) {
             // All-day events - end at start of next day
-            eventEnd = new Date(event.end.date + 'T00:00:00');
+            eventEnd = new Date(event.end.date + "T00:00:00");
           } else {
             continue; // Skip invalid events
           }
@@ -223,7 +223,9 @@ async function isSlotAvailableCalendar(workOrder) {
         ${conflicts
           .map(
             (conflict, index) =>
-              `  ${index + 1}. "${conflict.eventSummary}" [${conflict.calendarName}]
+              `  ${index + 1}. "${conflict.eventSummary}" [${
+                conflict.calendarName
+              }]
               Event: ${conflict.eventStart} - ${conflict.eventEnd}
               Work Order: ${conflict.workOrderStart} - ${conflict.workOrderEnd}`
           )
@@ -255,7 +257,11 @@ function isSlotAvailableStatic(workOrder) {
   const { start: startTime, end: endTime } = workOrder.time;
   const orderStart = new Date(startTime);
   const orderEnd = new Date(endTime);
-  const orderDate = new Date(orderStart.getFullYear(), orderStart.getMonth(), orderStart.getDate());
+  const orderDate = new Date(
+    orderStart.getFullYear(),
+    orderStart.getMonth(),
+    orderStart.getDate()
+  );
 
   // Debug logging with better date formatting
   logger.info(
@@ -272,8 +278,10 @@ function isSlotAvailableStatic(workOrder) {
   const stampEndTime = orderEnd.getTime();
 
   // Create work hours boundaries for the order date
-  const workDate = orderStart.toISOString().split('T')[0];
-  const WORK_START = new Date(`${workDate}T${DAY_WORK_START_TIME}:00`).getTime();
+  const workDate = orderStart.toISOString().split("T")[0];
+  const WORK_START = new Date(
+    `${workDate}T${DAY_WORK_START_TIME}:00`
+  ).getTime();
   const WORK_END = new Date(`${workDate}T${DAY_WORK_END_TIME}:00`).getTime();
 
   if (stampStartTime < WORK_START || stampEndTime > WORK_END) {
