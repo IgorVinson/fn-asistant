@@ -334,54 +334,25 @@ async function processOrder(orderLink) {
         orderLink
       );
       playSound("error");
-    } else if (
-      normalizedData.platform === "WorkMarket" &&
-      normalizedData.distance > CONFIG.DISTANCE.TRAVEL_THRESHOLD_MILES &&
-      eligibilityResult.reason === "PAYMENT_INSUFFICIENT"
-    ) {
+    } else if (eligibilityResult.reason === "SLOT_UNAVAILABLE") {
       logger.info(
-        `Action: Counter Offer - Adding travel expenses for ${normalizedData.distance} miles`,
+        `Action: No Action - Calendar conflict detected`,
         normalizedData.platform,
         normalizedData.id
       );
 
-      try {
-        await postWMCounterOffer(
-          normalizedData.id,
-          normalizedData.payRange.min,
-          normalizedData.estLaborHours,
-          normalizedData.distance
-        );
-
-        telegramBot.sendOrderNotification(
-          normalizedData,
-          "💰 COUNTER OFFER",
-          `Travel expenses: $${Math.round(normalizedData.distance)}`,
-          orderLink
-        );
-        playSound("applied");
-        logger.info(
-          `Result: Counter offer sent successfully with $${Math.round(
-            normalizedData.distance
-          )} travel expenses 🔊`,
-          normalizedData.platform,
-          normalizedData.id
-        );
-      } catch (error) {
-        logger.error(
-          `Result: Failed to send counter offer - ${error.message}`,
-          normalizedData.platform,
-          normalizedData.id
-        );
-        telegramBot.sendMessage(
-          `❌ Failed to send counter offer: ${error.message}`
-        );
-        playSound("error");
-      }
+      telegramBot.sendOrderNotification(
+        normalizedData,
+        "❌ REJECTED",
+        "Calendar conflict",
+        orderLink
+      );
+      playSound("error");
     } else if (
       eligibilityResult.counterOffer &&
       eligibilityResult.reason === "PAYMENT_INSUFFICIENT"
     ) {
+      // Handle counter offers for both platforms
       if (normalizedData.platform === "FieldNation") {
         logger.info(
           `Action: Counter Offer - Adjusting rates and adding travel expenses`,
@@ -427,8 +398,66 @@ async function processOrder(orderLink) {
           );
           playSound("error");
         }
+      } else if (normalizedData.platform === "WorkMarket") {
+        logger.info(
+          `Action: Counter Offer - Adjusting rates and adding travel expenses`,
+          normalizedData.platform,
+          normalizedData.id
+        );
+
+        try {
+          await postWMCounterOffer(
+            normalizedData.id,
+            eligibilityResult.counterOffer.baseAmount,
+            eligibilityResult.counterOffer.travelExpense,
+            eligibilityResult.counterOffer.payType,
+            eligibilityResult.counterOffer.baseHours,
+            eligibilityResult.counterOffer.additionalHours,
+            eligibilityResult.counterOffer.additionalAmount
+          );
+
+          const counterDetails = `Base: $${eligibilityResult.counterOffer.baseAmount}\nTravel: $${eligibilityResult.counterOffer.travelExpense}`;
+          telegramBot.sendOrderNotification(
+            normalizedData,
+            "💰 COUNTER OFFER",
+            counterDetails,
+            orderLink
+          );
+          playSound("applied");
+          logger.info(
+            `Result: Counter offer sent successfully with travel expenses 🔊`,
+            normalizedData.platform,
+            normalizedData.id
+          );
+        } catch (error) {
+          logger.error(
+            `Result: Failed to send counter offer - ${error.message}`,
+            normalizedData.platform,
+            normalizedData.id
+          );
+          telegramBot.sendMessage(
+            `❌ Failed to send counter offer: ${error.message}`
+          );
+          playSound("error");
+        }
       }
     } else {
+      // Handle all other rejection cases
+      let rejectReason = "Unknown reason";
+      switch (eligibilityResult.reason) {
+        case "PAYMENT_INSUFFICIENT":
+          rejectReason = "Payment below minimum threshold";
+          break;
+        case "SLOT_UNAVAILABLE":
+          rejectReason = "Time slot unavailable";
+          break;
+        case "OUTSIDE_WORKING_HOURS":
+          rejectReason = "Outside working hours";
+          break;
+        default:
+          rejectReason = eligibilityResult.reason;
+      }
+
       logger.info(
         `Action: No Action - Order does not meet criteria (Reason: ${eligibilityResult.reason})`,
         normalizedData.platform,
@@ -438,11 +467,8 @@ async function processOrder(orderLink) {
       telegramBot.sendOrderNotification(
         normalizedData,
         "❌ REJECTED",
-        `Reason: ${eligibilityResult.reason}`,
+        rejectReason,
         orderLink
-      );
-      console.log(
-        `DEBUG: Playing error sound for ${normalizedData.platform} order ${normalizedData.id}, reason: ${eligibilityResult.reason}`
       );
       playSound("error");
     }
