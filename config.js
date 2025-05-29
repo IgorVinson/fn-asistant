@@ -18,8 +18,8 @@ export const CONFIG = {
   TIME: {
     DEFAULT_LABOR_HOURS: 4, // Default estimated labor hours if not specified
     MIN_HOURS_BETWEEN_JOBS: 2, // Minimum hours required between jobs
-    WORK_START_TIME: '08:00', // Earliest time to accept jobs
-    WORK_END_TIME: '19:00', // Latest time to accept jobs
+    WORK_START_TIME: "08:00", // Earliest time to accept jobs
+    WORK_END_TIME: "19:00", // Latest time to accept jobs
     BUFFER_MINUTES: 30, // Buffer time between jobs
   },
 
@@ -28,7 +28,7 @@ export const CONFIG = {
     FIELD_NATION: {
       USER_ID: 983643, // Your Field Nation user ID
       API_ENDPOINTS: {
-        REQUESTS: 'https://app.fieldnation.com/v2/workorders',
+        REQUESTS: "https://app.fieldnation.com/v2/workorders",
       },
     },
     WORK_MARKET: {
@@ -38,21 +38,21 @@ export const CONFIG = {
 
   // Telegram Bot Settings
   TELEGRAM: {
-    BOT_TOKEN: '8018594226:AAFjb09j1uXwurHiABXNVWDWzmXJehUZsaA',
-    CHAT_ID: '271352684',
+    BOT_TOKEN: "8018594226:AAFjb09j1uXwurHiABXNVWDWzmXJehUZsaA",
+    CHAT_ID: "271352684",
     COMMANDS: {
-      START_MONITORING: '/start',
-      STOP_MONITORING: '/stop',
-      STATUS: '/status',
-      PROCESS_ORDER: '/process',
-      HELP: '/help',
-      RELOGIN: '/relogin'
-    }
+      START_MONITORING: "/start",
+      STOP_MONITORING: "/stop",
+      STATUS: "/status",
+      PROCESS_ORDER: "/process",
+      HELP: "/help",
+      RELOGIN: "/relogin",
+    },
   },
 
   // Default Values
   DEFAULTS: {
-    COMPANY_NAME: 'Unknown Company',
-    PLATFORM_NAME: 'Unknown',
+    COMPANY_NAME: "Unknown Company",
+    PLATFORM_NAME: "Unknown",
   },
 };

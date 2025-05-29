@@ -2,7 +2,6 @@ import express from "express";
 import { google } from "googleapis";
 import puppeteer from "puppeteer";
 import { CONFIG } from "./config.js";
-import telegramBot from "./utils/telegram/telegramBot.js";
 import { getFNorderData } from "./utils/FieldNation/getFNorderData.js";
 import { loginFnAuto } from "./utils/FieldNation/loginFnAuto.js";
 import { postFNCounterOffer } from "./utils/FieldNation/postFNCounterOffer.js";
@@ -15,6 +14,7 @@ import isEligibleForApplication from "./utils/isEligibleForApplication.js";
 import logger from "./utils/logger.js";
 import normalizeDateFromWO from "./utils/normalizedDateFromWO.js";
 import playSound from "./utils/playSound.js";
+import telegramBot from "./utils/telegram/telegramBot.js";
 import { getWMorderData } from "./utils/WorkMarket/getWMorderData.js";
 import { loginWMAuto } from "./utils/WorkMarket/loginWMAuto.js";
 import { postWMCounterOffer } from "./utils/WorkMarket/postWMCounterOffer.js";
@@ -307,7 +307,12 @@ async function processOrder(orderLink) {
         normalizedData.id
       );
 
-      telegramBot.sendOrderNotification(normalizedData, "✅ APPLIED", "Order meets all criteria", orderLink);
+      telegramBot.sendOrderNotification(
+        normalizedData,
+        "✅ APPLIED",
+        "Order meets all criteria",
+        orderLink
+      );
       await applyForJob(
         orderLink,
         normalizedData.time,
@@ -322,7 +327,12 @@ async function processOrder(orderLink) {
         normalizedData.id
       );
 
-      telegramBot.sendOrderNotification(normalizedData, "❌ REJECTED", "Outside working hours", orderLink);
+      telegramBot.sendOrderNotification(
+        normalizedData,
+        "❌ REJECTED",
+        "Outside working hours",
+        orderLink
+      );
       playSound("error");
     } else if (
       normalizedData.platform === "WorkMarket" &&
@@ -343,7 +353,12 @@ async function processOrder(orderLink) {
           normalizedData.distance
         );
 
-        telegramBot.sendOrderNotification(normalizedData, "💰 COUNTER OFFER", `Travel expenses: $${Math.round(normalizedData.distance)}`, orderLink);
+        telegramBot.sendOrderNotification(
+          normalizedData,
+          "💰 COUNTER OFFER",
+          `Travel expenses: $${Math.round(normalizedData.distance)}`,
+          orderLink
+        );
         playSound("applied");
         logger.info(
           `Result: Counter offer sent successfully with $${Math.round(
@@ -358,7 +373,9 @@ async function processOrder(orderLink) {
           normalizedData.platform,
           normalizedData.id
         );
-        telegramBot.sendMessage(`❌ Failed to send counter offer: ${error.message}`);
+        telegramBot.sendMessage(
+          `❌ Failed to send counter offer: ${error.message}`
+        );
         playSound("error");
       }
     } else if (
@@ -384,7 +401,12 @@ async function processOrder(orderLink) {
           );
 
           const counterDetails = `Base: $${eligibilityResult.counterOffer.baseAmount}\nTravel: $${eligibilityResult.counterOffer.travelExpense}`;
-          telegramBot.sendOrderNotification(normalizedData, "💰 COUNTER OFFER", counterDetails, orderLink);
+          telegramBot.sendOrderNotification(
+            normalizedData,
+            "💰 COUNTER OFFER",
+            counterDetails,
+            orderLink
+          );
           playSound("applied");
           logger.info(
             `Result: Counter offer sent successfully 🔊
@@ -400,7 +422,9 @@ async function processOrder(orderLink) {
             normalizedData.platform,
             normalizedData.id
           );
-          telegramBot.sendMessage(`❌ Failed to send counter offer: ${error.message}`);
+          telegramBot.sendMessage(
+            `❌ Failed to send counter offer: ${error.message}`
+          );
           playSound("error");
         }
       }
@@ -411,7 +435,12 @@ async function processOrder(orderLink) {
         normalizedData.id
       );
 
-      telegramBot.sendOrderNotification(normalizedData, "❌ REJECTED", `Reason: ${eligibilityResult.reason}`, orderLink);
+      telegramBot.sendOrderNotification(
+        normalizedData,
+        "❌ REJECTED",
+        `Reason: ${eligibilityResult.reason}`,
+        orderLink
+      );
       console.log(
         `DEBUG: Playing error sound for ${normalizedData.platform} order ${normalizedData.id}, reason: ${eligibilityResult.reason}`
       );
@@ -435,7 +464,9 @@ telegramBot.onRelogin = saveCookies;
 // Start the server
 app.listen(port, async () => {
   console.log(`Server running on port ${port}`);
-  telegramBot.sendMessage(`🚀 Server started on port ${port}\nUse /help for available commands`);
+  telegramBot.sendMessage(
+    `🚀 Server started on port ${port}\nUse /help for available commands`
+  );
   // await saveCookies();
   // await periodicCheck(); // Don't auto-start, wait for Telegram command
   // scheduleRelogin();
