@@ -151,42 +151,83 @@ export async function getWMorderData(url) {
     fs.writeFileSync('debug_response.html', body);
     console.log('Response saved to debug_response.html');
 
-    // Regular expressions to extract data
-    const titleMatch = body.match(/<title[^>]*>([^<]+)<\/title>/i);
-    const companyMatch = body.match(
-      /<a[^>]*href="\/profile\/company\/\d+"[^>]*>([^<]+)<\/a>/i
-    );
-    const hourlyRateMatch =
-      body.match(/\$\s*([\d.]+)(?:\/hr|\/hour)/i) ||
-      body.match(/rate:\s*\$\s*([\d.]+)/i);
-    const hoursOfWorkMatch =
-      body.match(/(?:up to|estimated)\s*(\d+)\s*(?:hr|hours?)/i) ||
-      body.match(/Duration:\s*(\d+)\s*(?:hr|hours?)/i);
-    const totalPaymentMatch =
-      body.match(/<td[^>]*>\s*<strong[^>]*>\s*\$\s*([\d.]+)/i) ||
-      body.match(/total\s+payment:?\s*\$\s*([\d.]+)/i);
-    const distanceMatch =
-      body.match(/\(([\d.]+)\s*mi(?:les?)?\)/i) ||
-      body.match(/Distance:\s*([\d.]+)\s*mi(?:les?)?/i);
+    // Extract title from page header
+    const titleMatch = body.match(/<h2[^>]*class="assignment-header"[^>]*>\s*([^<]+)/i) ||
+                      body.match(/<title[^>]*>([^<]+)<\/title>/i);
 
-    // Extract date and time with more flexible patterns
-    const dateTimeMatch = body.match(
-      /Start Date[^>]*>([^<]+)<.*?Time[^>]*>([^<]+)</is
-    );
-    const date = dateTimeMatch ? dateTimeMatch[1].trim() : null;
-    const time = dateTimeMatch ? dateTimeMatch[2].trim() : null;
+    // Fix company name - look in the sidebar company link
+    const companyMatch = body.match(/<a[^>]*href="\/profile\/company\/\d+"[^>]*>([^<]+)<\/a>/i);
+    
+    // Extract from JavaScript config if company link fails
+    let companyFromConfig = null;
+    const configMatch = body.match(/companyName:\s*'([^']+)'/);
+    if (configMatch) {
+      companyFromConfig = configMatch[1];
+    }
+
+    // Fix pricing extraction - look for hourly rate and total budget
+    const hourlyRateMatch = body.match(/\$\s*([\d.,]+)\/hr/i);
+    const maxHoursMatch = body.match(/up to\s+(\d+)hr/i);
+    const totalBudgetMatch = body.match(/<td[^>]*><strong[^>]*>Total budget<\/strong><\/td>\s*<td[^>]*>\s*<strong[^>]*>\s*\$\s*([\d.,]+)/i);
+
+    // Fix distance extraction - look in the location section
+    const distanceMatch = body.match(/\(([\d.,]+)\s*mi\)/i);
+
+    // Fix date and time extraction - look for the specific format in the schedule section
+    const scheduleMatch = body.match(/<strong[^>]*>(Mon|Tue|Wed|Thu|Fri|Sat|Sun),\s*(\d{1,2}\/\d{1,2}\/\d{4})\s*(?:to\s*(Mon|Tue|Wed|Thu|Fri|Sat|Sun),\s*(\d{1,2}\/\d{1,2}\/\d{4}))?<\/strong><br\/>\s*(\d{1,2}:\d{2}\s*(?:AM|PM))\s*(?:to\s*(\d{1,2}:\d{2}\s*(?:AM|PM)))?\s*(\w{3})/i);
+
+    // Parse the schedule data
+    let formattedDate = null;
+    let formattedTime = null;
+    
+    if (scheduleMatch) {
+      const startDate = scheduleMatch[2]; // e.g., "05/30/2025"
+      const startTime = scheduleMatch[5]; // e.g., "8:00 AM"
+      const endTime = scheduleMatch[6]; // e.g., "5:00 PM"
+      const timezone = scheduleMatch[7]; // e.g., "EDT"
+      
+      // Convert date to YYYY-MM-DD format
+      const dateObj = new Date(startDate);
+      formattedDate = dateObj.toISOString().split('T')[0];
+      
+      // Format time range
+      if (endTime) {
+        formattedTime = `${startTime} to ${endTime} ${timezone}`;
+      } else {
+        formattedTime = `${startTime} ${timezone}`;
+      }
+    }
+
+    // Extract marketplace fee and calculate pricing
+    const marketplaceFeeMatch = body.match(/Marketplace Access Fee[^$]*-\s*\$\s*([\d.,]+)/i);
+    
+    let totalPayment = 0;
+    let originalAmount = 0;
+    
+    if (totalBudgetMatch) {
+      totalPayment = parseFloat(totalBudgetMatch[1].replace(',', ''));
+      originalAmount = totalPayment;
+    }
+    
+    if (marketplaceFeeMatch) {
+      const marketplaceFee = parseFloat(marketplaceFeeMatch[1].replace(',', ''));
+      originalAmount = totalPayment + marketplaceFee;
+    }
 
     const data = {
       id: workOrderId,
       platform: 'WorkMarket',
-      company: companyMatch ? companyMatch[1].trim() : 'Unknown Company',
-      title: titleMatch ? titleMatch[1].trim() : 'No Title',
-      hourlyRate: hourlyRateMatch ? parseFloat(hourlyRateMatch[1]) : 0,
-      hoursOfWork: hoursOfWorkMatch ? parseInt(hoursOfWorkMatch[1]) : 4, // Default to 4 hours
-      totalPayment: totalPaymentMatch ? parseFloat(totalPaymentMatch[1]) : 0,
-      date: date || new Date().toISOString().split('T')[0], // Default to today
-      time: time || '09:00 AM EST', // Default time
-      distance: distanceMatch ? parseFloat(distanceMatch[1]) : 0,
+      company: (companyMatch ? companyMatch[1].trim() : null) || 
+               companyFromConfig || 
+               'Unknown Company',
+      title: titleMatch ? titleMatch[1].trim().replace(' - Work Market', '') : 'No Title',
+      hourlyRate: hourlyRateMatch ? parseFloat(hourlyRateMatch[1].replace(',', '')) : 0,
+      hoursOfWork: maxHoursMatch ? parseInt(maxHoursMatch[1]) : 4, // Default to 4 hours
+      totalPayment: totalPayment,
+      originalAmount: originalAmount, // Original amount before fees
+      date: formattedDate || new Date().toISOString().split('T')[0], // Default to today
+      time: formattedTime || '09:00 AM EST', // Default time
+      distance: distanceMatch ? parseFloat(distanceMatch[1].replace(',', '')) : 0,
     };
 
     console.log('Extracted data:', data);
