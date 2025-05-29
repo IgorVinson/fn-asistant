@@ -1,5 +1,5 @@
 import { waitForFNcode } from "../gmail/getFNcode.js";
-import { saveCookies } from "../saveCookies.js";
+import { saveCookiesCustom } from "../saveCookies.js";
 
 /**
  * Automated Field Nation login with simplified approach
@@ -465,9 +465,9 @@ export async function loginFnAuto(
       });
     }
 
-    // Step 6: Save cookies
-    console.log("🍪 Saving cookies...");
-    await saveCookies(page, "FieldNation");
+    // Step 6: Save cookies as autoCookies.json
+    console.log("🍪 Saving cookies as autoCookies.json...");
+    await saveCookiesCustom(page, "FieldNation", "autoCookies.json");
 
     return {
       success: true,
