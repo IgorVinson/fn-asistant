@@ -1,6 +1,6 @@
-import TelegramBot from 'node-telegram-bot-api';
-import { CONFIG } from '../../config.js';
-import logger from '../logger.js';
+import TelegramBot from "node-telegram-bot-api";
+import { CONFIG } from "../../config.js";
+import logger from "../logger.js";
 
 class TelegramBotService {
   constructor() {
@@ -12,9 +12,9 @@ class TelegramBotService {
 
   setupCommands() {
     // Start monitoring command
-    this.bot.onText(/\/start/, (msg) => {
+    this.bot.onText(/\/start/, msg => {
       if (msg.chat.id.toString() === this.chatId) {
-        this.sendMessage('🚀 Starting job monitoring...');
+        this.sendMessage("🚀 Starting job monitoring...");
         this.isMonitoring = true;
         if (this.onStartMonitoring) {
           this.onStartMonitoring();
@@ -23,9 +23,9 @@ class TelegramBotService {
     });
 
     // Stop monitoring command
-    this.bot.onText(/\/stop/, (msg) => {
+    this.bot.onText(/\/stop/, msg => {
       if (msg.chat.id.toString() === this.chatId) {
-        this.sendMessage('⏹️ Stopping job monitoring...');
+        this.sendMessage("⏹️ Stopping job monitoring...");
         this.isMonitoring = false;
         if (this.onStopMonitoring) {
           this.onStopMonitoring();
@@ -34,9 +34,9 @@ class TelegramBotService {
     });
 
     // Status command
-    this.bot.onText(/\/status/, (msg) => {
+    this.bot.onText(/\/status/, msg => {
       if (msg.chat.id.toString() === this.chatId) {
-        const status = this.isMonitoring ? '🟢 Active' : '🔴 Stopped';
+        const status = this.isMonitoring ? "🟢 Active" : "🔴 Stopped";
         this.sendMessage(`Monitoring Status: ${status}`);
       }
     });
@@ -53,9 +53,9 @@ class TelegramBotService {
     });
 
     // Relogin command
-    this.bot.onText(/\/relogin/, (msg) => {
+    this.bot.onText(/\/relogin/, msg => {
       if (msg.chat.id.toString() === this.chatId) {
-        this.sendMessage('🔄 Initiating relogin process...');
+        this.sendMessage("🔄 Initiating relogin process...");
         if (this.onRelogin) {
           this.onRelogin();
         }
@@ -63,7 +63,7 @@ class TelegramBotService {
     });
 
     // Help command
-    this.bot.onText(/\/help/, (msg) => {
+    this.bot.onText(/\/help/, msg => {
       if (msg.chat.id.toString() === this.chatId) {
         const helpText = `
 🤖 Available Commands:
@@ -84,16 +84,15 @@ Example:
   }
 
   sendMessage(text) {
-    this.bot.sendMessage(this.chatId, text)
-      .catch(error => {
-        logger.error(`Failed to send Telegram message: ${error.message}`);
-      });
+    this.bot.sendMessage(this.chatId, text).catch(error => {
+      logger.error(`Failed to send Telegram message: ${error.message}`);
+    });
   }
 
-  sendOrderNotification(orderData, action, details = '', orderLink = '') {
+  sendOrderNotification(orderData, action, details = "", orderLink = "") {
     // Escape special characters for Markdown
-    const escapeMarkdown = (text) => {
-      return text.replace(/[_*[\]()~`>#+=|{}.!-]/g, '\\$&');
+    const escapeMarkdown = text => {
+      return text.replace(/[_*[\]()~`>#+=|{}.!-]/g, "\\$&");
     };
 
     let orderIdText;
@@ -103,7 +102,7 @@ Example:
     } else {
       orderIdText = escapeMarkdown(orderData.id.toString());
     }
-    
+
     const message = `
 🔔 *New Job Alert*
 
@@ -116,20 +115,21 @@ Example:
 *Time:* ${escapeMarkdown(new Date(orderData.time.start).toLocaleString())}
 
 *Action:* ${action}
-${details ? escapeMarkdown(details) : ''}
+${details ? escapeMarkdown(details) : ""}
     `;
-    
-    this.bot.sendMessage(this.chatId, message, { 
-      parse_mode: 'Markdown',
-      disable_web_page_preview: true 
-    })
-    .catch(error => {
-      // If Markdown fails, send as plain text
-      const plainMessage = `
+
+    this.bot
+      .sendMessage(this.chatId, message, {
+        parse_mode: "Markdown",
+        disable_web_page_preview: true,
+      })
+      .catch(error => {
+        // If Markdown fails, send as plain text
+        const plainMessage = `
 🔔 New Job Alert
 
 Platform: ${orderData.platform}
-Order ID: ${orderData.id} (${orderLink || 'No link'})
+Order ID: ${orderData.id} (${orderLink || "No link"})
 Company: ${orderData.company}
 Title: ${orderData.title}
 Pay: $${orderData.payRange.min}-$${orderData.payRange.max}
@@ -139,12 +139,13 @@ Time: ${new Date(orderData.time.start).toLocaleString()}
 Action: ${action}
 ${details}
       `;
-      
-      this.bot.sendMessage(this.chatId, plainMessage)
-        .catch(fallbackError => {
-          logger.error(`Failed to send Telegram message (both formats): ${fallbackError.message}`);
+
+        this.bot.sendMessage(this.chatId, plainMessage).catch(fallbackError => {
+          logger.error(
+            `Failed to send Telegram message (both formats): ${fallbackError.message}`
+          );
         });
-    });
+      });
   }
 
   // Event handlers (to be set by main application)
