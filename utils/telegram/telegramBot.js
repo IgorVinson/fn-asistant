@@ -90,11 +90,46 @@ Example:
       });
   }
 
-  sendOrderNotification(orderData, action, details = '') {
+  sendOrderNotification(orderData, action, details = '', orderLink = '') {
+    // Escape special characters for Markdown
+    const escapeMarkdown = (text) => {
+      return text.replace(/[_*[\]()~`>#+=|{}.!-]/g, '\\$&');
+    };
+
+    let orderIdText;
+    if (orderLink) {
+      // Create clickable link with escaped text
+      orderIdText = `[${orderData.id}](${orderLink})`;
+    } else {
+      orderIdText = escapeMarkdown(orderData.id.toString());
+    }
+    
     const message = `
+🔔 *New Job Alert*
+
+*Platform:* ${escapeMarkdown(orderData.platform)}
+*Order ID:* ${orderIdText}
+*Company:* ${escapeMarkdown(orderData.company)}
+*Title:* ${escapeMarkdown(orderData.title)}
+*Pay:* $${orderData.payRange.min}-$${orderData.payRange.max}
+*Distance:* ${orderData.distance}mi
+*Time:* ${escapeMarkdown(new Date(orderData.time.start).toLocaleString())}
+
+*Action:* ${action}
+${details ? escapeMarkdown(details) : ''}
+    `;
+    
+    this.bot.sendMessage(this.chatId, message, { 
+      parse_mode: 'Markdown',
+      disable_web_page_preview: true 
+    })
+    .catch(error => {
+      // If Markdown fails, send as plain text
+      const plainMessage = `
 🔔 New Job Alert
 
 Platform: ${orderData.platform}
+Order ID: ${orderData.id} (${orderLink || 'No link'})
 Company: ${orderData.company}
 Title: ${orderData.title}
 Pay: $${orderData.payRange.min}-$${orderData.payRange.max}
@@ -103,8 +138,13 @@ Time: ${new Date(orderData.time.start).toLocaleString()}
 
 Action: ${action}
 ${details}
-    `;
-    this.sendMessage(message);
+      `;
+      
+      this.bot.sendMessage(this.chatId, plainMessage)
+        .catch(fallbackError => {
+          logger.error(`Failed to send Telegram message (both formats): ${fallbackError.message}`);
+        });
+    });
   }
 
   // Event handlers (to be set by main application)

@@ -307,7 +307,7 @@ async function processOrder(orderLink) {
         normalizedData.id
       );
 
-      telegramBot.sendOrderNotification(normalizedData, "✅ APPLIED", "Order meets all criteria");
+      telegramBot.sendOrderNotification(normalizedData, "✅ APPLIED", "Order meets all criteria", orderLink);
       await applyForJob(
         orderLink,
         normalizedData.time,
@@ -322,7 +322,7 @@ async function processOrder(orderLink) {
         normalizedData.id
       );
 
-      telegramBot.sendOrderNotification(normalizedData, "❌ REJECTED", "Outside working hours");
+      telegramBot.sendOrderNotification(normalizedData, "❌ REJECTED", "Outside working hours", orderLink);
       playSound("error");
     } else if (
       normalizedData.platform === "WorkMarket" &&
@@ -343,7 +343,7 @@ async function processOrder(orderLink) {
           normalizedData.distance
         );
 
-        telegramBot.sendOrderNotification(normalizedData, "💰 COUNTER OFFER", `Travel expenses: $${Math.round(normalizedData.distance)}`);
+        telegramBot.sendOrderNotification(normalizedData, "💰 COUNTER OFFER", `Travel expenses: $${Math.round(normalizedData.distance)}`, orderLink);
         playSound("applied");
         logger.info(
           `Result: Counter offer sent successfully with $${Math.round(
@@ -384,7 +384,7 @@ async function processOrder(orderLink) {
           );
 
           const counterDetails = `Base: $${eligibilityResult.counterOffer.baseAmount}\nTravel: $${eligibilityResult.counterOffer.travelExpense}`;
-          telegramBot.sendOrderNotification(normalizedData, "💰 COUNTER OFFER", counterDetails);
+          telegramBot.sendOrderNotification(normalizedData, "💰 COUNTER OFFER", counterDetails, orderLink);
           playSound("applied");
           logger.info(
             `Result: Counter offer sent successfully 🔊
@@ -411,7 +411,7 @@ async function processOrder(orderLink) {
         normalizedData.id
       );
 
-      telegramBot.sendOrderNotification(normalizedData, "❌ REJECTED", `Reason: ${eligibilityResult.reason}`);
+      telegramBot.sendOrderNotification(normalizedData, "❌ REJECTED", `Reason: ${eligibilityResult.reason}`, orderLink);
       console.log(
         `DEBUG: Playing error sound for ${normalizedData.platform} order ${normalizedData.id}, reason: ${eligibilityResult.reason}`
       );
