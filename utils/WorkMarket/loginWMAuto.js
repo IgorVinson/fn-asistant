@@ -20,7 +20,25 @@ export async function loginWMAuto(
   gmailAuth = null
 ) {
   const url = "https://www.workmarket.com/login";
+  
+  // Create a new page with additional configurations to avoid detection
   const page = await browser.newPage();
+  
+  // Set a common user agent to look like a regular browser
+  await page.setUserAgent('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36');
+  
+  // Set additional headers to mimic a real browser
+  await page.setExtraHTTPHeaders({
+    'Accept-Language': 'en-US,en;q=0.9',
+    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8'
+  });
+  
+  // Set viewport to appear like a regular desktop browser
+  await page.setViewport({
+    width: 1280,
+    height: 800,
+    deviceScaleFactor: 1,
+  });
 
   try {
     console.log("🚀 Starting automated WorkMarket login...");
@@ -50,13 +68,22 @@ export async function loginWMAuto(
     await new Promise(resolve => setTimeout(resolve, 3000));
 
     // Take a screenshot for debugging
-    console.log("🔍 Debug screenshot disabled");
+    try {
+      await page.screenshot({ path: 'debug-after-login.png', fullPage: true });
+      console.log("📸 Screenshot saved as debug-after-login.png");
+    } catch (screenshotError) {
+      console.log("⚠️ Could not take screenshot:", screenshotError.message);
+    }
 
     console.log("📝 Page title:", await page.title());
     console.log("🌐 Current URL:", page.url());
 
     // Step 5: Check for verification code input
     console.log("🔑 Looking for verification code input...");
+
+    // Wait longer for web components to fully initialize in headless mode
+    console.log("⏳ Waiting for web components to initialize...");
+    await new Promise(resolve => setTimeout(resolve, 5000));
 
     // Additional debugging: Check what elements are actually on the page
     console.log("🔍 Debugging page elements...");
@@ -360,7 +387,6 @@ export async function loginWMAuto(
       console.log(
         "ℹ️ No verification code screen found, login may be complete"
       );
-      // Debug screenshot disabled
     }
 
     // Step 7: Save cookies as autoCookies.json

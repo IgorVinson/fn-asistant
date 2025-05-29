@@ -29,7 +29,29 @@ let browser; // Declare a browser instance
 async function saveCookies() {
   try {
     console.log("🚀 Starting automated login process...");
-    browser = await puppeteer.launch({ headless: false }); // Set headless: false to see the browser
+    browser = await puppeteer.launch({
+      headless: true,
+      args: [
+        "--no-sandbox",
+        "--disable-setuid-sandbox",
+        "--disable-dev-shm-usage",
+        "--disable-accelerated-2d-canvas",
+        "--no-first-run",
+        "--no-zygote",
+        "--disable-gpu",
+        "--disable-web-security",
+        "--disable-features=VizDisplayCompositor",
+        "--enable-experimental-web-platform-features", // Enable shadow DOM support
+        "--force-device-scale-factor=1",
+        "--disable-extensions-except",
+        "--disable-plugins-discovery",
+                "--enable-blink-features=ShadowDOMV0", // Additional shadow DOM support
+        "--force-device-scale-factor=1",
+        "--disable-extensions-except",
+        "--disable-plugins-discovery",
+        "--incognito", // Enable incognito mode
+      ],
+    });
 
     // Get Gmail auth for potential 2FA code retrieval
     const gmailAuth = await authorize();
@@ -332,6 +354,6 @@ async function processOrder(orderLink) {
 // Start the server
 app.listen(port, async () => {
   console.log(`Server running on port ${port}`);
-  // await saveCookies();
-  await periodicCheck();
+  await saveCookies();
+  // await periodicCheck();
 });
