@@ -328,10 +328,11 @@ function calculateCounterOffer(workOrder) {
   const BASE_HOURS = 2;
   const BASE_RATE = 150;
   const ADDITIONAL_HOURLY_RATE = 55;
-  const TRAVEL_THRESHOLD = 30;
 
   const travelExpense =
-    workOrder.distance > TRAVEL_THRESHOLD ? Math.round(workOrder.distance) : 0;
+    workOrder.distance > CONFIG.DISTANCE.TRAVEL_THRESHOLD_MILES 
+      ? Math.round(workOrder.distance * CONFIG.DISTANCE.TRAVEL_RATE_PER_MILE) 
+      : 0;
 
   const isFixedRate = workOrder.estLaborHours <= 2;
 

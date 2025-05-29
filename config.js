@@ -9,7 +9,7 @@ export const CONFIG = {
   // Distance and Travel Settings
   DISTANCE: {
     TRAVEL_THRESHOLD_MILES: 30, // Miles before charging travel expenses
-    TRAVEL_RATE_PER_MILE: 1, // Amount to charge per mile over threshold
+    TRAVEL_RATE_PER_MILE: 1.25, // Amount to charge per mile over threshold
     FREE_TRAVEL_LIMIT: 50 / 60, // Free travel time in hours (50 minutes)
     AVERAGE_SPEED: 50, // Average travel speed in miles per hour
   },

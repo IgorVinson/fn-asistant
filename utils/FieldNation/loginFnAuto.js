@@ -467,7 +467,7 @@ export async function loginFnAuto(
 
     // Step 6: Save cookies as autoCookies.json
     console.log("🍪 Saving cookies as autoCookies.json...");
-    await saveCookiesCustom(page, "FieldNation", "autoCookies.json");
+    await saveCookiesCustom(page, "FieldNation", "cookies.json");
 
     return {
       success: true,

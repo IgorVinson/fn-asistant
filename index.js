@@ -3,7 +3,7 @@ import { google } from "googleapis";
 import puppeteer from "puppeteer";
 import { CONFIG } from "./config.js";
 import { getFNorderData } from "./utils/FieldNation/getFNorderData.js";
-import { loginToFieldNation } from "./utils/FieldNation/loginToFieldNation.js";
+import { loginFnAuto } from "./utils/FieldNation/loginFnAuto.js";
 import { postFNCounterOffer } from "./utils/FieldNation/postFNCounterOffer.js";
 import { postFNworkOrderRequest } from "./utils/FieldNation/postFNworkOrderRequest.js";
 import { sendWorkOrderMessage } from "./utils/FieldNation/sendWorkOrderMessage.js";
@@ -15,7 +15,7 @@ import logger from "./utils/logger.js";
 import normalizeDateFromWO from "./utils/normalizedDateFromWO.js";
 import playSound from "./utils/playSound.js";
 import { getWMorderData } from "./utils/WorkMarket/getWMorderData.js";
-import { loginToWorkMarket } from "./utils/WorkMarket/loginToWorkMarket.js";
+import { loginWMAuto } from "./utils/WorkMarket/loginWMAuto.js";
 import { postWMCounterOffer } from "./utils/WorkMarket/postWMCounterOffer.js";
 import { postWMworkOrderRequest } from "./utils/WorkMarket/postWMworkOrderRequest.js";
 
@@ -27,9 +27,49 @@ let browser; // Declare a browser instance
 
 // Initialize Puppeteer and log in to FieldNation and WorkMarket
 async function saveCookies() {
-  browser = await puppeteer.launch({ headless: false }); // Set headless: false to see the browser
-  await loginToFieldNation(browser);
-  await loginToWorkMarket(browser);
+  try {
+    console.log("🚀 Starting automated login process...");
+    browser = await puppeteer.launch({ headless: false }); // Set headless: false to see the browser
+
+    // Get Gmail auth for potential 2FA code retrieval
+    const gmailAuth = await authorize();
+
+    // Login to FieldNation with the new automated system
+    console.log("🔑 Logging into FieldNation...");
+    const fnResult = await loginFnAuto(
+      browser,
+      undefined,
+      undefined,
+      null,
+      false,
+      gmailAuth
+    );
+    if (fnResult.success) {
+      console.log("✅ FieldNation login successful");
+    } else {
+      console.error("❌ FieldNation login failed:", fnResult.error);
+    }
+
+    // Login to WorkMarket with the new automated system
+    console.log("🔑 Logging into WorkMarket...");
+    const wmResult = await loginWMAuto(
+      browser,
+      undefined,
+      undefined,
+      null,
+      false,
+      gmailAuth
+    );
+    if (wmResult.success) {
+      console.log("✅ WorkMarket login successful");
+    } else {
+      console.error("❌ WorkMarket login failed:", wmResult.error);
+    }
+
+    console.log("🍪 Login process completed, cookies saved automatically");
+  } catch (error) {
+    console.error("❌ Error during automated login process:", error);
+  }
 }
 
 // Periodically check for unread emails
