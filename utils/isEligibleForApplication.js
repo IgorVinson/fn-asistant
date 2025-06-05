@@ -39,6 +39,12 @@ function isPaymentEligible(workOrder) {
     workOrder.estLaborHours || CONFIG.TIME.DEFAULT_LABOR_HOURS;
   const TRAVEL_THRESHOLD = CONFIG.DISTANCE.TRAVEL_THRESHOLD_MILES;
 
+  // Get platform-specific minimum pay threshold
+  const MIN_PAY_THRESHOLD =
+    workOrder.platform === "WorkMarket"
+      ? CONFIG.RATES.MIN_PAY_THRESHOLD_WORKMARKET
+      : CONFIG.RATES.MIN_PAY_THRESHOLD_FIELDNATION;
+
   // Calculate travel expense for FULL distance if it exceeds threshold
   const travelExpense =
     workOrder.distance > TRAVEL_THRESHOLD
@@ -58,8 +64,9 @@ function isPaymentEligible(workOrder) {
 
     logger.info(
       `Payment Analysis:
+      - Platform: ${workOrder.platform}
       - Offered Pay: $${workOrder.payRange.max}
-      - Minimum Threshold: $${CONFIG.RATES.MIN_PAY_THRESHOLD}
+      - Minimum Threshold: $${MIN_PAY_THRESHOLD}
       - Distance: ${workOrder.distance} miles
       - Travel Threshold: ${TRAVEL_THRESHOLD} miles
       - Travel Expense: $${travelExpense.toFixed(2)}
@@ -76,32 +83,31 @@ function isPaymentEligible(workOrder) {
   }
 
   // For jobs within travel threshold, check if base pay meets minimum
-  if (workOrder.payRange.max < CONFIG.RATES.MIN_PAY_THRESHOLD) {
-    decisionReason = `Base pay too low ($${workOrder.payRange.max} < $${CONFIG.RATES.MIN_PAY_THRESHOLD}) and distance (${workOrder.distance} miles) is within free travel limit (${TRAVEL_THRESHOLD} miles)`;
+  if (workOrder.payRange.max < MIN_PAY_THRESHOLD) {
+    decisionReason = `Base pay too low ($${workOrder.payRange.max} < $${MIN_PAY_THRESHOLD}) and distance (${workOrder.distance} miles) is within free travel limit (${TRAVEL_THRESHOLD} miles)`;
   } else {
-    decisionReason = `Base pay acceptable: $${workOrder.payRange.max} >= $${CONFIG.RATES.MIN_PAY_THRESHOLD} and no travel required`;
+    decisionReason = `Base pay acceptable: $${workOrder.payRange.max} >= $${MIN_PAY_THRESHOLD} and no travel required`;
   }
 
   // Log the decision
   logger.info(
     `Payment Analysis:
+    - Platform: ${workOrder.platform}
     - Offered Pay: $${workOrder.payRange.max}
-    - Minimum Threshold: $${CONFIG.RATES.MIN_PAY_THRESHOLD}
+    - Minimum Threshold: $${MIN_PAY_THRESHOLD}
     - Distance: ${workOrder.distance} miles
     - Travel Threshold: ${TRAVEL_THRESHOLD} miles
     - Travel Expense: $${travelExpense.toFixed(2)}
-    - Required Pay: $${CONFIG.RATES.MIN_PAY_THRESHOLD}
+    - Required Pay: $${MIN_PAY_THRESHOLD}
     - Decision: ${
-      workOrder.payRange.max >= CONFIG.RATES.MIN_PAY_THRESHOLD
-        ? "ACCEPT"
-        : "REJECT"
+      workOrder.payRange.max >= MIN_PAY_THRESHOLD ? "ACCEPT" : "REJECT"
     }
     - Reason: ${decisionReason}`,
     workOrder.platform,
     workOrder.id
   );
 
-  return workOrder.payRange.max >= CONFIG.RATES.MIN_PAY_THRESHOLD;
+  return workOrder.payRange.max >= MIN_PAY_THRESHOLD;
 }
 
 // New function using Google Calendar for availability checking
@@ -392,6 +398,12 @@ function calculateCounterOffer(workOrder) {
   const BASE_HOURS = 2;
   const ADDITIONAL_HOURLY_RATE = 55;
 
+  // Get platform-specific minimum pay threshold
+  const MIN_PAY_THRESHOLD =
+    workOrder.platform === "WorkMarket"
+      ? CONFIG.RATES.MIN_PAY_THRESHOLD_WORKMARKET
+      : CONFIG.RATES.MIN_PAY_THRESHOLD_FIELDNATION;
+
   // Calculate travel expense for FULL distance if it exceeds threshold
   const travelExpense =
     workOrder.distance > CONFIG.DISTANCE.TRAVEL_THRESHOLD_MILES
@@ -408,14 +420,14 @@ function calculateCounterOffer(workOrder) {
   // If payment is too low, use minimum threshold
   let baseAmount;
   if (
-    workOrder.payRange.max >= CONFIG.RATES.MIN_PAY_THRESHOLD &&
+    workOrder.payRange.max >= MIN_PAY_THRESHOLD &&
     workOrder.distance > CONFIG.DISTANCE.TRAVEL_THRESHOLD_MILES
   ) {
     // Use their offered amount since it's acceptable, just add travel
     baseAmount = workOrder.payRange.max;
   } else {
     // Use minimum threshold for low payments
-    baseAmount = CONFIG.RATES.MIN_PAY_THRESHOLD;
+    baseAmount = MIN_PAY_THRESHOLD;
   }
 
   logger.info(
@@ -466,7 +478,44 @@ async function isEligibleForApplication(workOrder) {
     };
   }
 
-  // Check eligibility for both FieldNation and WorkMarket
+  // Special handling for Granite Telecommunications - skip calendar and payment checks
+  if (
+    workOrder.platform === "WorkMarket" &&
+    workOrder.company === "Granite Telecommunications"
+  ) {
+    logger.info(
+      `Primary company detected (Granite Telecommunications) - skipping calendar and payment checks, only checking distance`,
+      workOrder.platform,
+      workOrder.id
+    );
+
+    // Only check if travel is required
+    if (workOrder.distance > CONFIG.DISTANCE.TRAVEL_THRESHOLD_MILES) {
+      logger.info(
+        `Granite Telecommunications job requires travel (${workOrder.distance} miles > ${CONFIG.DISTANCE.TRAVEL_THRESHOLD_MILES} miles) - generating counter offer`,
+        workOrder.platform,
+        workOrder.id
+      );
+      return {
+        eligible: false,
+        counterOffer: calculateCounterOffer(workOrder),
+        reason: "GRANITE_TRAVEL_REQUIRED",
+      };
+    } else {
+      logger.info(
+        `Granite Telecommunications job within travel threshold - applying directly`,
+        workOrder.platform,
+        workOrder.id
+      );
+      return {
+        eligible: true,
+        counterOffer: null,
+        reason: "GRANITE_ELIGIBLE",
+      };
+    }
+  }
+
+  // Check eligibility for both FieldNation and WorkMarket (non-Granite)
   if (
     workOrder.platform === "FieldNation" ||
     workOrder.platform === "WorkMarket"
