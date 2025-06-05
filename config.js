@@ -2,7 +2,7 @@ export const CONFIG = {
   // Payment and Rate Settings
   RATES: {
     BASE_HOURLY_RATE: 50, // Minimum desired hourly rate
-    MIN_PAY_THRESHOLD: 150, // Minimum total pay for a job
+    MIN_PAY_THRESHOLD: 110, // Minimum total pay for a job
     TRAVEL_RATE: 30, // Rate per hour of travel
   },
 
@@ -18,7 +18,7 @@ export const CONFIG = {
   TIME: {
     DEFAULT_LABOR_HOURS: 2, // Default estimated labor hours if not specified
     MIN_HOURS_BETWEEN_JOBS: 1, // Minimum hours required between jobs
-    WORK_START_TIME: "08:00", // Earliest time to accept jobs
+    WORK_START_TIME: "09:00", // Earliest time to accept jobs
     WORK_END_TIME: "19:00", // Latest time to accept jobs
     BUFFER_MINUTES: 30, // Buffer time between jobs
   },
