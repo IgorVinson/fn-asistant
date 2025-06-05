@@ -39,26 +39,47 @@ function isPaymentEligible(workOrder) {
     workOrder.estLaborHours || CONFIG.TIME.DEFAULT_LABOR_HOURS;
   const TRAVEL_THRESHOLD = CONFIG.DISTANCE.TRAVEL_THRESHOLD_MILES;
 
-  // Calculate required pay
-  let requiredPay = CONFIG.RATES.MIN_PAY_THRESHOLD; // Minimum acceptable pay
+  // Calculate travel expense for FULL distance if it exceeds threshold
+  const travelExpense =
+    workOrder.distance > TRAVEL_THRESHOLD
+      ? workOrder.distance * CONFIG.DISTANCE.TRAVEL_RATE_PER_MILE
+      : 0;
+
   let decisionReason = "";
 
-  // Check if minimum pay meets our requirements
+  // If distance exceeds threshold, ALWAYS require travel expenses
+  if (workOrder.distance > TRAVEL_THRESHOLD) {
+    // Never accept directly if travel is required - always counter offer
+    decisionReason = `Travel required: Distance ${
+      workOrder.distance
+    } miles > ${TRAVEL_THRESHOLD} miles threshold. Base pay $${
+      workOrder.payRange.max
+    } + travel $${travelExpense.toFixed(2)} needed`;
+
+    logger.info(
+      `Payment Analysis:
+      - Offered Pay: $${workOrder.payRange.max}
+      - Minimum Threshold: $${CONFIG.RATES.MIN_PAY_THRESHOLD}
+      - Distance: ${workOrder.distance} miles
+      - Travel Threshold: ${TRAVEL_THRESHOLD} miles
+      - Travel Expense: $${travelExpense.toFixed(2)}
+      - Required Pay: $${workOrder.payRange.max} + $${travelExpense.toFixed(
+        2
+      )} (travel)
+      - Decision: REJECT (Counter offer needed for travel)
+      - Reason: ${decisionReason}`,
+      workOrder.platform,
+      workOrder.id
+    );
+
+    return false; // Always reject to trigger counter offer
+  }
+
+  // For jobs within travel threshold, check if base pay meets minimum
   if (workOrder.payRange.max < CONFIG.RATES.MIN_PAY_THRESHOLD) {
-    // Only consider counter-offer if distance exceeds threshold
-    if (workOrder.distance > TRAVEL_THRESHOLD) {
-      const travelExpense =
-        workOrder.distance * CONFIG.DISTANCE.TRAVEL_RATE_PER_MILE;
-      decisionReason = `Base pay too low ($${workOrder.payRange.max} < $${
-        CONFIG.RATES.MIN_PAY_THRESHOLD
-      }), adding travel expenses: ${workOrder.distance} miles × $${
-        CONFIG.DISTANCE.TRAVEL_RATE_PER_MILE
-      }/mile = $${travelExpense.toFixed(2)}`;
-    } else {
-      decisionReason = `Base pay too low ($${workOrder.payRange.max} < $${CONFIG.RATES.MIN_PAY_THRESHOLD}) and distance (${workOrder.distance} miles) is within free travel limit (${TRAVEL_THRESHOLD} miles)`;
-    }
+    decisionReason = `Base pay too low ($${workOrder.payRange.max} < $${CONFIG.RATES.MIN_PAY_THRESHOLD}) and distance (${workOrder.distance} miles) is within free travel limit (${TRAVEL_THRESHOLD} miles)`;
   } else {
-    decisionReason = `Base pay acceptable: $${workOrder.payRange.max} >= $${CONFIG.RATES.MIN_PAY_THRESHOLD}`;
+    decisionReason = `Base pay acceptable: $${workOrder.payRange.max} >= $${CONFIG.RATES.MIN_PAY_THRESHOLD} and no travel required`;
   }
 
   // Log the decision
@@ -68,14 +89,19 @@ function isPaymentEligible(workOrder) {
     - Minimum Threshold: $${CONFIG.RATES.MIN_PAY_THRESHOLD}
     - Distance: ${workOrder.distance} miles
     - Travel Threshold: ${TRAVEL_THRESHOLD} miles
-    - Required Pay: $${requiredPay}
-    - Decision: ${workOrder.payRange.max >= requiredPay ? "ACCEPT" : "REJECT"}
+    - Travel Expense: $${travelExpense.toFixed(2)}
+    - Required Pay: $${CONFIG.RATES.MIN_PAY_THRESHOLD}
+    - Decision: ${
+      workOrder.payRange.max >= CONFIG.RATES.MIN_PAY_THRESHOLD
+        ? "ACCEPT"
+        : "REJECT"
+    }
     - Reason: ${decisionReason}`,
     workOrder.platform,
     workOrder.id
   );
 
-  return workOrder.payRange.max >= requiredPay;
+  return workOrder.payRange.max >= CONFIG.RATES.MIN_PAY_THRESHOLD;
 }
 
 // New function using Google Calendar for availability checking
@@ -366,6 +392,7 @@ function calculateCounterOffer(workOrder) {
   const BASE_HOURS = 2;
   const ADDITIONAL_HOURLY_RATE = 55;
 
+  // Calculate travel expense for FULL distance if it exceeds threshold
   const travelExpense =
     workOrder.distance > CONFIG.DISTANCE.TRAVEL_THRESHOLD_MILES
       ? Math.round(workOrder.distance * CONFIG.DISTANCE.TRAVEL_RATE_PER_MILE)
@@ -377,13 +404,26 @@ function calculateCounterOffer(workOrder) {
     ? 0
     : Math.max(1, workOrder.estLaborHours - BASE_HOURS);
 
-  // Base amount should be the minimum threshold, travel is ADDITIONAL
-  let baseAmount = CONFIG.RATES.MIN_PAY_THRESHOLD;
+  // If payment is acceptable but travel is needed, use their offered amount
+  // If payment is too low, use minimum threshold
+  let baseAmount;
+  if (
+    workOrder.payRange.max >= CONFIG.RATES.MIN_PAY_THRESHOLD &&
+    workOrder.distance > CONFIG.DISTANCE.TRAVEL_THRESHOLD_MILES
+  ) {
+    // Use their offered amount since it's acceptable, just add travel
+    baseAmount = workOrder.payRange.max;
+  } else {
+    // Use minimum threshold for low payments
+    baseAmount = CONFIG.RATES.MIN_PAY_THRESHOLD;
+  }
 
   logger.info(
-    `Counter offer calculation: Base: $${baseAmount} (minimum threshold) + Travel: $${travelExpense} = Total: $${
-      baseAmount + travelExpense
-    }`,
+    `Counter offer calculation: Base: $${baseAmount} (${
+      baseAmount === workOrder.payRange.max
+        ? "offered amount"
+        : "minimum threshold"
+    }) + Travel: $${travelExpense} = Total: $${baseAmount + travelExpense}`,
     workOrder.platform,
     workOrder.id
   );
