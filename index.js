@@ -255,6 +255,18 @@ async function applyForJob(orderLink, startDateAndTime, estLaborHours, id) {
   }
 }
 
+// Function to detect if WorkMarket data indicates expired cookies
+function isInvalidWorkMarketData(data) {
+  return (
+    data &&
+    data.platform === "WorkMarket" &&
+    (data.company === "Unknown Company" ||
+      data.title === "No Title" ||
+      data.totalPayment === 0 ||
+      data.hourlyRate === 0)
+  );
+}
+
 // Process the order: check requirements and apply if valid
 async function processOrder(orderLink) {
   try {
@@ -265,6 +277,62 @@ async function processOrder(orderLink) {
       data = await getFNorderData(orderLink);
     } else if (platform === "WorkMarket") {
       data = await getWMorderData(orderLink);
+
+      // Check if data indicates expired cookies and retry with fresh cookies
+      if (isInvalidWorkMarketData(data)) {
+        console.log(
+          "🔄 Invalid WorkMarket data detected, refreshing cookies and retrying..."
+        );
+        logger.info(
+          "Detected expired WorkMarket cookies, refreshing and retrying",
+          platform,
+          "unknown"
+        );
+
+        try {
+          // Refresh cookies using saveCookies function
+          await saveCookies();
+
+          // Wait a bit for cookies to be saved
+          await new Promise(resolve => setTimeout(resolve, 2000));
+
+          // Retry fetching the data
+          console.log(
+            "🔄 Retrying WorkMarket data fetch with fresh cookies..."
+          );
+          data = await getWMorderData(orderLink);
+
+          // Check if retry was successful
+          if (isInvalidWorkMarketData(data)) {
+            throw new Error(
+              "Still receiving invalid data after cookie refresh"
+            );
+          } else {
+            console.log(
+              "✅ Successfully retrieved WorkMarket data after cookie refresh"
+            );
+            logger.info(
+              "Successfully retrieved data after cookie refresh",
+              platform,
+              data.id
+            );
+          }
+        } catch (refreshError) {
+          console.error(
+            "❌ Failed to refresh cookies or retry data fetch:",
+            refreshError
+          );
+          logger.error(
+            `Failed to refresh cookies: ${refreshError.message}`,
+            platform,
+            "unknown"
+          );
+          telegramBot.sendMessage(
+            `❌ Failed to refresh WorkMarket cookies: ${refreshError.message}`
+          );
+          return null;
+        }
+      }
     } else {
       throw new Error("Unsupported platform or invalid order link.");
     }
@@ -494,7 +562,7 @@ app.listen(port, async () => {
     `🚀 Server started on port ${port}\nUse /help for available commands or the menu button (☰) for quick access`
   );
   // Remove the showMainMenu call since we now use persistent menu
-  // await saveCookies();
+  await saveCookies();
   // await periodicCheck(); // Don't auto-start, wait for Telegram command
   // scheduleRelogin();
 });
