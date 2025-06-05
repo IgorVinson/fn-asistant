@@ -494,7 +494,7 @@ app.listen(port, async () => {
     `🚀 Server started on port ${port}\nUse /help for available commands or the menu button (☰) for quick access`
   );
   // Remove the showMainMenu call since we now use persistent menu
-  await saveCookies();
+  // await saveCookies();
   // await periodicCheck(); // Don't auto-start, wait for Telegram command
   // scheduleRelogin();
 });
