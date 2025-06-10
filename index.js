@@ -257,14 +257,30 @@ async function applyForJob(orderLink, startDateAndTime, estLaborHours, id) {
 
 // Function to detect if WorkMarket data indicates expired cookies
 function isInvalidWorkMarketData(data) {
-  return (
-    data &&
-    data.platform === "WorkMarket" &&
-    (data.company === "Unknown Company" ||
-      data.title === "No Title" ||
-      data.totalPayment === 0 ||
-      data.hourlyRate === 0)
-  );
+  if (!data || data.platform !== "WorkMarket") {
+    return false;
+  }
+
+  // Check for multiple indicators of invalid data
+  const hasInvalidCompany =
+    !data.company ||
+    data.company === "Unknown Company" ||
+    data.company.trim() === "";
+  const hasInvalidTitle =
+    !data.title || data.title === "No Title" || data.title.trim() === "";
+  const hasInvalidPayment = data.totalPayment === 0 && data.hourlyRate === 0;
+  const hasInvalidId = !data.id || data.id === "" || data.id === "unknown";
+
+  // Only consider data invalid if multiple indicators are present
+  // This prevents false positives with legitimate $0 jobs or missing single fields
+  const invalidIndicators = [
+    hasInvalidCompany,
+    hasInvalidTitle,
+    hasInvalidPayment,
+    hasInvalidId,
+  ].filter(Boolean).length;
+
+  return invalidIndicators >= 2;
 }
 
 // Process the order: check requirements and apply if valid

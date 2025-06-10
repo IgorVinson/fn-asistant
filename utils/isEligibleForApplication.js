@@ -552,7 +552,7 @@ async function isEligibleForApplication(workOrder) {
         workOrder.id
       );
       return {
-        eligible: false,
+        eligible: true,
         counterOffer: calculateCounterOffer(workOrder),
         reason: "PAYMENT_INSUFFICIENT",
       };
