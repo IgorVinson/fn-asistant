@@ -542,14 +542,17 @@ async function processOrder(orderLink) {
         );
 
         try {
+          // Calculate proper hourly rate for WorkMarket counter offer
+          const hourlyRate = Math.ceil(
+            eligibilityResult.counterOffer.baseAmount /
+              normalizedData.estLaborHours
+          );
+
           await postWMCounterOffer(
             normalizedData.id,
-            eligibilityResult.counterOffer.baseAmount,
-            eligibilityResult.counterOffer.travelExpense,
-            eligibilityResult.counterOffer.payType,
-            eligibilityResult.counterOffer.baseHours,
-            eligibilityResult.counterOffer.additionalHours,
-            eligibilityResult.counterOffer.additionalAmount
+            hourlyRate,
+            normalizedData.estLaborHours,
+            normalizedData.distance
           );
 
           const counterDetails = `Base: $${eligibilityResult.counterOffer.baseAmount}\nTravel: $${eligibilityResult.counterOffer.travelExpense}`;
