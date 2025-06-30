@@ -1,4 +1,8 @@
 export const CONFIG = {
+  // Platform configuration
+  FIELDNATION_ENABLED: false, // Set to false to disable FieldNation applications
+  WORKMARKET_ENABLED: true, // Set to false to disable WorkMarket applications
+
   // Payment and Rate Settings
   RATES: {
     BASE_HOURLY_RATE: 50, // Minimum desired hourly rate
