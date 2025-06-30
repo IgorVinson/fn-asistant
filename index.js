@@ -105,35 +105,43 @@ async function saveCookies() {
     const gmailAuth = await authorize();
 
     // Login to FieldNation with the new automated system
-    console.log("🔑 Logging into FieldNation...");
-    const fnResult = await loginFnAuto(
-      browser,
-      undefined,
-      undefined,
-      null,
-      false,
-      gmailAuth
-    );
-    if (fnResult.success) {
-      console.log("✅ FieldNation login successful");
+    if (CONFIG.FIELDNATION_ENABLED) {
+      console.log("🔑 Logging into FieldNation...");
+      const fnResult = await loginFnAuto(
+        browser,
+        undefined,
+        undefined,
+        null,
+        false,
+        gmailAuth
+      );
+      if (fnResult.success) {
+        console.log("✅ FieldNation login successful");
+      } else {
+        console.error("❌ FieldNation login failed:", fnResult.error);
+      }
     } else {
-      console.error("❌ FieldNation login failed:", fnResult.error);
+      console.log("⏭️ FieldNation login skipped (disabled)");
     }
 
     // Login to WorkMarket with the new automated system
-    console.log("🔑 Logging into WorkMarket...");
-    const wmResult = await loginWMAuto(
-      browser,
-      undefined,
-      undefined,
-      null,
-      false,
-      gmailAuth
-    );
-    if (wmResult.success) {
-      console.log("✅ WorkMarket login successful");
+    if (CONFIG.WORKMARKET_ENABLED) {
+      console.log("🔑 Logging into WorkMarket...");
+      const wmResult = await loginWMAuto(
+        browser,
+        undefined,
+        undefined,
+        null,
+        false,
+        gmailAuth
+      );
+      if (wmResult.success) {
+        console.log("✅ WorkMarket login successful");
+      } else {
+        console.error("❌ WorkMarket login failed:", wmResult.error);
+      }
     } else {
-      console.error("❌ WorkMarket login failed:", wmResult.error);
+      console.log("⏭️ WorkMarket login skipped (disabled)");
     }
 
     console.log("🍪 Login process completed, cookies saved automatically");
@@ -221,7 +229,7 @@ async function applyForJob(orderLink, startDateAndTime, estLaborHours, id) {
   const platform = determinePlatform(orderLink);
 
   try {
-    if (platform === "FieldNation") {
+    if (platform === "FieldNation" && CONFIG.FIELDNATION_ENABLED) {
       await postFNworkOrderRequest(orderLink, startDateAndTime, estLaborHours);
       await sendWorkOrderMessage(orderLink);
       // Play success sound for FieldNation application
@@ -231,9 +239,16 @@ async function applyForJob(orderLink, startDateAndTime, estLaborHours, id) {
         platform,
         id
       );
+    } else if (platform === "FieldNation" && !CONFIG.FIELDNATION_ENABLED) {
+      console.log("⏭️ FieldNation application skipped (platform disabled)");
+      logger.info(
+        `Action: Skipped - FieldNation platform disabled`,
+        platform,
+        id
+      );
     }
 
-    if (platform === "WorkMarket") {
+    if (platform === "WorkMarket" && CONFIG.WORKMARKET_ENABLED) {
       await postWMworkOrderRequest(
         orderLink,
         startDateAndTime,
@@ -244,6 +259,13 @@ async function applyForJob(orderLink, startDateAndTime, estLaborHours, id) {
       playSound("applied");
       logger.info(
         `🔊 Sound notification: Application submitted for WorkMarket job`,
+        platform,
+        id
+      );
+    } else if (platform === "WorkMarket" && !CONFIG.WORKMARKET_ENABLED) {
+      console.log("⏭️ WorkMarket application skipped (platform disabled)");
+      logger.info(
+        `Action: Skipped - WorkMarket platform disabled`,
         platform,
         id
       );
@@ -287,6 +309,36 @@ function isInvalidWorkMarketData(data) {
 async function processOrder(orderLink) {
   try {
     const platform = determinePlatform(orderLink);
+
+    // Check if platform is enabled
+    if (platform === "FieldNation" && !CONFIG.FIELDNATION_ENABLED) {
+      console.log(
+        "⏭️ FieldNation order processing skipped (platform disabled)"
+      );
+      logger.info(
+        `Action: Skipped - FieldNation platform disabled`,
+        platform,
+        "unknown"
+      );
+      telegramBot.sendMessage(
+        `⏭️ FieldNation order skipped (platform disabled)`
+      );
+      return null;
+    }
+
+    if (platform === "WorkMarket" && !CONFIG.WORKMARKET_ENABLED) {
+      console.log("⏭️ WorkMarket order processing skipped (platform disabled)");
+      logger.info(
+        `Action: Skipped - WorkMarket platform disabled`,
+        platform,
+        "unknown"
+      );
+      telegramBot.sendMessage(
+        `⏭️ WorkMarket order skipped (platform disabled)`
+      );
+      return null;
+    }
+
     let data;
 
     if (platform === "FieldNation") {
