@@ -2,7 +2,7 @@ import { CONFIG } from "../config.js";
 import schedule from "../schedule.js";
 import logger from "./logger.js";
 
-// Function to check if time is within working hours
+// Function to check if time window overlaps with working hours
 function isWithinWorkingHours(startTime, endTime) {
   const workStartTime = CONFIG.TIME.WORK_START_TIME;
   const workEndTime = CONFIG.TIME.WORK_END_TIME;
@@ -18,19 +18,33 @@ function isWithinWorkingHours(startTime, endTime) {
   const dayWorkStart = new Date(`${jobDate}T${workStartTime}:00`);
   const dayWorkEnd = new Date(`${jobDate}T${workEndTime}:00`);
 
-  // Check if job times fall within working hours
-  const isWithinHours = jobStart >= dayWorkStart && jobEnd <= dayWorkEnd;
+  // Check if the time window OVERLAPS with working hours (not contained within)
+  const hasOverlap = jobStart < dayWorkEnd && jobEnd > dayWorkStart;
+
+  // Also check if there's enough overlap for DEFAULT_LABOR_HOURS
+  const actualLaborHours = CONFIG.TIME.DEFAULT_LABOR_HOURS;
+  const overlapStart = new Date(
+    Math.max(jobStart.getTime(), dayWorkStart.getTime())
+  );
+  const overlapEnd = new Date(Math.min(jobEnd.getTime(), dayWorkEnd.getTime()));
+  const overlapHours =
+    (overlapEnd.getTime() - overlapStart.getTime()) / (1000 * 60 * 60);
+  const hasEnoughOverlap = overlapHours >= actualLaborHours;
 
   logger.info(
     `Working Hours Check:
     - Job Date: ${jobDate}
-    - Job Time: ${jobStart.toLocaleTimeString()} - ${jobEnd.toLocaleTimeString()}
+    - Job Window: ${jobStart.toLocaleTimeString()} - ${jobEnd.toLocaleTimeString()}
     - Work Hours: ${workStartTime} - ${workEndTime}
-    - Within Hours: ${isWithinHours}`,
+    - Required Labor Hours: ${actualLaborHours}
+    - Overlap Hours: ${overlapHours.toFixed(1)}
+    - Has Overlap: ${hasOverlap}
+    - Enough Overlap: ${hasEnoughOverlap}
+    - Decision: ${hasOverlap && hasEnoughOverlap}`,
     "SCHEDULE_CHECK"
   );
 
-  return isWithinHours;
+  return hasOverlap && hasEnoughOverlap;
 }
 
 function isPaymentEligible(workOrder) {
@@ -113,6 +127,7 @@ function isPaymentEligible(workOrder) {
 // New function using Google Calendar for availability checking
 async function isSlotAvailableCalendar(workOrder) {
   const MIN_BUFFER_MINUTES = CONFIG.TIME.BUFFER_MINUTES;
+  const actualLaborHours = CONFIG.TIME.DEFAULT_LABOR_HOURS;
   const { start: startTime, end: endTime } = workOrder.time;
 
   try {
@@ -123,15 +138,15 @@ async function isSlotAvailableCalendar(workOrder) {
     const auth = await authorize();
     const calendar = google.calendar({ version: "v3", auth });
 
-    // Get work order time details with proper date handling
-    const workOrderStart = new Date(startTime);
-    const workOrderEnd = new Date(endTime);
+    // Get work order time window (when work can start)
+    const workOrderWindowStart = new Date(startTime);
+    const workOrderWindowEnd = new Date(endTime);
 
     // Get the work order date in local time zone
     const workOrderDate = new Date(
-      workOrderStart.getFullYear(),
-      workOrderStart.getMonth(),
-      workOrderStart.getDate()
+      workOrderWindowStart.getFullYear(),
+      workOrderWindowStart.getMonth(),
+      workOrderWindowStart.getDate()
     );
 
     // Get all calendars
@@ -139,14 +154,13 @@ async function isSlotAvailableCalendar(workOrder) {
     const allCalendars = calendarList.data.items || [];
 
     logger.info(
-      `Multi-Calendar Check: Found ${allCalendars.length} calendars to check for conflicts`,
+      `Multi-Calendar Check: Found ${allCalendars.length} calendars to check for ${actualLaborHours}-hour work block`,
       workOrder.platform,
       workOrder.id
     );
 
     let totalEvents = 0;
-    let totalConflicts = 0;
-    const conflicts = [];
+    const occupiedSlots = []; // Track already occupied time slots
 
     // Get the date range for the work order day (start of day to end of day)
     const timeMin = new Date(workOrderDate).toISOString();
@@ -156,7 +170,7 @@ async function isSlotAvailableCalendar(workOrder) {
       workOrderDate.getDate() + 1
     ).toISOString();
 
-    // Check each calendar for conflicts
+    // Collect all occupied time slots from all calendars
     for (const cal of allCalendars) {
       try {
         const events = await calendar.events.list({
@@ -170,7 +184,7 @@ async function isSlotAvailableCalendar(workOrder) {
         const todayEvents = events.data.items || [];
         totalEvents += todayEvents.length;
 
-        // Check each event for conflicts
+        // Process each calendar event as an occupied slot
         for (const event of todayEvents) {
           // Skip cancelled or transparent (free) events
           if (
@@ -201,26 +215,28 @@ async function isSlotAvailableCalendar(workOrder) {
             continue; // Skip invalid events
           }
 
-          // Add buffer time to work order times
-          const bufferedWorkStart = new Date(
-            workOrderStart.getTime() - MIN_BUFFER_MINUTES * 60 * 1000
-          );
-          const bufferedWorkEnd = new Date(
-            workOrderEnd.getTime() + MIN_BUFFER_MINUTES * 60 * 1000
+          // Calendar events represent available time windows, so we need to create
+          // occupied slots assuming work takes DEFAULT_LABOR_HOURS within that window
+          // For simplicity, assume work is scheduled at the start of the event window
+          const workStart = eventStart;
+          const workEnd = new Date(
+            workStart.getTime() + actualLaborHours * 60 * 60 * 1000
           );
 
-          // Check for overlap
-          if (bufferedWorkStart < eventEnd && bufferedWorkEnd > eventStart) {
-            conflicts.push({
-              eventSummary: event.summary || "No title",
-              calendarName: cal.summary,
-              eventStart: eventStart.toLocaleString(),
-              eventEnd: eventEnd.toLocaleString(),
-              workOrderStart: workOrderStart.toLocaleString(),
-              workOrderEnd: workOrderEnd.toLocaleString(),
-            });
-            totalConflicts++;
-          }
+          // Add buffer time
+          const bufferedStart = new Date(
+            workStart.getTime() - MIN_BUFFER_MINUTES * 60 * 1000
+          );
+          const bufferedEnd = new Date(
+            workEnd.getTime() + MIN_BUFFER_MINUTES * 60 * 1000
+          );
+
+          occupiedSlots.push({
+            start: bufferedStart,
+            end: bufferedEnd,
+            eventSummary: event.summary || "No title",
+            calendarName: cal.summary,
+          });
         }
       } catch (error) {
         logger.info(
@@ -231,32 +247,79 @@ async function isSlotAvailableCalendar(workOrder) {
       }
     }
 
-    const isAvailable = totalConflicts === 0;
+    // Sort occupied slots by start time
+    occupiedSlots.sort((a, b) => a.start.getTime() - b.start.getTime());
+
+    // Check if we can fit a DEFAULT_LABOR_HOURS block within the work order window
+    const workDurationMs = actualLaborHours * 60 * 60 * 1000;
+    let availableSlotFound = false;
+    let conflictDetails = [];
+
+    // Try to find a slot within the work order window
+    for (
+      let testStart = workOrderWindowStart.getTime();
+      testStart + workDurationMs <= workOrderWindowEnd.getTime();
+      testStart += 15 * 60 * 1000
+    ) {
+      // Check every 15 minutes
+
+      const testEnd = testStart + workDurationMs;
+      const testStartDate = new Date(testStart);
+      const testEndDate = new Date(testEnd);
+
+      // Check if this test slot conflicts with any occupied slot
+      let hasConflict = false;
+      for (const occupied of occupiedSlots) {
+        if (
+          testStart < occupied.end.getTime() &&
+          testEnd > occupied.start.getTime()
+        ) {
+          hasConflict = true;
+          conflictDetails.push({
+            testSlot: `${testStartDate.toLocaleTimeString()} - ${testEndDate.toLocaleTimeString()}`,
+            conflictWith: `${occupied.eventSummary} [${occupied.calendarName}]`,
+            conflictTime: `${occupied.start.toLocaleTimeString()} - ${occupied.end.toLocaleTimeString()}`,
+          });
+          break;
+        }
+      }
+
+      if (!hasConflict) {
+        availableSlotFound = true;
+        logger.info(
+          `Available ${actualLaborHours}-hour slot found: ${testStartDate.toLocaleTimeString()} - ${testEndDate.toLocaleTimeString()}`,
+          workOrder.platform,
+          workOrder.id
+        );
+        break;
+      }
+    }
 
     logger.info(
       `Calendar Availability Check:
       - Work Order Date: ${workOrderDate.toDateString()}
-      - Work Order Time: ${workOrderStart.toLocaleTimeString()} - ${workOrderEnd.toLocaleTimeString()}
+      - Available Window: ${workOrderWindowStart.toLocaleTimeString()} - ${workOrderWindowEnd.toLocaleTimeString()}
+      - Required Duration: ${actualLaborHours} hours
       - Buffer: ${MIN_BUFFER_MINUTES} minutes
       - Calendars Checked: ${allCalendars.length}
       - Total Events Found: ${totalEvents}
-      - Conflicts Found: ${totalConflicts}
-      - Decision: ${isAvailable ? "AVAILABLE" : "CONFLICT"}`,
+      - Occupied Slots: ${occupiedSlots.length}
+      - Available Slot Found: ${availableSlotFound}
+      - Decision: ${availableSlotFound ? "AVAILABLE" : "CONFLICT"}`,
       workOrder.platform,
       workOrder.id
     );
 
-    if (!isAvailable && conflicts.length > 0) {
+    if (!availableSlotFound && conflictDetails.length > 0) {
       logger.info(
         `Calendar conflicts details:
-        ${conflicts
+        ${conflictDetails
+          .slice(0, 5) // Show first 5 conflicts
           .map(
             (conflict, index) =>
-              `  ${index + 1}. "${conflict.eventSummary}" [${
-                conflict.calendarName
-              }]
-              Event: ${conflict.eventStart} - ${conflict.eventEnd}
-              Work Order: ${conflict.workOrderStart} - ${conflict.workOrderEnd}`
+              `  ${index + 1}. Test slot ${conflict.testSlot} conflicts with ${
+                conflict.conflictWith
+              } (${conflict.conflictTime})`
           )
           .join("\n        ")}`,
         workOrder.platform,
@@ -264,7 +327,7 @@ async function isSlotAvailableCalendar(workOrder) {
       );
     }
 
-    return isAvailable;
+    return availableSlotFound;
   } catch (error) {
     logger.error(
       `Error checking calendar availability: ${error.message}. Falling back to static schedule.`,
@@ -282,60 +345,88 @@ function isSlotAvailableStatic(workOrder) {
   const DAY_WORK_START_TIME = CONFIG.TIME.WORK_START_TIME;
   const DAY_WORK_END_TIME = CONFIG.TIME.WORK_END_TIME;
   const MIN_BUFFER_MINUTES = CONFIG.TIME.BUFFER_MINUTES;
+  const actualLaborHours = CONFIG.TIME.DEFAULT_LABOR_HOURS;
 
   const { start: startTime, end: endTime } = workOrder.time;
-  const orderStart = new Date(startTime);
-  const orderEnd = new Date(endTime);
+  const orderWindowStart = new Date(startTime);
+  const orderWindowEnd = new Date(endTime);
   const orderDate = new Date(
-    orderStart.getFullYear(),
-    orderStart.getMonth(),
-    orderStart.getDate()
+    orderWindowStart.getFullYear(),
+    orderWindowStart.getMonth(),
+    orderWindowStart.getDate()
   );
 
   // Debug logging with better date formatting
   logger.info(
     `Static Schedule Check:
     - Order Date: ${orderDate.toDateString()}
-    - Order Time: ${orderStart.toLocaleTimeString()} - ${orderEnd.toLocaleTimeString()}
+    - Available Window: ${orderWindowStart.toLocaleTimeString()} - ${orderWindowEnd.toLocaleTimeString()}
+    - Required Duration: ${actualLaborHours} hours
     - Work Hours: ${DAY_WORK_START_TIME} - ${DAY_WORK_END_TIME}
     - Buffer: ${MIN_BUFFER_MINUTES} minutes`,
     workOrder.platform,
     workOrder.id
   );
 
-  const stampStartTime = orderStart.getTime();
-  const stampEndTime = orderEnd.getTime();
-
   // Create work hours boundaries for the order date
-  const workDate = orderStart.toISOString().split("T")[0];
+  const workDate = orderWindowStart.toISOString().split("T")[0];
   const WORK_START = new Date(
     `${workDate}T${DAY_WORK_START_TIME}:00`
   ).getTime();
   const WORK_END = new Date(`${workDate}T${DAY_WORK_END_TIME}:00`).getTime();
 
-  if (stampStartTime < WORK_START || stampEndTime > WORK_END) {
+  // Check if the available window overlaps with work hours
+  const windowStart = orderWindowStart.getTime();
+  const windowEnd = orderWindowEnd.getTime();
+
+  if (windowStart >= WORK_END || windowEnd <= WORK_START) {
     logger.info(
-      `Time is not available: Outside work hours (${DAY_WORK_START_TIME}-${DAY_WORK_END_TIME})`,
+      `Time window does not overlap with work hours (${DAY_WORK_START_TIME}-${DAY_WORK_END_TIME})`,
       workOrder.platform,
       workOrder.id
     );
     return false;
   }
 
-  // Get all events for comparison
+  // Get effective available window within work hours
+  const effectiveStart = Math.max(windowStart, WORK_START);
+  const effectiveEnd = Math.min(windowEnd, WORK_END);
+  const effectiveWindowHours =
+    (effectiveEnd - effectiveStart) / (1000 * 60 * 60);
+
+  if (effectiveWindowHours < actualLaborHours) {
+    logger.info(
+      `Effective window (${effectiveWindowHours.toFixed(
+        1
+      )} hours) is shorter than required labor hours (${actualLaborHours} hours)`,
+      workOrder.platform,
+      workOrder.id
+    );
+    return false;
+  }
+
+  // Get all events for comparison and treat them as occupied blocks
   const allEvents = Object.values(schedule).flatMap(week =>
     Object.entries(week).flatMap(([day, events]) => {
-      return events.map(event => ({
-        day,
-        start: new Date(event.time.start).getTime(),
-        end: new Date(event.time.end).getTime(),
-      }));
+      return events.map(event => {
+        const eventStart = new Date(event.time.start).getTime();
+        // Treat schedule events as DEFAULT_LABOR_HOURS blocks starting at event time
+        const eventEnd = eventStart + actualLaborHours * 60 * 60 * 1000;
+        const bufferedStart = eventStart - MIN_BUFFER_MINUTES * 60 * 1000;
+        const bufferedEnd = eventEnd + MIN_BUFFER_MINUTES * 60 * 1000;
+
+        return {
+          day,
+          start: bufferedStart,
+          end: bufferedEnd,
+        };
+      });
     })
   );
 
-  // Filter events for the same date (year, month, day)
+  // Filter events for the same date
   const sameDayEvents = allEvents.filter(event => {
-    const eventDate = new Date(event.start);
+    const eventDate = new Date(event.start + MIN_BUFFER_MINUTES * 60 * 1000); // Adjust for buffer to get original event time
     return (
       eventDate.getDate() === orderDate.getDate() &&
       eventDate.getMonth() === orderDate.getMonth() &&
@@ -343,10 +434,12 @@ function isSlotAvailableStatic(workOrder) {
     );
   });
 
-  // If no events on this day, the slot is available
+  // If no events on this day, check if we can fit the work within the effective window
   if (sameDayEvents.length === 0) {
     logger.info(
-      `Time is available: No other events scheduled for ${orderDate.toDateString()}`,
+      `Time is available: No other events scheduled for ${orderDate.toDateString()}, ${effectiveWindowHours.toFixed(
+        1
+      )} hours available`,
       workOrder.platform,
       workOrder.id
     );
@@ -356,42 +449,54 @@ function isSlotAvailableStatic(workOrder) {
   // Sort events by start time
   const sortedEvents = sameDayEvents.sort((a, b) => a.start - b.start);
 
-  let prevEndTime = WORK_START;
+  // Try to find a slot for the required duration
+  const workDurationMs = actualLaborHours * 60 * 60 * 1000;
 
-  // Check for conflicts with existing events
-  for (const event of sortedEvents) {
-    if (
-      stampStartTime >= prevEndTime + MIN_BUFFER_MINUTES * 60 * 1000 &&
-      stampEndTime <= event.start - MIN_BUFFER_MINUTES * 60 * 1000
-    ) {
+  // Check before first event
+  if (sortedEvents[0].start > effectiveStart + workDurationMs) {
+    logger.info(
+      `Time is available: ${actualLaborHours}-hour slot found before first event`,
+      workOrder.platform,
+      workOrder.id
+    );
+    return true;
+  }
+
+  // Check between events
+  for (let i = 0; i < sortedEvents.length - 1; i++) {
+    const gapStart = sortedEvents[i].end;
+    const gapEnd = sortedEvents[i + 1].start;
+
+    if (gapEnd - gapStart >= workDurationMs) {
       logger.info(
-        `Time is available: Slot found between ${new Date(
-          prevEndTime
-        ).toLocaleTimeString()} and ${new Date(
-          event.start
-        ).toLocaleTimeString()}`,
+        `Time is available: ${actualLaborHours}-hour slot found between events ${
+          i + 1
+        } and ${i + 2}`,
         workOrder.platform,
         workOrder.id
       );
       return true;
     }
-    prevEndTime = event.end;
   }
 
-  // Final check for end of day
-  const isAvailable =
-    stampStartTime >= prevEndTime + MIN_BUFFER_MINUTES * 60 * 1000 &&
-    stampEndTime <= WORK_END;
+  // Check after last event
+  const lastEventEnd = sortedEvents[sortedEvents.length - 1].end;
+  if (effectiveEnd - lastEventEnd >= workDurationMs) {
+    logger.info(
+      `Time is available: ${actualLaborHours}-hour slot found after last event`,
+      workOrder.platform,
+      workOrder.id
+    );
+    return true;
+  }
 
   logger.info(
-    `Time ${isAvailable ? "is" : "is not"} available: ${
-      isAvailable ? "Slot found at end of day" : "No available slots found"
-    }`,
+    `Time is not available: No ${actualLaborHours}-hour slot found in the available window`,
     workOrder.platform,
     workOrder.id
   );
 
-  return isAvailable;
+  return false;
 }
 
 function calculateCounterOffer(workOrder) {
