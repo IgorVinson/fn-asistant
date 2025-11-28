@@ -22,24 +22,30 @@ import { postWMworkOrderRequest } from "./utils/WorkMarket/postWMworkOrderReques
 
 // Configure the server
 const app = express();
-const port = 3001;
+const port = CONFIG.SERVER.PORT;
 
 let browser; // Declare a browser instance
 let reloginTimeout; // Timeout for the relogin scheduler
 let monitoringInterval; // Store the monitoring interval
 
 // Function to schedule a relogin with a 4-hour interval + random variance
+// Function to schedule a relogin with a configured interval + random variance
 function scheduleRelogin() {
+  if (!CONFIG.RELOGIN.ENABLED) {
+    console.log("⏸️ Relogin scheduler is disabled in config");
+    return;
+  }
+
   // Clear any existing timeout
   if (reloginTimeout) {
     clearTimeout(reloginTimeout);
   }
 
-  // Base interval: 4 hours in milliseconds
-  const baseInterval = 4 * 60 * 60 * 1000;
+  // Base interval: configured hours in milliseconds
+  const baseInterval = CONFIG.RELOGIN.INTERVAL_HOURS * 60 * 60 * 1000;
 
-  // Random variance: +/- 10 minutes in milliseconds
-  const variance = (Math.random() * 20 - 10) * 60 * 1000;
+  // Random variance: +/- configured minutes in milliseconds
+  const variance = (Math.random() * (CONFIG.RELOGIN.VARIANCE_MINUTES * 2) - CONFIG.RELOGIN.VARIANCE_MINUTES) * 60 * 1000;
 
   // Calculate the next relogin time
   const nextReloginTime = baseInterval + variance;
@@ -78,27 +84,8 @@ async function saveCookies() {
     }
 
     browser = await puppeteer.launch({
-      headless: true,
-      args: [
-        "--no-sandbox",
-        "--disable-setuid-sandbox",
-        "--disable-dev-shm-usage",
-        "--disable-accelerated-2d-canvas",
-        "--no-first-run",
-        "--no-zygote",
-        "--disable-gpu",
-        "--disable-web-security",
-        "--disable-features=VizDisplayCompositor",
-        "--enable-experimental-web-platform-features", // Enable shadow DOM support
-        "--force-device-scale-factor=1",
-        "--disable-extensions-except",
-        "--disable-plugins-discovery",
-        "--enable-blink-features=ShadowDOMV0", // Additional shadow DOM support
-        "--force-device-scale-factor=1",
-        "--disable-extensions-except",
-        "--disable-plugins-discovery",
-        "--incognito", // Enable incognito mode
-      ],
+      headless: CONFIG.BROWSER.HEADLESS,
+      args: CONFIG.BROWSER.ARGS,
     });
 
     // Get Gmail auth for potential 2FA code retrieval
@@ -109,10 +96,10 @@ async function saveCookies() {
       console.log("🔑 Logging into FieldNation...");
       const fnResult = await loginFnAuto(
         browser,
-        undefined,
-        undefined,
+        CONFIG.LOGIN.FIELDNATION.EMAIL,
+        CONFIG.LOGIN.FIELDNATION.PASSWORD,
         null,
-        false,
+        CONFIG.LOGIN.WAIT_FOR_CODE,
         gmailAuth
       );
       if (fnResult.success) {
@@ -129,10 +116,10 @@ async function saveCookies() {
       console.log("🔑 Logging into WorkMarket...");
       const wmResult = await loginWMAuto(
         browser,
-        undefined,
-        undefined,
+        CONFIG.LOGIN.WORKMARKET.EMAIL,
+        CONFIG.LOGIN.WORKMARKET.PASSWORD,
         null,
-        false,
+        CONFIG.LOGIN.WAIT_FOR_CODE,
         gmailAuth
       );
       if (wmResult.success) {
@@ -175,7 +162,7 @@ async function periodicCheck() {
           await processOrder(orderLink);
 
           // Add a delay to ensure sounds can finish playing
-          await new Promise(resolve => setTimeout(resolve, 3000));
+          await new Promise(resolve => setTimeout(resolve, CONFIG.MONITORING.SOUND_DELAY_MS));
         } else {
           console.log("No valid order link found in email.");
         }
@@ -186,7 +173,7 @@ async function periodicCheck() {
       console.error("Error during email check:", error);
       telegramBot.sendMessage(`❌ Error during monitoring: ${error.message}`);
     }
-  }, 1000); // Check every sec
+  }, CONFIG.MONITORING.INTERVAL_MS); // Check every configured interval
 }
 
 function startMonitoring() {
@@ -633,7 +620,7 @@ app.listen(port, async () => {
     `🚀 Server started on port ${port}\nUse /help for available commands or the menu button (☰) for quick access`
   );
   // Remove the showMainMenu call since we now use persistent menu
-  // await saveCookies();
+  await saveCookies();
   await periodicCheck(); // Don't auto-start, wait for Telegram command
-  // scheduleRelogin();
+  scheduleRelogin();
 });

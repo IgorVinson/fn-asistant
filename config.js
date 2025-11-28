@@ -3,6 +3,59 @@ export const CONFIG = {
   FIELDNATION_ENABLED: false, // Set to false to disable FieldNation applications
   WORKMARKET_ENABLED: true, // Set to false to disable WorkMarket applications
 
+  // Browser Settings
+  BROWSER: {
+    HEADLESS: true, // Set to false to see the browser window
+    ARGS: [
+      "--no-sandbox",
+      "--disable-setuid-sandbox",
+      "--disable-dev-shm-usage",
+      "--disable-accelerated-2d-canvas",
+      "--no-first-run",
+      "--no-zygote",
+      "--disable-gpu",
+      "--disable-web-security",
+      "--disable-features=VizDisplayCompositor",
+      "--enable-experimental-web-platform-features",
+      "--force-device-scale-factor=1",
+      "--disable-extensions-except",
+      "--disable-plugins-discovery",
+      "--enable-blink-features=ShadowDOMV0",
+      "--incognito",
+    ],
+  },
+
+  // Login Settings
+  LOGIN: {
+    WAIT_FOR_CODE: false, // Set to true to wait for manual 2FA code entry
+    FIELDNATION: {
+      EMAIL: "igorvinson@gmail.com",
+      PASSWORD: "YOUR_PASSWORD_HERE",
+    },
+    WORKMARKET: {
+      EMAIL: "igorvinson@gmail.com",
+      PASSWORD: "YOUR_PASSWORD_HERE",
+    },
+  },
+
+  // Server Settings
+  SERVER: {
+    PORT: 3001,
+  },
+
+  // Monitoring Settings
+  MONITORING: {
+    INTERVAL_MS: 1000, // Check for emails every 1 second
+    SOUND_DELAY_MS: 3000, // Delay after processing to allow sounds to play
+  },
+
+  // Relogin Scheduler Settings
+  RELOGIN: {
+    ENABLED: true,
+    INTERVAL_HOURS: 4,
+    VARIANCE_MINUTES: 10,
+  },
+
   // Payment and Rate Settings
   RATES: {
     BASE_HOURLY_RATE: 50, // Minimum desired hourly rate
