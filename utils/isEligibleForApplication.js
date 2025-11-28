@@ -1,6 +1,7 @@
 import { CONFIG } from "../config.js";
 import schedule from "../schedule.js";
 import logger from "./logger.js";
+import { getWMSchedule } from "./WorkMarket/getWMSchedule.js";
 
 // Function to check if time window overlaps with working hours
 function isWithinWorkingHours(startTime, endTime) {
@@ -499,6 +500,85 @@ function isSlotAvailableStatic(workOrder) {
   return false;
 }
 
+async function isSlotAvailableWorkMarket(workOrder) {
+  const MIN_BUFFER_MINUTES = CONFIG.TIME.BUFFER_MINUTES;
+  const actualLaborHours = CONFIG.TIME.DEFAULT_LABOR_HOURS;
+  const { start: startTime, end: endTime } = workOrder.time;
+
+  try {
+    // Get occupied slots from WorkMarket
+    const occupiedSlots = await getWMSchedule();
+
+    // Get work order time window
+    const workOrderStart = new Date(startTime);
+    const workOrderEnd = new Date(endTime);
+    
+    // Sort occupied slots
+    occupiedSlots.sort((a, b) => a.start.getTime() - b.start.getTime());
+
+    logger.info(
+      `WorkMarket Schedule Check:
+      - Work Order: ${workOrderStart.toLocaleString()} - ${workOrderEnd.toLocaleString()}
+      - Found ${occupiedSlots.length} existing assignments`,
+      workOrder.platform,
+      workOrder.id
+    );
+
+    // Check for conflicts
+    // We need to find a free block of 'actualLaborHours' within the workOrder window
+    // that doesn't overlap with any occupied slot (plus buffer)
+
+    const workDurationMs = actualLaborHours * 60 * 60 * 1000;
+    const bufferMs = MIN_BUFFER_MINUTES * 60 * 1000;
+
+    // Iterate through the work order window in 15-minute increments
+    for (
+      let testStart = workOrderStart.getTime();
+      testStart + workDurationMs <= workOrderEnd.getTime();
+      testStart += 15 * 60 * 1000
+    ) {
+      const testEnd = testStart + workDurationMs;
+      
+      // Check if this test slot conflicts with any occupied slot
+      let hasConflict = false;
+      for (const slot of occupiedSlots) {
+        // Expand occupied slot by buffer
+        const slotStartBuffered = slot.start.getTime() - bufferMs;
+        const slotEndBuffered = slot.end.getTime() + bufferMs;
+
+        if (testStart < slotEndBuffered && testEnd > slotStartBuffered) {
+          hasConflict = true;
+          break;
+        }
+      }
+
+      if (!hasConflict) {
+        logger.info(
+          `Available slot found in WorkMarket schedule: ${new Date(testStart).toLocaleString()}`,
+          workOrder.platform,
+          workOrder.id
+        );
+        return true;
+      }
+    }
+
+    logger.info(
+      `No available slot found in WorkMarket schedule for ${actualLaborHours} hours`,
+      workOrder.platform,
+      workOrder.id
+    );
+    return false;
+
+  } catch (error) {
+    logger.error(
+      `Error checking WorkMarket availability: ${error.message}. Fallback to static check.`,
+      workOrder.platform,
+      workOrder.id
+    );
+    return isSlotAvailableStatic(workOrder);
+  }
+}
+
 function calculateCounterOffer(workOrder) {
   const BASE_HOURS = 2;
   const ADDITIONAL_HOURLY_RATE = 55;
@@ -625,12 +705,19 @@ async function isEligibleForApplication(workOrder) {
     workOrder.platform === "FieldNation" ||
     workOrder.platform === "WorkMarket"
   ) {
-    // STEP 1: Check calendar availability FIRST
-    const slotAvailable = await isSlotAvailableCalendar(workOrder);
+    // STEP 1: Check availability based on configuration
+    let slotAvailable = false;
+    
+    if (CONFIG.AVAILABILITY && CONFIG.AVAILABILITY.PROVIDER === "WORKMARKET") {
+        slotAvailable = await isSlotAvailableWorkMarket(workOrder);
+    } else {
+        // Default to Google Calendar
+        slotAvailable = await isSlotAvailableCalendar(workOrder);
+    }
 
     if (!slotAvailable) {
       logger.info(
-        `Job rejected: Calendar conflict detected`,
+        `Job rejected: Schedule conflict detected (${CONFIG.AVAILABILITY ? CONFIG.AVAILABILITY.PROVIDER : "GOOGLE_CALENDAR"})`,
         workOrder.platform,
         workOrder.id
       );

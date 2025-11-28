@@ -40,7 +40,7 @@ export const CONFIG = {
 
   // Server Settings
   SERVER: {
-    PORT: 3001,
+    PORT: 3012,
   },
 
   // Monitoring Settings
@@ -79,6 +79,12 @@ export const CONFIG = {
     WORK_START_TIME: "09:00", // Earliest time to accept jobs
     WORK_END_TIME: "19:00", // Latest time to accept jobs
     BUFFER_MINUTES: 30, // Buffer time between jobs
+  },
+
+  // Availability Check Settings
+  AVAILABILITY: {
+    // Options: "GOOGLE_CALENDAR", "WORKMARKET"
+    PROVIDER: "WORKMARKET",
   },
 
   // Platform-specific Settings
