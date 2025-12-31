@@ -134,7 +134,7 @@ async function isSlotAvailableCalendar(workOrder) {
 
   try {
     // Use the same simple approach as showAllCalendarsEvents.js
-    const { authorize } = await import("./gmail/login.js");
+    const { authorize } = await import("./platforms/gmail/login.js");
     const { google } = await import("googleapis");
 
     const auth = await authorize();
@@ -188,6 +188,17 @@ async function isSlotAvailableCalendar(workOrder) {
 
         // Process each calendar event as an occupied slot
         for (const event of todayEvents) {
+          // Log every event found for debugging
+          logger.info(
+               `[DEBUG] Event found: "${event.summary}" (${cal.summary})
+                - Status: ${event.status}
+                - Transparency: ${event.transparency}
+                - Start: ${event.start.dateTime || event.start.date}
+                - End: ${event.end.dateTime || event.end.date}`,
+               workOrder.platform,
+               workOrder.id
+          );
+
           // Skip cancelled or transparent (free) events
           if (
             event.status === "cancelled" ||
@@ -707,25 +718,40 @@ async function isEligibleForApplication(workOrder) {
     workOrder.platform === "FieldNation" ||
     workOrder.platform === "WorkMarket"
   ) {
-    // STEP 1: Check availability based on configuration
-    let slotAvailable = false;
+    // STEP 1: Check availability across ALL enabled calendars
+    let slotAvailable = true;
     
+    // 1. Check WorkMarket Schedule (if enabled)
     if (CONFIG.AVAILABILITY && CONFIG.AVAILABILITY.PROVIDER === "WORKMARKET") {
-        slotAvailable = await isSlotAvailableWorkMarket(workOrder);
-    } else {
-        // Default to Google Calendar
-        slotAvailable = await isSlotAvailableCalendar(workOrder);
+        const wmSlotAvailable = await isSlotAvailableWorkMarket(workOrder);
+        if (!wmSlotAvailable) {
+            slotAvailable = false;
+            logger.info(
+                `Job rejected: WorkMarket Schedule conflict detected`,
+                workOrder.platform,
+                workOrder.id
+            );
+        }
+    }
+
+    // 2. Check Google Calendar (if WorkMarket check passed or wasn't run)
+    // We only proceed to check Google Calendar if the slot is still considered available
+    if (slotAvailable) {
+        const googleSlotAvailable = await isSlotAvailableCalendar(workOrder);
+        if (!googleSlotAvailable) {
+            slotAvailable = false;
+            logger.info(
+                `Job rejected: Google Calendar conflict detected`,
+                workOrder.platform,
+                workOrder.id
+            );
+        }
     }
 
     if (!slotAvailable) {
-      logger.info(
-        `Job rejected: Schedule conflict detected (${CONFIG.AVAILABILITY ? CONFIG.AVAILABILITY.PROVIDER : "GOOGLE_CALENDAR"})`,
-        workOrder.platform,
-        workOrder.id
-      );
       return {
         eligible: false,
-        counterOffer: null, // No counter-offer if calendar has conflicts
+        counterOffer: null, 
         reason: "SLOT_UNAVAILABLE",
       };
     }
