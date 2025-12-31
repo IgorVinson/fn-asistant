@@ -1,15 +1,8 @@
 import { CONFIG } from "../../config/config.js";
 import logger from "../utils/logger.js";
-import normalizeDateFromWO from "../utils/normalizedDateFromWO.js"; // Wait, where is this? utils/normalizedDateFromWO.js -> src/utils/normalizedDateFromWO.js ? 
+import normalizeDateFromWO from "../utils/normalizedDateFromWO.js"; // Wait, where is this? utils/normalizedDateFromWO.js -> src/utils/normalizedDateFromWO.js ?
 import playSound from "../utils/playSound.js";
 import telegramBot from "../utils/telegram/telegramBot.js";
-// Step 41 mv utils/*.js src/utils/. So it should be src/utils/normalizedDateFromWO.js
-// But imports in index.js were from "./utils/normalizedDateFromWO.js".
-// So it is in src/utils/normalizedDateFromWO.js.
-// However, I moved it to src/utils/.
-// Let me verify where normalizedDateFromWO.js is.
-// It was in utils/normalizedDateFromWO.js.
-// Step 41 moved it to src/utils.
 import isEligibleForApplication from "./isEligibleForApplication.js";
 
 // Platform imports
@@ -156,10 +149,8 @@ export async function processOrder(orderLink) {
           platform,
           "unknown"
         );
-        
-        telegramBot.sendMessage(
-          "🔄 WorkMarket cookies expired, refreshing..."
-        );
+
+        telegramBot.sendMessage("🔄 WorkMarket cookies expired, refreshing...");
 
         try {
           console.log("🍪 Starting cookie refresh process...");
@@ -167,7 +158,11 @@ export async function processOrder(orderLink) {
           console.log("✅ Cookie refresh completed");
 
           const waitTime = CONFIG.COOKIE_REFRESH.WAIT_AFTER_REFRESH_MS;
-          console.log(`⏳ Waiting ${waitTime/1000} seconds for cookies to be saved to disk...`);
+          console.log(
+            `⏳ Waiting ${
+              waitTime / 1000
+            } seconds for cookies to be saved to disk...`
+          );
           await new Promise(resolve => setTimeout(resolve, waitTime));
 
           console.log(
@@ -181,7 +176,7 @@ export async function processOrder(orderLink) {
               title: data.title,
               totalPayment: data.totalPayment,
               hourlyRate: data.hourlyRate,
-              id: data.id
+              id: data.id,
             });
             throw new Error(
               "Still receiving invalid data after cookie refresh. Please check if cookies are being saved correctly."
@@ -228,26 +223,31 @@ export async function processOrder(orderLink) {
 
     // AI Normalization Step
     if (CONFIG.AI && CONFIG.AI.ENABLED) {
-        try {
-            console.log("🤖 AI Normalization: Analyzing order data...");
-            const aiData = await normalizeDataWithAI(data);
-            
-            if (aiData) {
-                console.log("✅ AI Analysis Complete. Merging data...");
-                // Merge AI data with normalized data, prioritizing AI for certain fields if present
-                if (aiData.estLaborHours && aiData.estLaborHours > 0) {
-                    normalizedData.estLaborHours = aiData.estLaborHours;
-                    console.log(`   Detailed: AI updated est labor hours to ${aiData.estLaborHours}`);
-                }
-                
-                // You can add more merges here as needed
-                if (aiData.payAmount && aiData.payAmount > 0) {
-                     // normalizedData.payRange.max = aiData.payAmount; // Optional: Override pay if AI is better
-                }
-            }
-        } catch (aiError) {
-            console.error("⚠️ AI Normalization failed, proceeding with regex data:", aiError);
+      try {
+        console.log("🤖 AI Normalization: Analyzing order data...");
+        const aiData = await normalizeDataWithAI(data);
+
+        if (aiData) {
+          console.log("✅ AI Analysis Complete. Merging data...");
+          // Merge AI data with normalized data, prioritizing AI for certain fields if present
+          if (aiData.estLaborHours && aiData.estLaborHours > 0) {
+            normalizedData.estLaborHours = aiData.estLaborHours;
+            console.log(
+              `   Detailed: AI updated est labor hours to ${aiData.estLaborHours}`
+            );
+          }
+
+          // You can add more merges here as needed
+          if (aiData.payAmount && aiData.payAmount > 0) {
+            // normalizedData.payRange.max = aiData.payAmount; // Optional: Override pay if AI is better
+          }
         }
+      } catch (aiError) {
+        console.error(
+          "⚠️ AI Normalization failed, proceeding with regex data:",
+          aiError
+        );
+      }
     }
 
     logger.info(
@@ -335,7 +335,8 @@ export async function processOrder(orderLink) {
       playSound("error");
     } else if (
       eligibilityResult.counterOffer &&
-      eligibilityResult.reason === "PAYMENT_INSUFFICIENT"
+      (eligibilityResult.reason === "PAYMENT_INSUFFICIENT" ||
+        eligibilityResult.reason === "GRANITE_TRAVEL_REQUIRED")
     ) {
       if (normalizedData.platform === "FieldNation") {
         logger.info(
@@ -345,57 +346,57 @@ export async function processOrder(orderLink) {
         );
 
         if (CONFIG.TEST_MODE) {
-           logger.info(
+          logger.info(
             `TEST MODE: Would have sent counter offer`,
             normalizedData.platform,
             normalizedData.id
           );
-           const counterDetails = `Base: $${eligibilityResult.counterOffer.baseAmount}\nTravel: $${eligibilityResult.counterOffer.travelExpense}`;
-           telegramBot.sendOrderNotification(
+          const counterDetails = `Base: $${eligibilityResult.counterOffer.baseAmount}\nTravel: $${eligibilityResult.counterOffer.travelExpense}`;
+          telegramBot.sendOrderNotification(
             normalizedData,
             "🧪 TEST MODE: COUNTER",
             counterDetails + "\n(Simulated)",
             orderLink
           );
         } else {
-            try {
-              await postFNCounterOffer(
-                normalizedData.id,
-                eligibilityResult.counterOffer.baseAmount,
-                eligibilityResult.counterOffer.travelExpense,
-                eligibilityResult.counterOffer.payType,
-                eligibilityResult.counterOffer.baseHours,
-                eligibilityResult.counterOffer.additionalHours,
-                eligibilityResult.counterOffer.additionalAmount
-              );
+          try {
+            await postFNCounterOffer(
+              normalizedData.id,
+              eligibilityResult.counterOffer.baseAmount,
+              eligibilityResult.counterOffer.travelExpense,
+              eligibilityResult.counterOffer.payType,
+              eligibilityResult.counterOffer.baseHours,
+              eligibilityResult.counterOffer.additionalHours,
+              eligibilityResult.counterOffer.additionalAmount
+            );
 
-              const counterDetails = `Base: $${eligibilityResult.counterOffer.baseAmount}\nTravel: $${eligibilityResult.counterOffer.travelExpense}`;
-              telegramBot.sendOrderNotification(
-                normalizedData,
-                "💰 COUNTER OFFER",
-                counterDetails,
-                orderLink
-              );
-              playSound("applied");
-              logger.info(
-                `Result: Counter offer sent successfully 🔊
+            const counterDetails = `Base: $${eligibilityResult.counterOffer.baseAmount}\nTravel: $${eligibilityResult.counterOffer.travelExpense}`;
+            telegramBot.sendOrderNotification(
+              normalizedData,
+              "💰 COUNTER OFFER",
+              counterDetails,
+              orderLink
+            );
+            playSound("applied");
+            logger.info(
+              `Result: Counter offer sent successfully 🔊
                  Base: $${eligibilityResult.counterOffer.baseAmount} (${eligibilityResult.counterOffer.baseHours}hr)
                  Additional: $${eligibilityResult.counterOffer.additionalAmount}/hr (${eligibilityResult.counterOffer.additionalHours}hr)
                  Travel: $${eligibilityResult.counterOffer.travelExpense}`,
-                normalizedData.platform,
-                normalizedData.id
-              );
-            } catch (error) {
-              logger.error(
-                `Result: Failed to send counter offer - ${error.message}`,
-                normalizedData.platform,
-                normalizedData.id
-              );
-              telegramBot.sendMessage(
-                `❌ Failed to send counter offer: ${error.message}`
-              );
-              playSound("error");
-            }
+              normalizedData.platform,
+              normalizedData.id
+            );
+          } catch (error) {
+            logger.error(
+              `Result: Failed to send counter offer - ${error.message}`,
+              normalizedData.platform,
+              normalizedData.id
+            );
+            telegramBot.sendMessage(
+              `❌ Failed to send counter offer: ${error.message}`
+            );
+            playSound("error");
+          }
         }
       } else if (normalizedData.platform === "WorkMarket") {
         logger.info(
@@ -405,56 +406,56 @@ export async function processOrder(orderLink) {
         );
 
         if (CONFIG.TEST_MODE) {
-             logger.info(
-                `TEST MODE: Would have sent counter offer`,
-                normalizedData.platform,
-                normalizedData.id
-              );
-             const counterDetails = `Base: $${eligibilityResult.counterOffer.baseAmount}\nTravel: $${eligibilityResult.counterOffer.travelExpense}`;
-             telegramBot.sendOrderNotification(
-                normalizedData,
-                "🧪 TEST MODE: COUNTER",
-                 counterDetails + "\n(Simulated)",
-                orderLink
-              );
+          logger.info(
+            `TEST MODE: Would have sent counter offer`,
+            normalizedData.platform,
+            normalizedData.id
+          );
+          const counterDetails = `Base: $${eligibilityResult.counterOffer.baseAmount}\nTravel: $${eligibilityResult.counterOffer.travelExpense}`;
+          telegramBot.sendOrderNotification(
+            normalizedData,
+            "🧪 TEST MODE: COUNTER",
+            counterDetails + "\n(Simulated)",
+            orderLink
+          );
         } else {
-            try {
-              const hourlyRate = Math.ceil(
-                eligibilityResult.counterOffer.baseAmount /
-                  normalizedData.estLaborHours
-              );
+          try {
+            const hourlyRate = Math.ceil(
+              eligibilityResult.counterOffer.baseAmount /
+                normalizedData.estLaborHours
+            );
 
-              await postWMCounterOffer(
-                normalizedData.id,
-                hourlyRate,
-                normalizedData.estLaborHours,
-                normalizedData.distance
-              );
+            await postWMCounterOffer(
+              normalizedData.id,
+              hourlyRate,
+              normalizedData.estLaborHours,
+              normalizedData.distance
+            );
 
-              const counterDetails = `Base: $${eligibilityResult.counterOffer.baseAmount}\nTravel: $${eligibilityResult.counterOffer.travelExpense}`;
-              telegramBot.sendOrderNotification(
-                normalizedData,
-                "💰 COUNTER OFFER",
-                counterDetails,
-                orderLink
-              );
-              playSound("applied");
-              logger.info(
-                `Result: Counter offer sent successfully with travel expenses 🔊`,
-                normalizedData.platform,
-                normalizedData.id
-              );
-            } catch (error) {
-              logger.error(
-                `Result: Failed to send counter offer - ${error.message}`,
-                normalizedData.platform,
-                normalizedData.id
-              );
-              telegramBot.sendMessage(
-                `❌ Failed to send counter offer: ${error.message}`
-              );
-              playSound("error");
-            }
+            const counterDetails = `Base: $${eligibilityResult.counterOffer.baseAmount}\nTravel: $${eligibilityResult.counterOffer.travelExpense}`;
+            telegramBot.sendOrderNotification(
+              normalizedData,
+              "💰 COUNTER OFFER",
+              counterDetails,
+              orderLink
+            );
+            playSound("applied");
+            logger.info(
+              `Result: Counter offer sent successfully with travel expenses 🔊`,
+              normalizedData.platform,
+              normalizedData.id
+            );
+          } catch (error) {
+            logger.error(
+              `Result: Failed to send counter offer - ${error.message}`,
+              normalizedData.platform,
+              normalizedData.id
+            );
+            telegramBot.sendMessage(
+              `❌ Failed to send counter offer: ${error.message}`
+            );
+            playSound("error");
+          }
         }
       }
     } else {
