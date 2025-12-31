@@ -129,7 +129,7 @@ function isPaymentEligible(workOrder) {
 // New function using Google Calendar for availability checking
 async function isSlotAvailableCalendar(workOrder) {
   const MIN_BUFFER_MINUTES = CONFIG.TIME.BUFFER_MINUTES;
-  const actualLaborHours = CONFIG.TIME.DEFAULT_LABOR_HOURS;
+  const actualLaborHours = workOrder.estLaborHours || CONFIG.TIME.DEFAULT_LABOR_HOURS;
   const { start: startTime, end: endTime } = workOrder.time;
 
   try {
@@ -503,7 +503,7 @@ function isSlotAvailableStatic(workOrder) {
 
 async function isSlotAvailableWorkMarket(workOrder) {
   const MIN_BUFFER_MINUTES = CONFIG.TIME.BUFFER_MINUTES;
-  const actualLaborHours = CONFIG.TIME.DEFAULT_LABOR_HOURS;
+  const actualLaborHours = workOrder.estLaborHours || CONFIG.TIME.DEFAULT_LABOR_HOURS;
   const { start: startTime, end: endTime } = workOrder.time;
 
   try {
