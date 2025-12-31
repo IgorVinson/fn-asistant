@@ -118,7 +118,31 @@ export default function normalizeDateFromWO(data) {
     distanceValue = 0; // Default for missing or invalid distance
   }
 
-  return {
+    // Fix for when end time is earlier than start time (e.g. overnight job or 12:00 AM parsing issue)
+    const startDateObj = new Date(`${startDate}T${startTime}`);
+    let endDateObj = new Date(`${endDate}T${endTime}`);
+    
+    // Check for invalid end time or suspicious "00:00:00" end time which often indicates missing data
+    const isEndTimeInvalid = endDateObj <= startDateObj || endTime === "00:00:00" || endTime === "00:00";
+
+    if (isEndTimeInvalid) {
+        // If the end time is invalid, we should recalculate it based on estimated labor hours
+        // Prioritize the AI-extracted hours, then structured data, then default
+        const hoursToAdd = data.estLaborHours || parseFloat(data.hoursOfWork || 1);
+        
+        console.log(`⚠️ Invalid end time detected (${endTime}). Recalculating using ${hoursToAdd} hours.`);
+        
+        const newEndTimeMs = startDateObj.getTime() + (hoursToAdd * 60 * 60 * 1000);
+        const newEndDateObj = new Date(newEndTimeMs);
+        
+        // Update date and time strings
+        endDate = newEndDateObj.toISOString().split('T')[0];
+        const hours = newEndDateObj.getHours().toString().padStart(2, '0');
+        const minutes = newEndDateObj.getMinutes().toString().padStart(2, '0');
+        endTime = `${hours}:${minutes}`; // Seconds are 00
+    }
+
+    return {
     id: data.id || data.workOrderId || null,
     platform: data.platform || 'Unknown',
     company: data.company || 'Unknown Company',

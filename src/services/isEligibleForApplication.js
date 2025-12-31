@@ -4,7 +4,7 @@ import logger from "../utils/logger.js";
 import { getWMSchedule } from "./platforms/workmarket/getWMSchedule.js";
 
 // Function to check if time window overlaps with working hours
-function isWithinWorkingHours(startTime, endTime) {
+function isWithinWorkingHours(startTime, endTime, workOrder = {}) {
   const workStartTime = CONFIG.TIME.WORK_START_TIME;
   const workEndTime = CONFIG.TIME.WORK_END_TIME;
 
@@ -23,7 +23,8 @@ function isWithinWorkingHours(startTime, endTime) {
   const hasOverlap = jobStart < dayWorkEnd && jobEnd > dayWorkStart;
 
   // Also check if there's enough overlap for DEFAULT_LABOR_HOURS
-  const actualLaborHours = CONFIG.TIME.DEFAULT_LABOR_HOURS;
+  // Use estLaborHours from workOrder if available (e.g. from AI), otherwise fallback to config default
+  const actualLaborHours = workOrder.estLaborHours || CONFIG.TIME.DEFAULT_LABOR_HOURS;
   const overlapStart = new Date(
     Math.max(jobStart.getTime(), dayWorkStart.getTime())
   );
@@ -646,7 +647,8 @@ async function isEligibleForApplication(workOrder) {
   // First check if the job is within working hours
   const isInWorkingHours = isWithinWorkingHours(
     workOrder.time.start,
-    workOrder.time.end
+    workOrder.time.end,
+    workOrder
   );
 
   // If outside working hours, not eligible for direct application or counter-offer
