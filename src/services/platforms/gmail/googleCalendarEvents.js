@@ -1,5 +1,5 @@
 import { google } from "googleapis";
-import logger from "../logger.js";
+import logger from "../../../utils/logger.js";
 import { authorize } from "./login.js";
 
 // Cache for storing calendar events to reduce API calls

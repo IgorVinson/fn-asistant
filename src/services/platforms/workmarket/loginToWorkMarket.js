@@ -1,5 +1,4 @@
-import { timeout } from "puppeteer";
-import {saveCookies} from "../saveCookies.js";
+import { saveCookies } from "../../../utils/saveCookies.js";
 
 
 export async function loginToWorkMarket(browser) {

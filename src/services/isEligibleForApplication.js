@@ -1,7 +1,7 @@
-import { CONFIG } from "../config.js";
-import schedule from "../schedule.js";
-import logger from "./logger.js";
-import { getWMSchedule } from "./WorkMarket/getWMSchedule.js";
+import { CONFIG } from "../../config/config.js";
+import schedule from "../../scripts/schedule.js";
+import logger from "../utils/logger.js";
+import { getWMSchedule } from "./platforms/workmarket/getWMSchedule.js";
 
 // Function to check if time window overlaps with working hours
 function isWithinWorkingHours(startTime, endTime) {

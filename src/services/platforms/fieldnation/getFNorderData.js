@@ -3,7 +3,7 @@ import path from 'path';
 
 
 // Шлях до файлу з куками
-const cookiesFilePath = path.resolve('utils', 'FieldNation', 'cookies.json');
+const cookiesFilePath = path.resolve(process.cwd(), "src", "services", "platforms", "fieldnation", "cookies.json");
 
 // Функція для отримання куків
 function getCookies() {

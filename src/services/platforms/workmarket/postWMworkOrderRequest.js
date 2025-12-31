@@ -1,7 +1,7 @@
 import fs from "fs";
 import path from "path";
 
-const cookiesFilePath = path.resolve("utils", "WorkMarket", "cookies.json");
+const cookiesFilePath = path.resolve(process.cwd(), "src", "services", "platforms", "workmarket", "cookies.json");
 
 // Function to get cookies
 function getCookies() {

@@ -4,8 +4,10 @@ import path from "path";
 export async function saveCookies(page, platform) {
   const cookiesFilePath = path.resolve(
     process.cwd(),
-    "utils",
-    platform,
+    "src",
+    "services",
+    "platforms",
+    platform.toLowerCase(),
     "cookies.json"
   );
 
@@ -28,8 +30,10 @@ export async function saveCookies(page, platform) {
 export async function saveCookiesCustom(page, platform, filename) {
   const cookiesFilePath = path.resolve(
     process.cwd(),
-    "utils",
-    platform,
+    "src",
+    "services",
+    "platforms",
+    platform.toLowerCase(),
     filename
   );
 

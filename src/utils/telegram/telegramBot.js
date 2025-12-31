@@ -1,5 +1,5 @@
 import TelegramBot from "node-telegram-bot-api";
-import { CONFIG } from "../../config.js";
+import { CONFIG } from "../../../config/config.js";
 import logger from "../logger.js";
 
 class TelegramBotService {

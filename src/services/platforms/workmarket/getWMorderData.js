@@ -2,7 +2,7 @@ import fs from "fs";
 import path from "path";
 import { loginToWorkMarket } from "./loginToWorkMarket.js";
 
-const cookiesFilePath = path.resolve("utils", "WorkMarket", "cookies.json");
+const cookiesFilePath = path.resolve(process.cwd(), "src", "services", "platforms", "workmarket", "cookies.json");
 
 function getCookies() {
   try {

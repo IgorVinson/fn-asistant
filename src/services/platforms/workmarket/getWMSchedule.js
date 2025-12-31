@@ -1,11 +1,11 @@
 import fs from "fs";
 import path from "path";
 import puppeteer from "puppeteer";
-import { CONFIG } from "../../config.js";
-import logger from "../logger.js";
+import { CONFIG } from "../../../../config/config.js";
+import logger from "../../../utils/logger.js";
 import { loginWMAuto } from "./loginWMAuto.js";
 
-const cookiesFilePath = path.resolve("utils", "WorkMarket", "cookies.json");
+const cookiesFilePath = path.resolve(process.cwd(), "src", "services", "platforms", "workmarket", "cookies.json");
 
 /**
  * Fetches the schedule from WorkMarket by capturing the dashboard API response.

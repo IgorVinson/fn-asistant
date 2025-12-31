@@ -1,9 +1,9 @@
 import fs from 'fs';
 import path from 'path';
-import { CONFIG } from '../../config.js';
+import { CONFIG } from '../../../../config/config.js';
 
 function getCookies() {
-  const cookiesFilePath = path.resolve('utils', 'FieldNation', 'cookies.json');
+  const cookiesFilePath = path.resolve(process.cwd(), 'src', 'services', 'platforms', 'fieldnation', 'cookies.json');
   if (!fs.existsSync(cookiesFilePath)) {
     throw new Error('Cookies file not found!');
   }

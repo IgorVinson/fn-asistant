@@ -1,5 +1,5 @@
+import { saveCookiesCustom } from "../../../utils/saveCookies.js";
 import { waitForFNcode } from "../gmail/getFNcode.js";
-import { saveCookiesCustom } from "../saveCookies.js";
 
 /**
  * Automated Field Nation login with simplified approach

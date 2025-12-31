@@ -8,7 +8,7 @@
  * @param {Object|null} gmailAuth - Optional Gmail OAuth2 client for automatic code retrieval
  * @returns {Promise<Object>} - Returns page object and success status
  */
-import { saveCookiesCustom } from "../saveCookies.js";
+import { saveCookiesCustom } from "../../../utils/saveCookies.js";
 import { waitForWMcode } from "./getWMcode.js";
 
 export async function loginWMAuto(
