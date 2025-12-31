@@ -8,35 +8,24 @@ export function isWithinWorkingHours(startTime, endTime, workOrder = {}) {
 
   const jobStart = new Date(startTime);
   const jobEnd = new Date(endTime);
-  const jobDate = jobStart.toISOString().split("T")[0];
+  const jobDate = `${jobStart.getFullYear()}-${String(
+    jobStart.getMonth() + 1
+  ).padStart(2, "0")}-${String(jobStart.getDate()).padStart(2, "0")}`;
 
   const dayWorkStart = new Date(`${jobDate}T${workStartTime}:00`);
   const dayWorkEnd = new Date(`${jobDate}T${workEndTime}:00`);
 
-  const hasOverlap = jobStart < dayWorkEnd && jobEnd > dayWorkStart;
-
-  const actualLaborHours =
-    workOrder.estLaborHours || CONFIG.TIME.DEFAULT_LABOR_HOURS;
-  const overlapStart = new Date(
-    Math.max(jobStart.getTime(), dayWorkStart.getTime())
-  );
-  const overlapEnd = new Date(Math.min(jobEnd.getTime(), dayWorkEnd.getTime()));
-  const overlapHours =
-    (overlapEnd.getTime() - overlapStart.getTime()) / (1000 * 60 * 60);
-  const hasEnoughOverlap = overlapHours >= actualLaborHours;
+  const isStartWithinHours = jobStart >= dayWorkStart && jobStart <= dayWorkEnd;
 
   logger.info(
     `Working Hours Check:
     - Job Date: ${jobDate}
     - Job Window: ${jobStart.toLocaleTimeString()} - ${jobEnd.toLocaleTimeString()}
     - Work Hours: ${workStartTime} - ${workEndTime}
-    - Required Labor Hours: ${actualLaborHours}
-    - Overlap Hours: ${overlapHours.toFixed(1)}
-    - Has Overlap: ${hasOverlap}
-    - Enough Overlap: ${hasEnoughOverlap}
-    - Decision: ${hasOverlap && hasEnoughOverlap}`,
+    - Start Within Hours: ${isStartWithinHours}
+    - Decision: ${isStartWithinHours}`,
     "SCHEDULE_CHECK"
   );
 
-  return hasOverlap && hasEnoughOverlap;
+  return isStartWithinHours;
 }

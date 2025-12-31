@@ -1,3 +1,5 @@
+import { CONFIG } from "../../config/config.js";
+
 export default function normalizeDateFromWO(data) {
   // Helper function to convert AM/PM time to 24-hour format
   function convertTo24Hour(timeStr) {
@@ -155,7 +157,10 @@ export default function normalizeDateFromWO(data) {
       min: data.payRange?.min || parseFloat(data.hourlyRate || 0),
       max: data.payRange?.max || parseFloat(data.totalPayment || 0),
     },
-    estLaborHours: data.estLaborHours || parseFloat(data.hoursOfWork || 0) || 3, // Default to 3 hours if not specified
+    estLaborHours:
+      data.estLaborHours ||
+      parseFloat(data.hoursOfWork || 0) ||
+      CONFIG.TIME.DEFAULT_LABOR_HOURS,
     distance: distanceValue,
   };
 }
