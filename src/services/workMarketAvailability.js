@@ -5,8 +5,6 @@ import { getWMSchedule } from "./platforms/workmarket/getWMSchedule.js";
 
 export async function isSlotAvailableWorkMarket(workOrder) {
   const MIN_BUFFER_MINUTES = CONFIG.TIME.BUFFER_MINUTES;
-  const actualLaborHours =
-    workOrder.estLaborHours || CONFIG.TIME.DEFAULT_LABOR_HOURS;
   const { start: startTime, end: endTime } = workOrder.time;
 
   try {
@@ -25,45 +23,30 @@ export async function isSlotAvailableWorkMarket(workOrder) {
       workOrder.id
     );
 
-    const workDurationMs = actualLaborHours * 60 * 60 * 1000;
     const bufferMs = MIN_BUFFER_MINUTES * 60 * 1000;
+    const windowStartMs = workOrderStart.getTime();
+    const windowEndMs = workOrderEnd.getTime();
 
-    for (
-      let testStart = workOrderStart.getTime();
-      testStart + workDurationMs <= workOrderEnd.getTime();
-      testStart += 15 * 60 * 1000
-    ) {
-      const testEnd = testStart + workDurationMs;
+    for (const slot of occupiedSlots) {
+      const slotStartBuffered = slot.start.getTime() - bufferMs;
+      const slotEndBuffered = slot.end.getTime() + bufferMs;
 
-      let hasConflict = false;
-      for (const slot of occupiedSlots) {
-        const slotStartBuffered = slot.start.getTime() - bufferMs;
-        const slotEndBuffered = slot.end.getTime() + bufferMs;
-
-        if (testStart < slotEndBuffered && testEnd > slotStartBuffered) {
-          hasConflict = true;
-          break;
-        }
-      }
-
-      if (!hasConflict) {
+      if (windowStartMs < slotEndBuffered && windowEndMs > slotStartBuffered) {
         logger.info(
-          `Available slot found in WorkMarket schedule: ${new Date(
-            testStart
-          ).toLocaleString()}`,
+          `WorkMarket schedule conflict detected within arrival window`,
           workOrder.platform,
           workOrder.id
         );
-        return true;
+        return false;
       }
     }
 
     logger.info(
-      `No available slot found in WorkMarket schedule for ${actualLaborHours} hours`,
+      `No WorkMarket schedule conflict detected within arrival window`,
       workOrder.platform,
       workOrder.id
     );
-    return false;
+    return true;
   } catch (error) {
     logger.error(
       `Error checking WorkMarket availability: ${error.message}. Fallback to static check.`,

@@ -150,8 +150,6 @@ export function isSlotAvailableStatic(workOrder) {
 // Google Calendar availability check
 export async function isSlotAvailableCalendar(workOrder) {
   const MIN_BUFFER_MINUTES = CONFIG.TIME.BUFFER_MINUTES;
-  const actualLaborHours =
-    workOrder.estLaborHours || CONFIG.TIME.DEFAULT_LABOR_HOURS;
   const { start: startTime, end: endTime } = workOrder.time;
 
   try {
@@ -173,7 +171,7 @@ export async function isSlotAvailableCalendar(workOrder) {
     const allCalendars = calendarList.data.items || [];
 
     logger.info(
-      `Multi-Calendar Check: Found ${allCalendars.length} calendars to check for ${actualLaborHours}-hour work block`,
+      `Multi-Calendar Check: Found ${allCalendars.length} calendars to check arrival window`,
       workOrder.platform,
       workOrder.id
     );
@@ -262,32 +260,22 @@ export async function isSlotAvailableCalendar(workOrder) {
 
     occupiedSlots.sort((a, b) => a.start.getTime() - b.start.getTime());
 
-    const workDurationMs = actualLaborHours * 60 * 60 * 1000;
-    const jobStartMs = new Date(startTime).getTime();
-    const jobEndMs = jobStartMs + workDurationMs;
-    const jobStartDate = new Date(jobStartMs);
-    const jobEndDate = new Date(jobEndMs);
-
-    if (jobEndMs > new Date(endTime).getTime()) {
-      logger.info(
-        `Job rejected: Duration (${actualLaborHours}h) does not fit within provided window`,
-        workOrder.platform,
-        workOrder.id
-      );
-      return false;
-    }
+    const windowStartMs = new Date(startTime).getTime();
+    const windowEndMs = new Date(endTime).getTime();
+    const windowStartDate = new Date(windowStartMs);
+    const windowEndDate = new Date(windowEndMs);
 
     let availableSlotFound = true;
     const conflictDetails = [];
 
     for (const occupied of occupiedSlots) {
       if (
-        jobStartMs < occupied.end.getTime() &&
-        jobEndMs > occupied.start.getTime()
+        windowStartMs < occupied.end.getTime() &&
+        windowEndMs > occupied.start.getTime()
       ) {
         availableSlotFound = false;
         conflictDetails.push({
-          testSlot: `${jobStartDate.toLocaleTimeString()} - ${jobEndDate.toLocaleTimeString()}`,
+          testSlot: `${windowStartDate.toLocaleTimeString()} - ${windowEndDate.toLocaleTimeString()}`,
           conflictWith: `${occupied.eventSummary} [${occupied.calendarName}]`,
           conflictTime: `${occupied.start.toLocaleTimeString()} - ${occupied.end.toLocaleTimeString()}`,
         });
@@ -301,7 +289,6 @@ export async function isSlotAvailableCalendar(workOrder) {
       - Available Window: ${new Date(startTime).toLocaleTimeString()} - ${new Date(
         endTime
       ).toLocaleTimeString()}
-      - Required Duration: ${actualLaborHours} hours
       - Buffer: ${MIN_BUFFER_MINUTES} minutes
       - Calendars Checked: ${allCalendars.length}
       - Total Events Found: ${totalEvents}
