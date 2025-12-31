@@ -343,13 +343,23 @@ async function processOrder(orderLink) {
           platform,
           "unknown"
         );
+        
+        // Send notification to Telegram about cookie refresh
+        telegramBot.sendMessage(
+          "🔄 WorkMarket cookies expired, refreshing..."
+        );
 
         try {
           // Refresh cookies using saveCookies function
+          console.log("🍪 Starting cookie refresh process...");
           await saveCookies();
+          console.log("✅ Cookie refresh completed");
 
-          // Wait a bit for cookies to be saved
-          await new Promise(resolve => setTimeout(resolve, 2000));
+          // Wait longer for cookies to be fully written to disk
+          // Configurable wait time to ensure file system has time to write
+          const waitTime = CONFIG.COOKIE_REFRESH.WAIT_AFTER_REFRESH_MS;
+          console.log(`⏳ Waiting ${waitTime/1000} seconds for cookies to be saved to disk...`);
+          await new Promise(resolve => setTimeout(resolve, waitTime));
 
           // Retry fetching the data
           console.log(
@@ -359,8 +369,16 @@ async function processOrder(orderLink) {
 
           // Check if retry was successful
           if (isInvalidWorkMarketData(data)) {
+            // Log the actual data received for debugging
+            console.error("❌ Still receiving invalid data:", {
+              company: data.company,
+              title: data.title,
+              totalPayment: data.totalPayment,
+              hourlyRate: data.hourlyRate,
+              id: data.id
+            });
             throw new Error(
-              "Still receiving invalid data after cookie refresh"
+              "Still receiving invalid data after cookie refresh. Please check if cookies are being saved correctly."
             );
           } else {
             console.log(
@@ -370,6 +388,9 @@ async function processOrder(orderLink) {
               "Successfully retrieved data after cookie refresh",
               platform,
               data.id
+            );
+            telegramBot.sendMessage(
+              "✅ WorkMarket cookies refreshed successfully"
             );
           }
         } catch (refreshError) {

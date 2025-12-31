@@ -56,6 +56,11 @@ export const CONFIG = {
     VARIANCE_MINUTES: 10,
   },
 
+  // Cookie Refresh Settings
+  COOKIE_REFRESH: {
+    WAIT_AFTER_REFRESH_MS: 5000, // Wait time after refreshing cookies before retry (in milliseconds)
+  },
+
   // Payment and Rate Settings
   RATES: {
     BASE_HOURLY_RATE: 50, // Minimum desired hourly rate
