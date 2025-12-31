@@ -72,6 +72,7 @@ export async function getFNorderData(url) {
             payRange: workOrder.pay?.range || { min: 0, max: 0 },
             estLaborHours: workOrder.schedule?.est_labor_hours || 0,
             distance: Math.floor(Number(workOrder.coords?.distance || 0)),
+            description: workOrder.description?.markdown || workOrder.description?.html || "",
         };
 
 

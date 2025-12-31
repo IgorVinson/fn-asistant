@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import { startServer } from "./api/server.js";
 import telegramBot from "./api/telegram.js";
 import { startMonitoring, stopMonitoring } from "./jobs/monitoring.js";

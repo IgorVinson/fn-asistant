@@ -249,6 +249,7 @@ export async function getWMorderData(url) {
       distance: distanceMatch
         ? parseFloat(distanceMatch[1].replace(",", ""))
         : 0,
+      description: body, // Pass full HTML body for AI analysis
     };
 
     console.log("Extracted data:", data);

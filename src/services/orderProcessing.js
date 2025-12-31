@@ -23,6 +23,7 @@ import { postWMCounterOffer } from "./platforms/workmarket/postWMCounterOffer.js
 import { postWMworkOrderRequest } from "./platforms/workmarket/postWMworkOrderRequest.js";
 
 import { saveCookies } from "../jobs/relogin.js"; // For cookie refresh
+import { normalizeDataWithAI } from "./ai/geminiService.js";
 
 function determinePlatform(orderLink) {
   if (orderLink.includes("fieldnation")) {
@@ -223,7 +224,31 @@ export async function processOrder(orderLink) {
       return null;
     }
 
-    const normalizedData = normalizeDateFromWO(data);
+    let normalizedData = normalizeDateFromWO(data);
+
+    // AI Normalization Step
+    if (CONFIG.AI && CONFIG.AI.ENABLED) {
+        try {
+            console.log("🤖 AI Normalization: Analyzing order data...");
+            const aiData = await normalizeDataWithAI(data);
+            
+            if (aiData) {
+                console.log("✅ AI Analysis Complete. Merging data...");
+                // Merge AI data with normalized data, prioritizing AI for certain fields if present
+                if (aiData.estLaborHours && aiData.estLaborHours > 0) {
+                    normalizedData.estLaborHours = aiData.estLaborHours;
+                    console.log(`   Detailed: AI updated est labor hours to ${aiData.estLaborHours}`);
+                }
+                
+                // You can add more merges here as needed
+                if (aiData.payAmount && aiData.payAmount > 0) {
+                     // normalizedData.payRange.max = aiData.payAmount; // Optional: Override pay if AI is better
+                }
+            }
+        } catch (aiError) {
+            console.error("⚠️ AI Normalization failed, proceeding with regex data:", aiError);
+        }
+    }
 
     logger.info(
       `New Order - Platform: ${normalizedData.platform}, ID: ${
