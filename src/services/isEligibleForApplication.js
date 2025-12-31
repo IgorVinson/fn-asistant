@@ -649,6 +649,24 @@ function calculateCounterOffer(workOrder) {
 }
 
 async function isEligibleForApplication(workOrder) {
+  // If FieldNation returns missing/zero ID, treat the job as unavailable and skip all checks
+  // (Observed cases: `null` and `0`)
+  if (
+    workOrder?.platform === "FieldNation" &&
+    (workOrder?.id == null || workOrder?.id === 0 || workOrder?.id === "0")
+  ) {
+    logger.info(
+      `Job unavailable (id=${workOrder?.id}) - skipping eligibility checks`,
+      workOrder?.platform,
+      workOrder?.id
+    );
+    return {
+      eligible: false,
+      counterOffer: null,
+      reason: "JOB_UNAVAILABLE",
+    };
+  }
+
   logger.info(
     `Checking eligibility - Distance: ${workOrder.distance}mi, Est. Hours: ${workOrder.estLaborHours}`,
     workOrder.platform,
