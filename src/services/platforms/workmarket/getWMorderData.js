@@ -252,7 +252,8 @@ export async function getWMorderData(url) {
       description: body, // Pass full HTML body for AI analysis
     };
 
-    console.log("Extracted data:", data);
+    const logData = { ...data, description: "[omitted]" };
+    console.log("Extracted data:", logData);
     return data;
   } catch (error) {
     console.error("Error:", error.message);

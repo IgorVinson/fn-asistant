@@ -5,6 +5,8 @@ import { CONFIG } from "../../../config/config.js";
 let genAI = null;
 let model = null;
 
+const MAX_TEXT_LENGTH = 2000;
+
 function initializeAI() {
   if (CONFIG.AI && CONFIG.AI.ENABLED && CONFIG.AI.API_KEY) {
     try {
@@ -14,6 +16,55 @@ function initializeAI() {
       console.error("Failed to initialize Gemini AI:", error);
     }
   }
+}
+
+function normalizeTextForAI(text, maxLength = MAX_TEXT_LENGTH) {
+  if (typeof text !== "string") {
+    return text;
+  }
+
+  const withoutScripts = text.replace(/<script[\s\S]*?<\/script>/gi, " ");
+  const withoutStyles = withoutScripts.replace(/<style[\s\S]*?<\/style>/gi, " ");
+  const withoutTags = withoutStyles.replace(/<[^>]+>/g, " ");
+  const collapsed = withoutTags.replace(/\s+/g, " ").trim();
+
+  if (collapsed.length <= maxLength) {
+    return collapsed;
+  }
+
+  return collapsed.slice(0, maxLength);
+}
+
+function buildAiPayload(rawData) {
+  if (!rawData || typeof rawData !== "object") {
+    return rawData;
+  }
+
+  return {
+    platform: rawData.platform || null,
+    id: rawData.id || null,
+    company: rawData.company || null,
+    title: rawData.title || null,
+    schedule: {
+      start: rawData.time?.start || null,
+      end: rawData.time?.end || null,
+      date: rawData.date || null,
+      time: typeof rawData.time === "string" ? rawData.time : null,
+    },
+    pay: {
+      range: rawData.payRange || null,
+      hourlyRate: rawData.hourlyRate || null,
+      totalPayment: rawData.totalPayment || null,
+      originalAmount: rawData.originalAmount || null,
+    },
+    hours: {
+      estLaborHours: rawData.estLaborHours || null,
+      hoursOfWork: rawData.hoursOfWork || null,
+    },
+    distance: rawData.distance || null,
+    description: normalizeTextForAI(rawData.description),
+    text: normalizeTextForAI(rawData.text),
+  };
 }
 
 export async function normalizeDataWithAI(rawData) {
@@ -28,13 +79,15 @@ export async function normalizeDataWithAI(rawData) {
   }
 
   try {
+    const aiPayload = buildAiPayload(rawData);
     const prompt = `
       You are an AI assistant that extracts structured data from work order texts.
       
       Your GOAL is to find the ACTUAL estimated labor hours.
       
       INPUT DATA ANALYSIS:
-      1. Check the structured fields (e.g., "est_labor_hours", "hours", "pay.hours") in the provided JSON.
+      1. Check structured hours fields in the provided JSON. For FieldNation these are under "hours.estLaborHours".
+         For WorkMarket these are typically under "hours.hoursOfWork".
       2. If these fields are greater than 0, use that value.
       3. IF AND ONLY IF the structured hours are 0, missing, or null:
          - YOU MUST SEARCH THE "description" or "text" fields.
@@ -60,7 +113,7 @@ export async function normalizeDataWithAI(rawData) {
       Return ONLY valid JSON.
       
       Raw Data:
-      ${JSON.stringify(rawData, null, 2)}
+      ${JSON.stringify(aiPayload, null, 2)}
     `;
 
     const result = await model.generateContent(prompt);
