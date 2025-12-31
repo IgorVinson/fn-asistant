@@ -10,9 +10,14 @@ export function calculateCounterOffer(workOrder) {
       ? CONFIG.RATES.MIN_PAY_THRESHOLD_WORKMARKET
       : CONFIG.RATES.MIN_PAY_THRESHOLD_FIELDNATION;
 
+  const effectiveDistance =
+    workOrder.distance > CONFIG.DISTANCE.LONG_TRAVEL_THRESHOLD_MILES
+      ? workOrder.distance * CONFIG.DISTANCE.LONG_TRAVEL_DISTANCE_MULTIPLIER
+      : workOrder.distance;
+
   const travelExpense =
     workOrder.distance > CONFIG.DISTANCE.TRAVEL_THRESHOLD_MILES
-      ? Math.round(workOrder.distance * CONFIG.DISTANCE.TRAVEL_RATE_PER_MILE)
+      ? Math.round(effectiveDistance * CONFIG.DISTANCE.TRAVEL_RATE_PER_MILE)
       : 0;
 
   const isFixedRate = workOrder.estLaborHours <= 2;

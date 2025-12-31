@@ -64,9 +64,14 @@ export async function postWMCounterOffer(
     const CSRFToken = csrfCookie.split("=")[1];
 
     // Calculate travel expenses if distance > threshold miles
+    const effectiveDistance =
+      distance > CONFIG.DISTANCE.LONG_TRAVEL_THRESHOLD_MILES
+        ? distance * CONFIG.DISTANCE.LONG_TRAVEL_DISTANCE_MULTIPLIER
+        : distance;
+
     const travelExpenses =
       distance > CONFIG.DISTANCE.TRAVEL_THRESHOLD_MILES
-        ? Math.round(distance * CONFIG.DISTANCE.TRAVEL_RATE_PER_MILE)
+        ? Math.round(effectiveDistance * CONFIG.DISTANCE.TRAVEL_RATE_PER_MILE)
         : 0;
 
     const formData = new URLSearchParams({

@@ -11,9 +11,14 @@ export function isPaymentEligible(workOrder) {
       ? CONFIG.RATES.MIN_PAY_THRESHOLD_WORKMARKET
       : CONFIG.RATES.MIN_PAY_THRESHOLD_FIELDNATION;
 
+  const effectiveDistance =
+    workOrder.distance > CONFIG.DISTANCE.LONG_TRAVEL_THRESHOLD_MILES
+      ? workOrder.distance * CONFIG.DISTANCE.LONG_TRAVEL_DISTANCE_MULTIPLIER
+      : workOrder.distance;
+
   const travelExpense =
     workOrder.distance > TRAVEL_THRESHOLD
-      ? workOrder.distance * CONFIG.DISTANCE.TRAVEL_RATE_PER_MILE
+      ? effectiveDistance * CONFIG.DISTANCE.TRAVEL_RATE_PER_MILE
       : 0;
 
   let decisionReason = "";
