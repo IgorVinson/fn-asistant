@@ -228,20 +228,12 @@ async function isSlotAvailableCalendar(workOrder) {
             continue; // Skip invalid events
           }
 
-          // Calendar events represent available time windows, so we need to create
-          // occupied slots assuming work takes DEFAULT_LABOR_HOURS within that window
-          // For simplicity, assume work is scheduled at the start of the event window
-          const workStart = eventStart;
-          const workEnd = new Date(
-            workStart.getTime() + actualLaborHours * 60 * 60 * 1000
-          );
-
-          // Add buffer time
+          // Treat calendar events as occupied time (with buffer)
           const bufferedStart = new Date(
-            workStart.getTime() - MIN_BUFFER_MINUTES * 60 * 1000
+            eventStart.getTime() - MIN_BUFFER_MINUTES * 60 * 1000
           );
           const bufferedEnd = new Date(
-            workEnd.getTime() + MIN_BUFFER_MINUTES * 60 * 1000
+            eventEnd.getTime() + MIN_BUFFER_MINUTES * 60 * 1000
           );
 
           occupiedSlots.push({
@@ -263,47 +255,35 @@ async function isSlotAvailableCalendar(workOrder) {
     // Sort occupied slots by start time
     occupiedSlots.sort((a, b) => a.start.getTime() - b.start.getTime());
 
-    // Check if we can fit a DEFAULT_LABOR_HOURS block within the work order window
+    // FieldNation/WorkMarket work orders are treated as fixed start time, not a flexible window.
+    // If the job's fixed slot conflicts with any occupied slot (with buffer), it's unavailable.
     const workDurationMs = actualLaborHours * 60 * 60 * 1000;
-    let availableSlotFound = false;
-    let conflictDetails = [];
+    const jobStartMs = workOrderWindowStart.getTime();
+    const jobEndMs = jobStartMs + workDurationMs;
+    const jobStartDate = new Date(jobStartMs);
+    const jobEndDate = new Date(jobEndMs);
 
-    // Try to find a slot within the work order window
-    for (
-      let testStart = workOrderWindowStart.getTime();
-      testStart + workDurationMs <= workOrderWindowEnd.getTime();
-      testStart += 15 * 60 * 1000
-    ) {
-      // Check every 15 minutes
+    // Ensure the job duration fits into the provided start/end window
+    if (jobEndMs > workOrderWindowEnd.getTime()) {
+      logger.info(
+        `Job rejected: Duration (${actualLaborHours}h) does not fit within provided window`,
+        workOrder.platform,
+        workOrder.id
+      );
+      return false;
+    }
 
-      const testEnd = testStart + workDurationMs;
-      const testStartDate = new Date(testStart);
-      const testEndDate = new Date(testEnd);
+    let availableSlotFound = true;
+    const conflictDetails = [];
 
-      // Check if this test slot conflicts with any occupied slot
-      let hasConflict = false;
-      for (const occupied of occupiedSlots) {
-        if (
-          testStart < occupied.end.getTime() &&
-          testEnd > occupied.start.getTime()
-        ) {
-          hasConflict = true;
-          conflictDetails.push({
-            testSlot: `${testStartDate.toLocaleTimeString()} - ${testEndDate.toLocaleTimeString()}`,
-            conflictWith: `${occupied.eventSummary} [${occupied.calendarName}]`,
-            conflictTime: `${occupied.start.toLocaleTimeString()} - ${occupied.end.toLocaleTimeString()}`,
-          });
-          break;
-        }
-      }
-
-      if (!hasConflict) {
-        availableSlotFound = true;
-        logger.info(
-          `Available ${actualLaborHours}-hour slot found: ${testStartDate.toLocaleTimeString()} - ${testEndDate.toLocaleTimeString()}`,
-          workOrder.platform,
-          workOrder.id
-        );
+    for (const occupied of occupiedSlots) {
+      if (jobStartMs < occupied.end.getTime() && jobEndMs > occupied.start.getTime()) {
+        availableSlotFound = false;
+        conflictDetails.push({
+          testSlot: `${jobStartDate.toLocaleTimeString()} - ${jobEndDate.toLocaleTimeString()}`,
+          conflictWith: `${occupied.eventSummary} [${occupied.calendarName}]`,
+          conflictTime: `${occupied.start.toLocaleTimeString()} - ${occupied.end.toLocaleTimeString()}`,
+        });
         break;
       }
     }
