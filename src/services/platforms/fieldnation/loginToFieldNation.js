@@ -1,4 +1,4 @@
-import {saveCookies} from "../saveCookies.js";
+import { saveCookies } from "../saveCookies.js";
 
 
 export async function loginToFieldNation(browser) {
@@ -25,7 +25,7 @@ export async function loginToFieldNation(browser) {
         await saveCookies(page, 'FieldNation');
 
     } catch (error) {
-        console.error('Помилка з Cookies:', error.message,);
+        console.error('Error with Cookies:', error.message,);
     }
 
 }

@@ -16,7 +16,6 @@ export function getOrderLink(emailBody) {
         return wmLink[0];
     }
     else {
-        console.log('Посилання на замовлення не знайдено.');
         return null;
     }
 }

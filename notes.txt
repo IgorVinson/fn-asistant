@@ -1,0 +1,42 @@
+Order detected: https://app.fieldnation.com/workorders/18417038?t=ActionNewWorkOrder&src=Email
+[2025-12-31T17:19:50.206Z] [INFO] [FieldNation] [Order: 18417038] New Order - Platform: FieldNation, ID: 18417038
+       Company: Scarsdale Security Systems Inc
+       Title: Scarsdale Ticket #790306 - PANEL KEY SHIPPED TO SITE. LEAVE ON SITE WITH MOD. Technician to PROVIDE and REPLACE (2) 12v7ah battery with F1 connector. Check charging circuit and confirm restore.
+       Time: 1/9/2026, 10:00:00 AM - 1/9/2026, 3:00:00 PM                                      
+       Pay Range: $85-$85
+       Est. Hours: 3
+       Distance: 11mi
+[2025-12-31T17:19:50.207Z] [INFO] [FieldNation] [Order: 18417038] Checking eligibility - Distance: 11mi, Est. Hours: 3
+[2025-12-31T17:19:50.207Z] [INFO] [SCHEDULE_CHECK]  Working Hours Check:
+    - Job Date: 2026-01-09
+    - Job Window: 10:00:00 AM - 3:00:00 PM
+    - Work Hours: 09:00 - 19:00
+    - Required Labor Hours: 3
+    - Overlap Hours: 5.0
+    - Has Overlap: true
+    - Enough Overlap: true
+    - Decision: true
+[2025-12-31T17:19:50.208Z] [INFO] [SCHEDULE_CHECK]  Fetching WorkMarket schedule...
+No new unread emails.
+No new unread emails.
+No new unread emails.
+No new unread emails.
+[2025-12-31T17:19:53.726Z] [INFO] [SCHEDULE_CHECK]  Captured 0 assignments from WorkMarket
+[2025-12-31T17:19:53.801Z] [INFO] [FieldNation] [Order: 18417038] WorkMarket Schedule Check:
+      - Work Order: 1/9/2026, 10:00:00 AM - 1/9/2026, 3:00:00 PM
+      - Found 0 existing assignments
+[2025-12-31T17:19:53.801Z] [INFO] [FieldNation] [Order: 18417038] Available slot found in WorkMarket schedule: 1/9/2026, 10:00:00 AM
+[2025-12-31T17:19:53.801Z] [INFO] [FieldNation] [Order: 18417038] Payment Analysis:
+    - Platform: FieldNation
+    - Offered Pay: $85
+    - Minimum Threshold: $200
+    - Distance: 11 miles
+    - Travel Threshold: 30 miles
+    - Travel Expense: $0.00
+    - Required Pay: $200
+    - Decision: REJECT
+    - Reason: Base pay too low ($85 < $200) and distance (11 miles) is within free travel limit (30 miles)
+[2025-12-31T17:19:53.802Z] [INFO] [FieldNation] [Order: 18417038] Calendar available but payment insufficient - generating counter offer
+[2025-12-31T17:19:53.802Z] [INFO] [FieldNation] [Order: 18417038] Counter offer calculation: Base: $200 (minimum threshold) + Travel: $0 = Total: $200
+[2025-12-31T17:19:53.802Z] [INFO] [FieldNation] [Order: 18417038] Action: Counter Offer - Adjusting rates and adding travel expenses
+[2025-12-31T17:19:53.802Z] [INFO] [FieldNation] [Order: 18417038] TEST MODE: Would have sent counter offer                             

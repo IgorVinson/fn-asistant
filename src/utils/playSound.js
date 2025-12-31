@@ -1,5 +1,4 @@
 import { execSync } from 'child_process';
-import path from 'path';
 import os from 'os';
 
 /**
@@ -7,8 +6,6 @@ import os from 'os';
  * @param {string} soundName - Name of the sound: 'notification', 'error', or 'applied'
  */
 export function playSound(soundName = 'notification') {
-  console.log(`DEBUG: playSound called with ${soundName}`);
-  
   try {
     // Simplified sound options
     const sounds = {
@@ -36,23 +33,17 @@ export function playSound(soundName = 'notification') {
     const mappedSound = soundMap[soundName] || 'notification';
     const soundPath = sounds[mappedSound];
     
-    console.log(`DEBUG: Will play ${mappedSound} sound using ${soundPath}`);
-    
     if (os.platform() === 'darwin') {
       // macOS - Use execSync to make sure sound plays completely
-      console.log(`DEBUG: Executing afplay ${soundPath}`);
       execSync(`afplay ${soundPath}`);
-      console.log(`DEBUG: Sound played successfully`);
     } else if (os.platform() === 'win32') {
       // Windows - not implemented, would use PowerShell
-      console.log('Sound playback not implemented for Windows');
     } else {
       // Linux - not implemented, would use aplay
-      console.log('Sound playback not implemented for Linux');
     }
   } catch (error) {
     console.error('Error playing sound:', error.message);
   }
 }
 
-export default playSound; 
+export default playSound;

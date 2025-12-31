@@ -25,39 +25,71 @@ export default function normalizeDateFromWO(data) {
   }
 
   function standardizeDate(dateStr) {
-    if (!dateStr) return dateStr;
+    if (!dateStr || dateStr === "Unknown") {
+      return new Date().toISOString().split("T")[0];
+    }
 
-    // If date is already in ISO format (YYYY-MM-DD), return as is
-    if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) return dateStr;
+    // If date is already in ISO format (YYYY-MM-DD), extract it
+    const isoMatch = dateStr.match(/^(\d{4}-\d{2}-\d{2})/);
+    if (isoMatch) return isoMatch[1];
 
-    // Handle WorkMarket format (Mon, 02/17/2025)
-    if (dateStr.includes(',')) {
-      dateStr = dateStr.split(', ')[1]; // Remove day name
+    // Handle string date format like "Mon, 02/17/2025"
+    let cleanDate = dateStr;
+    if (cleanDate.includes(",")) {
+      cleanDate = cleanDate.split(", ")[1];
     }
 
     // Convert MM/DD/YYYY to YYYY-MM-DD
-    const [month, day, year] = dateStr.split('/');
-    return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+    const parts = cleanDate.split("/");
+    if (parts.length === 3) {
+      const [month, day, year] = parts;
+      return `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
+    }
+
+    // Fallback to today if format is unrecognizable
+    return new Date().toISOString().split("T")[0];
   }
 
-  const startDate = standardizeDate(
-    data.time?.start?.date || data.date?.split(' to ')[0] || 'Unknown'
-  );
-  const startTimeRaw =
-    data.time?.start?.time ||
-    (typeof data.time === 'string' && data.time.split(' to ')[0]) ||
-    '00:00:00';
+  let startDateRaw = "Unknown";
+  let startTimeRaw = "00:00:00";
+
+  if (data.time?.start?.date) {
+    startDateRaw = data.time.start.date;
+    startTimeRaw = data.time.start.time || "00:00:00";
+  } else if (typeof data.time?.start === "string") {
+    const parts = data.time.start.split(" ");
+    startDateRaw = parts[0];
+    startTimeRaw = parts[1] || "00:00:00";
+  } else if (data.date) {
+    startDateRaw = data.date.split(" to ")[0];
+    startTimeRaw =
+      typeof data.time === "string" ? data.time.split(" to ")[0] : "00:00:00";
+  }
+
+  const startDate = standardizeDate(startDateRaw);
   const startTime = convertTo24Hour(startTimeRaw);
 
   // Calculate end time
   let endDate, endTime;
-  if (data.time?.end?.date || data.time?.end?.time) {
-    endDate = standardizeDate(
-      data.time?.end?.date || data.date?.split(' to ')[1] || startDate
-    );
+  if (data.time?.end) {
+    let endDateRaw = startDate;
+    let endTimeRaw = "00:00:00";
+
+    if (data.time.end.date) {
+      endDateRaw = data.time.end.date;
+      endTimeRaw = data.time.end.time || "00:00:00";
+    } else if (typeof data.time.end === "string") {
+      const parts = data.time.end.split(" ");
+      endDateRaw = parts[0];
+      endTimeRaw = parts[1] || "00:00:00";
+    }
+
+    endDate = standardizeDate(endDateRaw);
+    endTime = convertTo24Hour(endTimeRaw);
+  } else if (data.date?.includes(" to ")) {
+    endDate = standardizeDate(data.date.split(" to ")[1]);
     endTime = convertTo24Hour(
-      data.time?.end?.time ||
-        (typeof data.time === 'string' && data.time.split(' to ')[1])
+      typeof data.time === "string" ? data.time.split(" to ")[1] : "00:00:00"
     );
   } else {
     endDate = startDate;

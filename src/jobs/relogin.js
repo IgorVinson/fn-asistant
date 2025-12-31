@@ -1,3 +1,5 @@
+import fs from "fs";
+import path from "path";
 import puppeteer from "puppeteer";
 import { CONFIG } from "../../config/config.js";
 import { loginFnAuto } from "../services/platforms/fieldnation/loginFnAuto.js";
@@ -7,8 +9,42 @@ import { loginWMAuto } from "../services/platforms/workmarket/loginWMAuto.js";
 let browser;
 let reloginTimeout;
 
-export async function saveCookies() {
+export async function saveCookies(force = false) {
   try {
+    const fnCookiesPath = path.resolve(process.cwd(), "src", "services", "platforms", "fieldnation", "cookies.json");
+    const wmCookiesPath = path.resolve(process.cwd(), "src", "services", "platforms", "workmarket", "cookies.json");
+
+    // Check if we actually need to refresh
+    if (!force) {
+      const thresholdHours = CONFIG.RELOGIN.INTERVAL_HOURS || 6;
+      const thresholdMs = thresholdHours * 60 * 60 * 1000;
+      const now = Date.now();
+
+      let fnActual = false;
+      let wmActual = false;
+
+      if (fs.existsSync(fnCookiesPath)) {
+        const stats = fs.statSync(fnCookiesPath);
+        if (now - stats.mtimeMs < thresholdMs) fnActual = true;
+      }
+
+      if (fs.existsSync(wmCookiesPath)) {
+        const stats = fs.statSync(wmCookiesPath);
+        if (now - stats.mtimeMs < thresholdMs) wmActual = true;
+      }
+
+      // If everything enabled is actual, skip
+      const fnNeeded = CONFIG.FIELDNATION_ENABLED && !fnActual;
+      const wmNeeded = CONFIG.WORKMARKET_ENABLED && !wmActual;
+
+      if (!fnNeeded && !wmNeeded) {
+        console.log("📍 Cookies are still fresh. Skipping automated login.");
+        return;
+      }
+      
+      console.log(`📍 Cookies need refresh (FN: ${fnNeeded ? 'Needed' : 'Fresh'}, WM: ${wmNeeded ? 'Needed' : 'Fresh'})`);
+    }
+
     console.log("🚀 Starting automated login process...");
 
     if (browser) {
@@ -87,7 +123,7 @@ export function scheduleRelogin() {
 
   reloginTimeout = setTimeout(async () => {
     console.log("⏰ Scheduled relogin triggered...");
-    await saveCookies();
+    await saveCookies(true); // Scheduled relogins should probably be forced
     scheduleRelogin();
   }, nextReloginTime);
 

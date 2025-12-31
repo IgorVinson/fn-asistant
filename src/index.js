@@ -9,7 +9,7 @@ import { processOrder } from "./services/orderProcessing.js";
 telegramBot.onStartMonitoring = startMonitoring;
 telegramBot.onStopMonitoring = stopMonitoring;
 telegramBot.onProcessOrder = processOrder;
-telegramBot.onRelogin = saveCookies;
+telegramBot.onRelogin = () => saveCookies(true);
 
 // Start the server (which initializes everything)
 startServer();

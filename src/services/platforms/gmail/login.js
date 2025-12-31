@@ -1,5 +1,6 @@
 import { authenticate } from "@google-cloud/local-auth";
 import { promises as fs } from "fs";
+import { google } from "googleapis";
 import path from "path";
 
 const SCOPES = [

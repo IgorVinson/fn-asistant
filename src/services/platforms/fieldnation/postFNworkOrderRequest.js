@@ -16,8 +16,6 @@ function getCookies() {
 // Функція для виконання запиту і аналізу даних
 export async function postFNworkOrderRequest(url, time, estHours) {
 
-    console.log(time)
-
     try {
         // Отримуємо куки
         const cookies = getCookies();
@@ -62,7 +60,7 @@ export async function postFNworkOrderRequest(url, time, estHours) {
         )
         
     } catch (error) {
-        console.error('Помилка:', error.message);
+        console.error('Error:', error.message);
         return null;
     }
 }

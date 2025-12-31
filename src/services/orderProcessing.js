@@ -162,7 +162,7 @@ export async function processOrder(orderLink) {
 
         try {
           console.log("🍪 Starting cookie refresh process...");
-          await saveCookies();
+          await saveCookies(true);
           console.log("✅ Cookie refresh completed");
 
           const waitTime = CONFIG.COOKIE_REFRESH.WAIT_AFTER_REFRESH_MS;

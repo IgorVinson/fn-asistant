@@ -63,20 +63,20 @@ export async function getFNorderData(url) {
         return {
             id: workOrder.id,
             platform: "FieldNation",
-            company: workOrder.company.name,
+            company: workOrder.company?.name || "Unknown Company",
             title: workOrder.title,
             time: {
-                start: workOrder.schedule.service_window.start.local,
-                end: workOrder.schedule.service_window.end.local
+                start: workOrder.schedule?.service_window?.start?.local || null,
+                end: workOrder.schedule?.service_window?.end?.local || null
             },
-            payRange: workOrder.pay.range,
-            estLaborHours: workOrder.schedule.est_labor_hours,
-            distance: Math.floor(Number(workOrder.coords.distance)),
+            payRange: workOrder.pay?.range || { min: 0, max: 0 },
+            estLaborHours: workOrder.schedule?.est_labor_hours || 0,
+            distance: Math.floor(Number(workOrder.coords?.distance || 0)),
         };
 
 
     } catch (error) {
-        console.error('Помилка:', error.message);
+        console.error('Error:', error.message);
         return null;
     }
 }

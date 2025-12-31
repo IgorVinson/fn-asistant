@@ -14,7 +14,7 @@ export function startServer() {
     );
     
     // Initial startup tasks
-    await saveCookies();
+    await saveCookies(false);
     // Note: We don't auto-start monitoring anymore, we wait for Telegram command or explicit start
     scheduleRelogin();
   });

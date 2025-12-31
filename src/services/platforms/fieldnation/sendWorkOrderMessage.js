@@ -63,7 +63,7 @@ export async function sendWorkOrderMessage(url = 'https://app.fieldnation.com/wo
 
         // Перевірка статусу відповіді
     } catch (error) {
-        console.error('Помилка:', error.message);
+        console.error('Error:', error.message);
         return null;
     }
 }

@@ -25,18 +25,15 @@ export async function periodicCheck() {
     try {
       const lastEmailBody = await getLastUnreadEmail(auth, gmail);
       if (lastEmailBody) {
-        console.log("Email body received.");
         const orderLink = extractOrderLink(lastEmailBody);
         if (orderLink) {
-          console.log("Order link extracted:", orderLink);
+          // Only log the link if it's FieldNation (short) or a summary if it's WorkMarket (long)
+          const displayLink = orderLink.includes('workmarket.com') ? 'WorkMarket Order' : orderLink;
+          console.log("Order detected:", displayLink);
           await processOrder(orderLink);
 
           await new Promise(resolve => setTimeout(resolve, CONFIG.MONITORING.SOUND_DELAY_MS));
-        } else {
-          console.log("No valid order link found in email.");
         }
-      } else {
-        console.log("No unread emails found.");
       }
     } catch (error) {
       console.error("Error during email check:", error);
