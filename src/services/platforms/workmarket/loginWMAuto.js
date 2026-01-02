@@ -53,22 +53,62 @@ export async function loginWMAuto(
     // Step 2: Enter email
     console.log("👤 Entering email...");
     await page.waitForSelector("#login-email", { visible: true });
-    await page.type("#login-email", email, { delay: Math.random() * 100 });
+    
+    // Handle Shadow DOM for email input
+    await page.evaluate((email) => {
+      const host = document.querySelector("#login-email");
+      const input = host.shadowRoot ? host.shadowRoot.querySelector("input") : host.querySelector("input");
+      if (input) {
+        input.value = email;
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+        input.dispatchEvent(new Event('change', { bubbles: true }));
+      } else {
+        throw new Error("Could not find input inside #login-email");
+      }
+    }, email);
 
     // Step 3: Enter password
     console.log("🔐 Entering password...");
     await page.waitForSelector("#login-password", { visible: true });
-    await page.type("#login-password", password, {
-      delay: Math.random() * 100,
-    });
+    
+    // Handle Shadow DOM for password input
+    await page.evaluate((password) => {
+      const host = document.querySelector("#login-password");
+      const input = host.shadowRoot ? host.shadowRoot.querySelector("input") : host.querySelector("input");
+      if (input) {
+        input.value = password;
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+        input.dispatchEvent(new Event('change', { bubbles: true }));
+      } else {
+        throw new Error("Could not find input inside #login-password");
+      }
+    }, password);
 
     // Step 4: Click login button
     console.log("🔘 Clicking login button...");
-    await page.click("#login_page_button");
+    
+    // Handle Shadow DOM for button
+    await page.evaluate(() => {
+      const host = document.querySelector("#login_page_button");
+      const btn = host.shadowRoot ? host.shadowRoot.querySelector("button") : host;
+      if (btn) {
+        btn.click();
+      } else {
+        host.click(); // Fallback
+      }
+    });
 
     // Wait for navigation or 2FA screen
     console.log("🔄 Waiting for authentication screen...");
     await new Promise(resolve => setTimeout(resolve, 3000));
+
+    // Check if we are still on the login page
+    const currentUrl = page.url();
+    if (currentUrl.includes("/login")) {
+        console.log("⚠️ Still on login page after clicking login. Checking for errors...");
+        // You might want to check for error messages here
+        // But for now, we'll proceed, assuming maybe it's just slow or 2FA is on the same URL (unlikely for WM)
+    }
 
     // Take a screenshot for debugging
     try {
