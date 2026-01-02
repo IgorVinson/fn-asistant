@@ -96,8 +96,10 @@ export async function authorize() {
   }
 
   // Якщо немає збережених даних або вони прострочені, авторизуємось знову
-  if (process.env.NODE_ENV === 'production') {
-    throw new Error('Cannot authenticate in production without valid environment variables (GMAIL_CLIENT_ID, GMAIL_CLIENT_SECRET, GMAIL_REFRESH_TOKEN). Interactive login is disabled.');
+  if (process.env.NODE_ENV === "production") {
+    throw new Error(
+      "Cannot authenticate in production without valid environment variables (GMAIL_CLIENT_ID, GMAIL_CLIENT_SECRET, GMAIL_REFRESH_TOKEN). Interactive login is disabled."
+    );
   }
 
   client = await authenticate({

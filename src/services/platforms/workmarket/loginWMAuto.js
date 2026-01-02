@@ -53,15 +53,17 @@ export async function loginWMAuto(
     // Step 2: Enter email
     console.log("👤 Entering email...");
     await page.waitForSelector("#login-email", { visible: true });
-    
+
     // Handle Shadow DOM for email input
-    await page.evaluate((email) => {
+    await page.evaluate(email => {
       const host = document.querySelector("#login-email");
-      const input = host.shadowRoot ? host.shadowRoot.querySelector("input") : host.querySelector("input");
+      const input = host.shadowRoot
+        ? host.shadowRoot.querySelector("input")
+        : host.querySelector("input");
       if (input) {
         input.value = email;
-        input.dispatchEvent(new Event('input', { bubbles: true }));
-        input.dispatchEvent(new Event('change', { bubbles: true }));
+        input.dispatchEvent(new Event("input", { bubbles: true }));
+        input.dispatchEvent(new Event("change", { bubbles: true }));
       } else {
         throw new Error("Could not find input inside #login-email");
       }
@@ -70,15 +72,17 @@ export async function loginWMAuto(
     // Step 3: Enter password
     console.log("🔐 Entering password...");
     await page.waitForSelector("#login-password", { visible: true });
-    
+
     // Handle Shadow DOM for password input
-    await page.evaluate((password) => {
+    await page.evaluate(password => {
       const host = document.querySelector("#login-password");
-      const input = host.shadowRoot ? host.shadowRoot.querySelector("input") : host.querySelector("input");
+      const input = host.shadowRoot
+        ? host.shadowRoot.querySelector("input")
+        : host.querySelector("input");
       if (input) {
         input.value = password;
-        input.dispatchEvent(new Event('input', { bubbles: true }));
-        input.dispatchEvent(new Event('change', { bubbles: true }));
+        input.dispatchEvent(new Event("input", { bubbles: true }));
+        input.dispatchEvent(new Event("change", { bubbles: true }));
       } else {
         throw new Error("Could not find input inside #login-password");
       }
@@ -86,11 +90,13 @@ export async function loginWMAuto(
 
     // Step 4: Click login button
     console.log("🔘 Clicking login button...");
-    
+
     // Handle Shadow DOM for button
     await page.evaluate(() => {
       const host = document.querySelector("#login_page_button");
-      const btn = host.shadowRoot ? host.shadowRoot.querySelector("button") : host;
+      const btn = host.shadowRoot
+        ? host.shadowRoot.querySelector("button")
+        : host;
       if (btn) {
         btn.click();
       } else {
@@ -105,9 +111,11 @@ export async function loginWMAuto(
     // Check if we are still on the login page
     const currentUrl = page.url();
     if (currentUrl.includes("/login")) {
-        console.log("⚠️ Still on login page after clicking login. Checking for errors...");
-        // You might want to check for error messages here
-        // But for now, we'll proceed, assuming maybe it's just slow or 2FA is on the same URL (unlikely for WM)
+      console.log(
+        "⚠️ Still on login page after clicking login. Checking for errors..."
+      );
+      // You might want to check for error messages here
+      // But for now, we'll proceed, assuming maybe it's just slow or 2FA is on the same URL (unlikely for WM)
     }
 
     // Take a screenshot for debugging

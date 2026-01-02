@@ -8,12 +8,12 @@ class TelegramBotService {
     // However, Render's free tier spins down, which kills polling.
     // For a paid service or continuous running, polling is fine.
     // If you have multiple instances, polling will cause conflicts (duplicate updates).
-    
-    const isProduction = process.env.NODE_ENV === 'production';
-    
+
+    const isProduction = process.env.NODE_ENV === "production";
+
     // Use polling for now as it's simplest, but be aware of limitations
     this.bot = new TelegramBot(CONFIG.TELEGRAM.BOT_TOKEN, { polling: true });
-    
+
     this.chatId = CONFIG.TELEGRAM.CHAT_ID;
     this.isMonitoring = false;
     this.waitingForInput = null; // Track what input we're waiting for
