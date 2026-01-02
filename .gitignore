@@ -8,5 +8,5 @@
 /logs
 /config
 .env*
-/src/services/platforms/workmarket/cookies.json
 /src/services/platforms/fieldnation/cookies.json
+src/services/platforms/workmarket/cookies.json
