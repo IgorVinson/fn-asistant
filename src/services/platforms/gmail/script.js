@@ -1,15 +1,17 @@
-import {authorize as authorizeAtGmail} from "./login.js";
-import {getLastUnreadEmail} from "./getLastUnreadEmail.js";
-import { getOrderLink } from './getOrderLink.js';
+import { google } from "googleapis";
+import { authorize as authorizeAtGmail } from "./login.js";
+import { getLastUnreadEmail } from "./getLastUnreadEmail.js";
+import { getOrderLink } from "./getOrderLink.js";
 
 
 (async () => {
     try {
         // Авторизуємо користувача
-        const client = await authorizeAtGmail();
+        const auth = await authorizeAtGmail();
+        const gmail = google.gmail({ version: "v1", auth });
 
         // Отримуємо вміст останнього непрочитаного листа
-        const lastEmailBody = await getLastUnreadEmail(client);
+        const lastEmailBody = await getLastUnreadEmail(auth, gmail);
 
         if (lastEmailBody) {
             // Виводимо посилання з листа
@@ -20,4 +22,3 @@ import { getOrderLink } from './getOrderLink.js';
         console.error('Помилка:', error);
     }
 })();
-

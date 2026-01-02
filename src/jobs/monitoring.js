@@ -6,6 +6,7 @@ import { getOrderLink } from "../services/platforms/gmail/getOrderLink.js";
 import { authorize } from "../services/platforms/gmail/login.js";
 import playSound from "../utils/playSound.js";
 import telegramBot from "../utils/telegram/telegramBot.js";
+import { isWithinWindow } from "../utils/timeWindow.js";
 
 let monitoringInterval;
 
@@ -23,6 +24,16 @@ export async function periodicCheck() {
     }
 
     try {
+      if (
+        !isWithinWindow(
+          new Date(),
+          CONFIG.RUNTIME.ACTIVE_START,
+          CONFIG.RUNTIME.ACTIVE_END
+        )
+      ) {
+        return;
+      }
+
       const lastEmailBody = await getLastUnreadEmail(auth, gmail);
       if (lastEmailBody) {
         const orderLink = extractOrderLink(lastEmailBody);
@@ -43,6 +54,19 @@ export async function periodicCheck() {
 }
 
 export function startMonitoring() {
+  if (
+    !isWithinWindow(
+      new Date(),
+      CONFIG.RUNTIME.ACTIVE_START,
+      CONFIG.RUNTIME.ACTIVE_END
+    )
+  ) {
+    telegramBot.sendMessage(
+      `⏸️ Monitoring disabled outside active window (${CONFIG.RUNTIME.ACTIVE_START}-${CONFIG.RUNTIME.ACTIVE_END}).`
+    );
+    return;
+  }
+
   if (!monitoringInterval) {
     periodicCheck();
   }

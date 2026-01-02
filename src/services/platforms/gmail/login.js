@@ -12,6 +12,25 @@ const SCOPES = [
 const TOKEN_PATH = path.join(process.cwd(), "config", "token.json");
 const CREDENTIALS_PATH = path.join(process.cwd(), "config", "credentials.json");
 
+function loadEnvCredentials() {
+  const clientId = process.env.GMAIL_CLIENT_ID;
+  const clientSecret = process.env.GMAIL_CLIENT_SECRET;
+  const refreshToken = process.env.GMAIL_REFRESH_TOKEN;
+
+  if (!clientId || !clientSecret || !refreshToken) {
+    return null;
+  }
+
+  const redirectUri = process.env.GMAIL_REDIRECT_URI || "http://localhost";
+  const oauth2Client = new google.auth.OAuth2(
+    clientId,
+    clientSecret,
+    redirectUri
+  );
+  oauth2Client.setCredentials({ refresh_token: refreshToken });
+  return oauth2Client;
+}
+
 /**
  * Читання збережених раніше авторизованих облікових даних.
  *
@@ -51,6 +70,16 @@ async function saveCredentials(client) {
  *
  */
 export async function authorize() {
+  const envClient = loadEnvCredentials();
+  if (envClient) {
+    try {
+      await envClient.getAccessToken();
+      return envClient;
+    } catch (error) {
+      console.log("Env OAuth token invalid, falling back to local auth.");
+    }
+  }
+
   let client = await loadSavedCredentialsIfExist();
 
   // Якщо є збережені облікові дані, перевіряємо їх дійсність

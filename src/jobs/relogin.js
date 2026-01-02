@@ -5,12 +5,26 @@ import { CONFIG } from "../../config/config.js";
 import { loginFnAuto } from "../services/platforms/fieldnation/loginFnAuto.js";
 import { authorize } from "../services/platforms/gmail/login.js";
 import { loginWMAuto } from "../services/platforms/workmarket/loginWMAuto.js";
+import { isWithinWindow } from "../utils/timeWindow.js";
 
 let browser;
 let reloginTimeout;
 
 export async function saveCookies(force = false) {
   try {
+    if (
+      !isWithinWindow(
+        new Date(),
+        CONFIG.RUNTIME.ACTIVE_START,
+        CONFIG.RUNTIME.ACTIVE_END
+      )
+    ) {
+      console.log(
+        `⏸️ Skipping login outside active window (${CONFIG.RUNTIME.ACTIVE_START}-${CONFIG.RUNTIME.ACTIVE_END}).`
+      );
+      return;
+    }
+
     const fnCookiesPath = path.resolve(process.cwd(), "src", "services", "platforms", "fieldnation", "cookies.json");
     const wmCookiesPath = path.resolve(process.cwd(), "src", "services", "platforms", "workmarket", "cookies.json");
 
