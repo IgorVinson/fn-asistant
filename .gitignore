@@ -1,12 +1,10 @@
 /credentials.json
 /token.json
 /node_modules
-/WorkMarket/cookies.json
-/FieldNation/cookies.json
 .idea
 .vscode
-utils/FieldNation/cookies.json
-utils/WorkMarket/cookies.json
 /logs
 /config
 .env*
+src/services/platforms/fieldnation/cookies.json
+src/services/platforms/workmarket/cookies.json

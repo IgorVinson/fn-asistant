@@ -146,9 +146,13 @@ export async function getWMorderData(url) {
       }
     }
 
-    // Save response for debugging
-    fs.writeFileSync("debug_response.html", body);
-    console.log("Response saved to debug_response.html");
+    // Save response for debugging with ID
+    fs.writeFileSync(`debug_response_${workOrderId}.html`, body);
+    console.log(`Response saved to debug_response_${workOrderId}.html`);
+
+    // DEBUG: Find all occurrences of prices to help debug extraction
+    const allPrices = body.match(/\$\s*[\d.,]+/g) || [];
+    console.log("DEBUG: All price strings found in document:", allPrices);
 
     // Extract title from page header
     const titleMatch =
@@ -177,9 +181,21 @@ export async function getWMorderData(url) {
     // Fix pricing extraction - look for hourly rate and total budget
     const hourlyRateMatch = body.match(/\$\s*([\d.,]+)\/hr/i);
     const maxHoursMatch = body.match(/up to\s+(\d+)hr/i);
-    const totalBudgetMatch = body.match(
+    
+    // Try multiple patterns for total budget/payment
+    let totalBudgetMatch = body.match(
       /<td[^>]*><strong[^>]*>Total budget<\/strong><\/td>\s*<td[^>]*>\s*<strong[^>]*>\s*\$\s*([\d.,]+)/i
     );
+
+    if (!totalBudgetMatch) {
+        // Try looking for "Payment" or generic "Total" labels
+        totalBudgetMatch = body.match(/Total\s*(?:Budget|Payment)[^$]*\$\s*([\d.,]+)/i);
+    }
+    
+    if (!totalBudgetMatch) {
+        // Try looking for div/span structure
+        totalBudgetMatch = body.match(/class="[^"]*budget[^"]*"[^>]*>\s*\$\s*([\d.,]+)/i);
+    }
 
     // Fix distance extraction - look in the location section
     const distanceMatch = body.match(/\(([\d.,]+)\s*mi\)/i);

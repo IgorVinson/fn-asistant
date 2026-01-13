@@ -22,27 +22,48 @@ export async function saveCookies(force = false) {
 
       let fnActual = false;
       let wmActual = false;
+      let fnStatus = "Unknown";
+      let wmStatus = "Unknown";
 
       if (fs.existsSync(fnCookiesPath)) {
         const stats = fs.statSync(fnCookiesPath);
-        if (now - stats.mtimeMs < thresholdMs) fnActual = true;
+        const ageMs = now - stats.mtimeMs;
+        const ageHours = (ageMs / (1000 * 60 * 60)).toFixed(2);
+        if (ageMs < thresholdMs) {
+          fnActual = true;
+          fnStatus = `Fresh (${ageHours}h old)`;
+        } else {
+          fnStatus = `Stale (${ageHours}h old)`;
+        }
+      } else {
+        fnStatus = "Missing";
       }
 
       if (fs.existsSync(wmCookiesPath)) {
         const stats = fs.statSync(wmCookiesPath);
-        if (now - stats.mtimeMs < thresholdMs) wmActual = true;
+        const ageMs = now - stats.mtimeMs;
+        const ageHours = (ageMs / (1000 * 60 * 60)).toFixed(2);
+        if (ageMs < thresholdMs) {
+          wmActual = true;
+          wmStatus = `Fresh (${ageHours}h old)`;
+        } else {
+          wmStatus = `Stale (${ageHours}h old)`;
+        }
+      } else {
+        wmStatus = "Missing";
       }
 
-      // If everything enabled is actual, skip
       const fnNeeded = CONFIG.FIELDNATION_ENABLED && !fnActual;
       const wmNeeded = CONFIG.WORKMARKET_ENABLED && !wmActual;
 
+      console.log(`📊 Cookie Status: FN: ${fnStatus}, WM: ${wmStatus}`);
+
       if (!fnNeeded && !wmNeeded) {
-        console.log("📍 Cookies are still fresh. Skipping automated login.");
+        console.log("📍 All required cookies are still fresh. Skipping login.");
         return;
       }
       
-      console.log(`📍 Cookies need refresh (FN: ${fnNeeded ? 'Needed' : 'Fresh'}, WM: ${wmNeeded ? 'Needed' : 'Fresh'})`);
+      console.log(`📍 Refresh starting because: ${fnNeeded ? 'FN needs update ' : ''}${wmNeeded ? 'WM needs update' : ''}`);
     }
 
     console.log("🚀 Starting automated login process...");
@@ -117,23 +138,17 @@ export function scheduleRelogin() {
     clearTimeout(reloginTimeout);
   }
 
-  const baseInterval = CONFIG.RELOGIN.INTERVAL_HOURS * 60 * 60 * 1000;
-  const variance = (Math.random() * (CONFIG.RELOGIN.VARIANCE_MINUTES * 2) - CONFIG.RELOGIN.VARIANCE_MINUTES) * 60 * 1000;
-  const nextReloginTime = baseInterval + variance;
+  // We check freshness every 10-15 minutes
+  const checkInterval = (10 + Math.random() * 5) * 60 * 1000;
 
   reloginTimeout = setTimeout(async () => {
-    console.log("⏰ Scheduled relogin triggered...");
-    await saveCookies(true); // Scheduled relogins should probably be forced
+    console.log("⏰ Periodic cookie freshness check...");
+    await saveCookies(false); // Non-forced check
     scheduleRelogin();
-  }, nextReloginTime);
+  }, checkInterval);
 
-  const nextReloginHours = Math.floor(nextReloginTime / (60 * 60 * 1000));
-  const nextReloginMinutes = Math.floor(
-    (nextReloginTime % (60 * 60 * 1000)) / (60 * 1000)
-  );
-  console.log(
-    `🔄 Next relogin scheduled in ${nextReloginHours} hours and ${nextReloginMinutes} minutes`
-  );
+  const nextCheckMinutes = Math.floor(checkInterval / (60 * 1000));
+  console.log(`🔄 Next cookie freshness check in ${nextCheckMinutes} minutes`);
 }
 
 // Export for other modules to use if needed
