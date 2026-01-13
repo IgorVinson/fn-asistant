@@ -1,6 +1,6 @@
 import express from "express";
 import { CONFIG } from "../../config/config.js";
-import telegramBot from "../api/telegram.js";
+import telegramBot from "../utils/telegram/telegramBot.js";
 import { saveCookies, scheduleRelogin } from "../jobs/relogin.js";
 
 const app = express();

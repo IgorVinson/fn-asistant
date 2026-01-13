@@ -153,7 +153,7 @@ export async function processOrder(orderLink) {
         telegramBot.sendMessage("🔄 WorkMarket cookies expired, refreshing...");
 
         try {
-          console.log("🍪 Starting cookie refresh process...");
+          console.log("🍪 Starting cookie refresh process...");        
           await saveCookies(true);
           console.log("✅ Cookie refresh completed");
 
