@@ -1,4 +1,5 @@
 import express from "express";
+import "dotenv/config";
 import { google } from "googleapis";
 import puppeteer from "puppeteer";
 import { CONFIG } from "./config.js";

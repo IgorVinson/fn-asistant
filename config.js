@@ -31,7 +31,7 @@ export const CONFIG = {
   // Platform-specific Settings
   PLATFORMS: {
     FIELD_NATION: {
-      USER_ID: 983643, // Your Field Nation user ID
+      USER_ID: process.env.FIELD_NATION_USER_ID || 983643, // Your Field Nation user ID
       API_ENDPOINTS: {
         REQUESTS: "https://app.fieldnation.com/v2/workorders",
       },
@@ -43,8 +43,8 @@ export const CONFIG = {
 
   // Telegram Bot Settings
   TELEGRAM: {
-    BOT_TOKEN: "8018594226:AAFjb09j1uXwurHiABXNVWDWzmXJehUZsaA",
-    CHAT_ID: "271352684",
+    BOT_TOKEN: process.env.TELEGRAM_BOT_TOKEN,
+    CHAT_ID: process.env.TELEGRAM_CHAT_ID,
     COMMANDS: {
       START_MONITORING: "/start",
       STOP_MONITORING: "/stop",
