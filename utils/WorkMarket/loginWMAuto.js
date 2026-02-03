@@ -48,16 +48,16 @@ export async function loginWMAuto(
 
     // Step 1: Navigate to login page
     console.log("📍 Navigating to login page...");
-    await page.goto(url, { waitUntil: "load" });
+    await page.goto(url, { waitUntil: "domcontentloaded" });
 
     // Step 2: Enter email
     console.log("👤 Entering email...");
-    await page.waitForSelector("#login-email", { visible: true });
+    await page.waitForSelector("#login-email", { visible: true, timeout: 10000 });
     await page.type("#login-email", email, { delay: Math.random() * 100 });
 
     // Step 3: Enter password
     console.log("🔐 Entering password...");
-    await page.waitForSelector("#login-password", { visible: true });
+    await page.waitForSelector("#login-password", { visible: true, timeout: 10000 });
     await page.type("#login-password", password, {
       delay: Math.random() * 100,
     });
@@ -68,7 +68,7 @@ export async function loginWMAuto(
 
     // Wait for navigation or 2FA screen
     console.log("🔄 Waiting for authentication screen...");
-    await new Promise(resolve => setTimeout(resolve, 3000));
+    await new Promise(resolve => setTimeout(resolve, 4000));
 
     // Take a screenshot for debugging
     try {
@@ -86,7 +86,7 @@ export async function loginWMAuto(
 
     // Wait longer for web components to fully initialize in headless mode
     console.log("⏳ Waiting for web components to initialize...");
-    await new Promise(resolve => setTimeout(resolve, 5000));
+    await new Promise(resolve => setTimeout(resolve, 6000));
 
     // Additional debugging: Check what elements are actually on the page
     console.log("🔍 Debugging page elements...");
@@ -151,7 +151,7 @@ export async function loginWMAuto(
     // Check which verification input selector works
     for (const selector of codeInputSelectors) {
       try {
-        await page.waitForSelector(selector, { visible: true, timeout: 5000 });
+        await page.waitForSelector(selector, { visible: true, timeout: 3000 });
         codeInputFound = true;
         codeInputSelector = selector;
         console.log(`✅ Found verification code input: ${selector}`);
@@ -201,7 +201,7 @@ export async function loginWMAuto(
           console.log("🔧 Handling sdf-input web component...");
 
           // Method 1: Try to set the value attribute directly
-          await page.evaluate(
+          const valueSet = await page.evaluate(
             (selector, code) => {
               const sdfInput = document.querySelector(selector);
               if (sdfInput) {
@@ -267,7 +267,7 @@ export async function loginWMAuto(
             verificationCode
           );
 
-          if (!innerInputSet) {
+          if (!valueSet && !innerInputSet) {
             console.log(
               "⚠️ Could not set value using web component methods, trying to type..."
             );
@@ -297,7 +297,7 @@ export async function loginWMAuto(
         }
 
         // Wait a moment for the input to process
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        await new Promise(resolve => setTimeout(resolve, 1500));
 
         // Step 6: Click the Verify button
         console.log("✅ Clicking Verify button...");
@@ -392,9 +392,32 @@ export async function loginWMAuto(
       );
     }
 
-    // Step 7: Save cookies as autoCookies.json
+    // Step 7: Save cookies with error handling
     console.log("🍪 Saving cookies as autoCookies.json...");
-    await saveCookiesCustom(page, "WorkMarket", "cookies.json");
+    try {
+      // Make sure the page is still attached to browser
+      if (page.isClosed()) {
+        console.log("⚠️ Page is closed, cannot save cookies");
+        return {
+          success: false,
+          page: page,
+          error: "Page closed before cookie saving",
+        };
+      }
+
+      // Save cookies
+      await saveCookiesCustom(page, "WorkMarket", "autoCookies.json");
+      console.log("✅ Cookies saved successfully");
+    } catch (cookieError) {
+      console.error("❌ Error saving cookies:", cookieError.message);
+      // Try to save to alternative location
+      try {
+        await saveCookiesCustom(page, "WorkMarket", "fallback-cookies.json");
+        console.log("✅ Cookies saved to fallback location");
+      } catch (fallbackError) {
+        console.error("❌ Failed to save cookies to fallback location:", fallbackError.message);
+      }
+    }
 
     return {
       success: true,
@@ -404,8 +427,23 @@ export async function loginWMAuto(
   } catch (error) {
     console.error("❌ Error during WorkMarket login:", error.message);
 
+    // Try to save cookies even if there's an error
+    try {
+      if (!page.isClosed()) {
+        await saveCookiesCustom(page, "WorkMarket", "error-cookies.json");
+        console.log("✅ Cookies saved from error state");
+      }
+    } catch (cookieError) {
+      console.error("❌ Could not save cookies during error:", cookieError.message);
+    }
+
     // Take screenshot on error for debugging
-    console.log("📸 Error screenshot disabled");
+    try {
+      await page.screenshot({ path: "debug-error.png", fullPage: true });
+      console.log("📸 Error screenshot saved as debug-error.png");
+    } catch (screenshotError) {
+      console.log("⚠️ Could not take error screenshot:", screenshotError.message);
+    }
 
     return {
       success: false,
