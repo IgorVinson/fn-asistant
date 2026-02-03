@@ -1,6 +1,8 @@
 import express from "express";
 import cors from "cors";
 import "dotenv/config";
+import fs from "fs/promises";
+import path from "path";
 import { google } from "googleapis";
 import puppeteer from "puppeteer";
 import { CONFIG } from "./config.js";
@@ -30,13 +32,31 @@ const port = 3001;
 
 // --- Global State for Dashboard ---
 let eventHistory = [];
-const pushEvent = (event) => {
-  eventHistory.unshift({ 
+const logsFilePath = path.join(process.cwd(), 'logs', 'logs.json');
+
+// Function to write events to logs.json file
+const writeEventsToFile = async (events) => {
+  try {
+    await fs.writeFile(logsFilePath, JSON.stringify(events, null, 2), 'utf8');
+  } catch (error) {
+    console.error("Error writing to logs.json:", error);
+  }
+};
+
+// Function to push event to both memory and logs.json
+const pushEvent = async (event) => {
+  const newEvent = { 
     ...event, 
     id: event.id || Math.random().toString(36).substr(2, 9),
     time: new Date().toLocaleTimeString() 
-  });
+  };
+  
+  // Add to memory
+  eventHistory.unshift(newEvent);
   if (eventHistory.length > 50) eventHistory.pop();
+  
+  // Write to logs.json
+  await writeEventsToFile(eventHistory);
 };
 
 // --- API Endpoints ---
@@ -49,9 +69,16 @@ app.get("/api/status", (req, res) => {
   });
 });
 
-// Get event history
-app.get("/api/events", (req, res) => {
-  res.json(eventHistory);
+// Get event history (reads from logs.json file)
+app.get("/api/events", async (req, res) => {
+  try {
+    // Read from logs.json file
+    const events = await fs.readFile(logsFilePath, 'utf8');
+    res.json(JSON.parse(events));
+  } catch (error) {
+    console.error("Error reading logs.json:", error);
+    res.json(eventHistory); // Fallback to memory if file read fails
+  }
 });
 
 // Update config
@@ -722,8 +749,8 @@ app.listen(port, async () => {
   telegramBot.sendMessage(
     `🚀 Server started on port ${port}\nUse /help for available commands or the menu button (☰) for quick access`
   );
-  // Remove the showMainMenu call since we now use persistent menu
-  await saveCookies();
+  // Initialize logs.json with current eventHistory
+  await writeEventsToFile(eventHistory);
   // await periodicCheck(); // Don't auto-start, wait for Telegram command
   // scheduleRelogin();
 });
