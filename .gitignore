@@ -8,3 +8,4 @@
 utils/FieldNation/cookies.json
 utils/WorkMarket/cookies.json
 /logs
+.env
