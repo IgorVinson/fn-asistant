@@ -65,7 +65,7 @@ const Dashboard = () => {
     workMarketEnabled: false,
     testMode: true
   });
-  
+
   const [stats, setStats] = useState({
     processed: 0,
     successRate: '100%',
@@ -80,18 +80,18 @@ const Dashboard = () => {
       .then(data => {
         setIsMonitoring(data.isMonitoring);
         const newCfg = {
-          baseHourly: data.config.RATES?.BASE_HOURLY_RATE || 0,
-          travelRate: data.config.RATES?.TRAVEL_RATE || 0,
-          fieldNationEnabled: data.config.FIELDNATION_ENABLED || false,
-          workMarketEnabled: data.config.WORKMARKET_ENABLED || false,
-          testMode: data.config.TEST_MODE ?? true
+          baseHourly: data.config?.RATES?.BASE_HOURLY_RATE || 0,
+          travelRate: data.config?.RATES?.TRAVEL_RATE || 0,
+          fieldNationEnabled: data.config?.FIELDNATION_ENABLED || false,
+          workMarketEnabled: data.config?.WORKMARKET_ENABLED || false,
+          testMode: data.config?.TEST_MODE ?? true
         };
         setConfig(newCfg);
         setIsLoading(false);
       })
       .catch(err => {
         console.error("Failed to fetch status:", err);
-        setIsLoading(false); 
+        setIsLoading(false);
       });
   }, []);
 
@@ -133,6 +133,8 @@ const Dashboard = () => {
 
   const handleRateChange = (key, value) => {
     const newVal = Number(value);
+    if (isNaN(newVal)) return; // Prevent invalid values
+
     const updated = { ...config, [key]: newVal };
     setConfig(updated);
     updateBackendConfig(updated);
@@ -154,7 +156,7 @@ const Dashboard = () => {
       alert('❌ Failed to change monitoring status');
     }
   };
-  
+
   if (isLoading) return (
     <div className="min-h-screen bg-slate-950 text-blue-500 flex flex-col items-center justify-center font-mono gap-4">
       <div className="w-8 h-8 border-4 border-blue-500/30 border-t-blue-500 rounded-full animate-spin"></div>
@@ -175,17 +177,17 @@ const Dashboard = () => {
               <p className="text-slate-400 text-[10px] font-bold tracking-[0.2em] uppercase mt-1">Autonomous Ops Engine</p>
             </div>
           </div>
-          
+
           <div className="flex items-center gap-4">
             <div className={`hidden md:flex items-center gap-2 px-3 py-1.5 rounded-full border ${isMonitoring ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' : 'bg-slate-900 border-slate-800 text-slate-500'}`}>
               <div className={`w-2 h-2 rounded-full ${isMonitoring ? 'bg-emerald-500 animate-pulse' : 'bg-slate-600'}`} />
               <span className="text-[10px] font-bold uppercase tracking-wider">{isMonitoring ? 'Monitoring' : 'Idle'}</span>
             </div>
-            <button 
+            <button
               onClick={toggleMonitoring}
               className={`flex items-center gap-2 px-5 py-2.5 rounded-lg font-bold text-sm transition-all shadow-lg active:scale-95 ${
-                isMonitoring 
-                  ? 'bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500/20 hover:border-red-500/40 shadow-red-900/20' 
+                isMonitoring
+                  ? 'bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500/20 hover:border-red-500/40 shadow-red-900/20'
                   : 'bg-blue-600 text-white hover:bg-blue-500 shadow-blue-900/20'
               }`}
             >
@@ -207,7 +209,7 @@ const Dashboard = () => {
           <div className="lg:col-span-2 flex flex-col bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow-xl shadow-black/20">
             <div className="p-4 border-b border-slate-800 bg-slate-950 flex justify-between items-center">
               <h2 className="font-semibold text-sm flex items-center gap-2 text-slate-200">
-                <Terminal size={16} className="text-slate-500" /> 
+                <Terminal size={16} className="text-slate-500" />
                 Live Event Stream
               </h2>
             </div>
@@ -226,11 +228,11 @@ const Dashboard = () => {
             <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow-xl shadow-black/20">
               <div className="p-4 border-b border-slate-800 bg-slate-950">
                 <h2 className="font-semibold text-sm flex items-center gap-2 text-slate-200">
-                  <Settings size={16} className="text-slate-500" /> 
+                  <Settings size={16} className="text-slate-500" />
                   Global Configuration
                 </h2>
               </div>
-              
+
               <div className="p-5 space-y-6">
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
@@ -239,11 +241,21 @@ const Dashboard = () => {
                   <div className="grid grid-cols-2 gap-3">
                     <div className="bg-slate-950 border border-slate-800 p-3 rounded-lg group">
                       <span className="text-[10px] font-semibold text-slate-400 uppercase block mb-1">Base Rate</span>
-                      <input type="number" value={config.baseHourly} onChange={(e) => handleRateChange('baseHourly', e.target.value)} className="bg-transparent font-mono font-bold text-xl w-full focus:outline-none focus:text-blue-400 text-slate-200" />
+                      <input
+                        type="number"
+                        value={config.baseHourly}
+                        onChange={(e) => handleRateChange('baseHourly', e.target.value)}
+                        className="bg-transparent font-mono font-bold text-xl w-full focus:outline-none focus:text-blue-400 text-slate-200"
+                      />
                     </div>
                     <div className="bg-slate-950 border border-slate-800 p-3 rounded-lg group">
                       <span className="text-[10px] font-semibold text-slate-400 uppercase block mb-1">Travel Rate</span>
-                      <input type="number" value={config.travelRate} onChange={(e) => handleRateChange('travelRate', e.target.value)} className="bg-transparent font-mono font-bold text-xl w-full focus:outline-none focus:text-blue-400 text-slate-200" />
+                      <input
+                        type="number"
+                        value={config.travelRate}
+                        onChange={(e) => handleRateChange('travelRate', e.target.value)}
+                        className="bg-transparent font-mono font-bold text-xl w-full focus:outline-none focus:text-blue-400 text-slate-200"
+                      />
                     </div>
                   </div>
                 </div>
@@ -252,21 +264,21 @@ const Dashboard = () => {
                   <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Target Platforms</label>
                   <ToggleButton label="FieldNation" active={config.fieldNationEnabled} onClick={() => toggleConfig('fieldNationEnabled')} color="blue" />
                   <ToggleButton label="WorkMarket" active={config.workMarketEnabled} onClick={() => toggleConfig('workMarketEnabled')} color="emerald" />
-                  
+
                   <div className="h-px bg-slate-800 my-2" />
-                  
+
                   <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Operational Mode</label>
-                  <ToggleButton 
-                    label="Test Mode (Dry Run)" 
-                    active={config.testMode} 
-                    onClick={() => toggleConfig('testMode')} 
-                    color="purple" 
+                  <ToggleButton
+                    label="Test Mode (Dry Run)"
+                    active={config.testMode}
+                    onClick={() => toggleConfig('testMode')}
+                    color="purple"
                     icon={TestTube}
                   />
                 </div>
 
                 <div className="pt-2 text-[10px] text-slate-500 italic text-center">
-                    Config changes are applied in real-time.
+                    Config changes are applied in real-time (no Apply button needed).
                 </div>
               </div>
             </div>
@@ -285,7 +297,7 @@ const ToggleButton = ({ label, active, onClick, color, icon: Icon }) => {
     };
 
     return (
-        <div 
+        <div
             onClick={onClick}
             className={`cursor-pointer p-3 rounded-lg border flex items-center justify-between transition-all ${colors[color]}`}
         >
