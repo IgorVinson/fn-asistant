@@ -9,8 +9,8 @@ const SCOPES = [
   "https://www.googleapis.com/auth/calendar.readonly",
   "https://www.googleapis.com/auth/calendar.events",
 ];
-const TOKEN_PATH = path.join(process.cwd(), "token.json");
-const CREDENTIALS_PATH = path.join(process.cwd(), "credentials.json");
+const TOKEN_PATH = path.join(process.cwd(), "config", "token.json");
+const CREDENTIALS_PATH = path.join(process.cwd(), "config", "credentials.json");
 
 /**
  * Читання збережених раніше авторизованих облікових даних.

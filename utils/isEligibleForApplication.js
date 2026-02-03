@@ -499,7 +499,7 @@ async function isEligibleForApplication(workOrder) {
       return {
         eligible: false,
         counterOffer: calculateCounterOffer(workOrder),
-        reason: "GRANITE_TRAVEL_REQUIRED",
+        reason: "PAYMENT_INSUFFICIENT", // Changed from GRANITE_TRAVEL_REQUIRED to trigger counter-offer flow
       };
     } else {
       logger.info(

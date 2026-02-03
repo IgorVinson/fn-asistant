@@ -1,4 +1,5 @@
 import express from "express";
+import cors from "cors";
 import "dotenv/config";
 import { google } from "googleapis";
 import puppeteer from "puppeteer";
@@ -23,7 +24,63 @@ import { postWMworkOrderRequest } from "./utils/WorkMarket/postWMworkOrderReques
 
 // Configure the server
 const app = express();
+app.use(cors());
+app.use(express.json());
 const port = 3001;
+
+// --- Global State for Dashboard ---
+let eventHistory = [];
+const pushEvent = (event) => {
+  eventHistory.unshift({ 
+    ...event, 
+    id: event.id || Math.random().toString(36).substr(2, 9),
+    time: new Date().toLocaleTimeString() 
+  });
+  if (eventHistory.length > 50) eventHistory.pop();
+};
+
+// --- API Endpoints ---
+
+// Get current system status and config
+app.get("/api/status", (req, res) => {
+  res.json({
+    isMonitoring: telegramBot.isMonitoring,
+    config: CONFIG
+  });
+});
+
+// Get event history
+app.get("/api/events", (req, res) => {
+  res.json(eventHistory);
+});
+
+// Update config
+app.post("/api/config", (req, res) => {
+  const newConfig = req.body;
+  
+  if (newConfig.RATES) Object.assign(CONFIG.RATES, newConfig.RATES);
+  if (newConfig.FIELDNATION_ENABLED !== undefined) CONFIG.FIELDNATION_ENABLED = newConfig.FIELDNATION_ENABLED;
+  if (newConfig.WORKMARKET_ENABLED !== undefined) CONFIG.WORKMARKET_ENABLED = newConfig.WORKMARKET_ENABLED;
+  if (newConfig.TEST_MODE !== undefined) CONFIG.TEST_MODE = newConfig.TEST_MODE;
+
+  console.log("⚙️ Configuration updated via UI:", CONFIG);
+  res.json({ success: true, config: CONFIG });
+});
+
+// Start/Stop Agent
+app.post("/api/monitor/:action", async (req, res) => {
+  const { action } = req.params;
+  
+  if (action === "start") {
+    startMonitoring();
+    res.json({ success: true, isMonitoring: true });
+  } else if (action === "stop") {
+    stopMonitoring();
+    res.json({ success: true, isMonitoring: false });
+  } else {
+    res.status(400).json({ error: "Invalid action" });
+  }
+});
 
 let browser; // Declare a browser instance
 let reloginTimeout; // Timeout for the relogin scheduler
@@ -229,6 +286,11 @@ function determinePlatform(orderLink) {
 async function applyForJob(orderLink, startDateAndTime, estLaborHours, id) {
   const platform = determinePlatform(orderLink);
 
+  if (CONFIG.TEST_MODE) {
+    console.log(`🧪 TEST_MODE: Application for ${platform} order ${id} suppressed.`);
+    return;
+  }
+
   try {
     if (platform === "FieldNation" && CONFIG.FIELDNATION_ENABLED) {
       await postFNworkOrderRequest(orderLink, startDateAndTime, estLaborHours);
@@ -324,6 +386,7 @@ async function processOrder(orderLink) {
       telegramBot.sendMessage(
         `⏭️ FieldNation order skipped (platform disabled)`
       );
+      pushEvent({ platform: 'FieldNation', status: 'info', message: 'Order skipped: Platform disabled' });
       return null;
     }
 
@@ -337,6 +400,7 @@ async function processOrder(orderLink) {
       telegramBot.sendMessage(
         `⏭️ WorkMarket order skipped (platform disabled)`
       );
+      pushEvent({ platform: 'WorkMarket', status: 'info', message: 'Order skipped: Platform disabled' });
       return null;
     }
 
@@ -373,9 +437,10 @@ async function processOrder(orderLink) {
 
           // Check if retry was successful
           if (isInvalidWorkMarketData(data)) {
-            throw new Error(
-              "Still receiving invalid data after cookie refresh"
-            );
+            // Still invalid? Don't throw, just log it and move on to next email to avoid loop crash
+             console.error("❌ Still receiving invalid data after cookie refresh. Skipping this order.");
+             pushEvent({ platform: 'WorkMarket', status: 'error', message: 'Auth Error: Data still invalid after refresh' });
+             return null;
           } else {
             console.log(
               "✅ Successfully retrieved WorkMarket data after cookie refresh"
@@ -399,6 +464,7 @@ async function processOrder(orderLink) {
           telegramBot.sendMessage(
             `❌ Failed to refresh WorkMarket cookies: ${refreshError.message}`
           );
+          pushEvent({ platform: 'WorkMarket', status: 'error', message: 'Auth Error: Refresh failed' });
           return null;
         }
       }
@@ -450,6 +516,11 @@ async function processOrder(orderLink) {
         "Order meets all criteria",
         orderLink
       );
+      
+      const appStatus = CONFIG.TEST_MODE ? 'info' : 'success';
+      const appMsg = CONFIG.TEST_MODE ? 'TEST: Matches criteria (not applied)' : 'Applied for job (Criteria Met)';
+      pushEvent({ platform: normalizedData.platform, id: normalizedData.id, title: normalizedData.title, status: appStatus, message: appMsg });
+
       await applyForJob(
         orderLink,
         normalizedData.time,
@@ -470,6 +541,8 @@ async function processOrder(orderLink) {
         "Outside working hours",
         orderLink
       );
+      
+      pushEvent({ platform: normalizedData.platform, id: normalizedData.id, title: normalizedData.title, status: 'error', message: 'Rejected: Outside Working Hours' });
       playSound("error");
     } else if (eligibilityResult.reason === "SLOT_UNAVAILABLE") {
       logger.info(
@@ -484,6 +557,8 @@ async function processOrder(orderLink) {
         "Calendar conflict",
         orderLink
       );
+      
+      pushEvent({ platform: normalizedData.platform, id: normalizedData.id, title: normalizedData.title, status: 'error', message: 'Rejected: Calendar Conflict' });
       playSound("error");
     } else if (
       eligibilityResult.counterOffer &&
@@ -498,16 +573,6 @@ async function processOrder(orderLink) {
         );
 
         try {
-          await postFNCounterOffer(
-            normalizedData.id,
-            eligibilityResult.counterOffer.baseAmount,
-            eligibilityResult.counterOffer.travelExpense,
-            eligibilityResult.counterOffer.payType,
-            eligibilityResult.counterOffer.baseHours,
-            eligibilityResult.counterOffer.additionalHours,
-            eligibilityResult.counterOffer.additionalAmount
-          );
-
           const counterDetails = `Base: $${eligibilityResult.counterOffer.baseAmount}\nTravel: $${eligibilityResult.counterOffer.travelExpense}`;
           telegramBot.sendOrderNotification(
             normalizedData,
@@ -515,6 +580,23 @@ async function processOrder(orderLink) {
             counterDetails,
             orderLink
           );
+          
+          const counterStatus = CONFIG.TEST_MODE ? 'info' : 'warning';
+          const counterMsg = CONFIG.TEST_MODE ? `TEST: Rate low, counter suggested: $${eligibilityResult.counterOffer.baseAmount}` : `Sent FN Counter Offer: $${eligibilityResult.counterOffer.baseAmount}`;
+          pushEvent({ platform: normalizedData.platform, id: normalizedData.id, title: normalizedData.title, status: counterStatus, message: counterMsg });
+
+          if (!CONFIG.TEST_MODE) {
+            await postFNCounterOffer(
+              normalizedData.id,
+              eligibilityResult.counterOffer.baseAmount,
+              eligibilityResult.counterOffer.travelExpense,
+              eligibilityResult.counterOffer.payType,
+              eligibilityResult.counterOffer.baseHours,
+              eligibilityResult.counterOffer.additionalHours,
+              eligibilityResult.counterOffer.additionalAmount
+            );
+          }
+
           playSound("applied");
           logger.info(
             `Result: Counter offer sent successfully 🔊
@@ -530,9 +612,7 @@ async function processOrder(orderLink) {
             normalizedData.platform,
             normalizedData.id
           );
-          telegramBot.sendMessage(
-            `❌ Failed to send counter offer: ${error.message}`
-          );
+          telegramBot.sendMessage(`❌ Failed to send counter offer: ${error.message}`);
           playSound("error");
         }
       } else if (normalizedData.platform === "WorkMarket") {
@@ -549,13 +629,6 @@ async function processOrder(orderLink) {
               normalizedData.estLaborHours
           );
 
-          await postWMCounterOffer(
-            normalizedData.id,
-            hourlyRate,
-            normalizedData.estLaborHours,
-            normalizedData.distance
-          );
-
           const counterDetails = `Base: $${eligibilityResult.counterOffer.baseAmount}\nTravel: $${eligibilityResult.counterOffer.travelExpense}`;
           telegramBot.sendOrderNotification(
             normalizedData,
@@ -563,6 +636,20 @@ async function processOrder(orderLink) {
             counterDetails,
             orderLink
           );
+          
+          const counterStatus = CONFIG.TEST_MODE ? 'info' : 'warning';
+          const counterMsg = CONFIG.TEST_MODE ? `TEST: Rate low, counter suggested: $${eligibilityResult.counterOffer.baseAmount}` : `Sent WM Counter Offer: $${eligibilityResult.counterOffer.baseAmount}`;
+          pushEvent({ platform: normalizedData.platform, id: normalizedData.id, title: normalizedData.title, status: counterStatus, message: counterMsg });
+
+          if (!CONFIG.TEST_MODE) {
+            await postWMCounterOffer(
+              normalizedData.id,
+              hourlyRate,
+              normalizedData.estLaborHours,
+              normalizedData.distance
+            );
+          }
+
           playSound("applied");
           logger.info(
             `Result: Counter offer sent successfully with travel expenses 🔊`,
@@ -610,6 +697,8 @@ async function processOrder(orderLink) {
         rejectReason,
         orderLink
       );
+      
+      pushEvent({ platform: normalizedData.platform, id: normalizedData.id, title: normalizedData.title, status: 'error', message: `Rejected: ${rejectReason}` });
       playSound("error");
     }
 
