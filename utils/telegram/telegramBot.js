@@ -21,8 +21,9 @@ class TelegramBotService {
         { command: "status", description: "📊 Check monitoring status" },
         { command: "settings", description: "⚙️ View/update settings" },
         { command: "setrate", description: "💰 Set hourly rate" },
-        { command: "setminpay", description: "💵 Set minimum pay" },
-        { command: "settravel", description: "🚗 Set travel rate per mile" },
+        { command: "setminpayfn", description: "💵 Set FN min pay" },
+        { command: "setminpaywm", description: "💵 Set WM min pay" },
+        { command: "setworkhours", description: "⏰ Set work hours" },
         { command: "relogin", description: "🔄 Trigger relogin to platforms" },
         { command: "process", description: "🔄 Process specific order link" },
         { command: "help", description: "❓ Show help information" },
@@ -36,7 +37,7 @@ class TelegramBotService {
   setupCommands() {
     // Handle all text messages (for interactive input)
     this.bot.on("message", msg => {
-      if (msg.chat.id.toString() !== this.chatId) return;
+      if (!msg.chat || msg.chat.id.toString() !== this.chatId) return;
 
       // Skip if it's a command (starts with /)
       if (msg.text && msg.text.startsWith("/")) return;
@@ -50,7 +51,7 @@ class TelegramBotService {
 
     // Start monitoring command
     this.bot.onText(/\/start/, msg => {
-      if (msg.chat.id.toString() === this.chatId) {
+      if (msg.chat && msg.chat.id.toString() === this.chatId) {
         this.clearWaitingState();
         this.sendMessage("🚀 Starting job monitoring...");
         this.isMonitoring = true;
@@ -62,7 +63,7 @@ class TelegramBotService {
 
     // Stop monitoring command
     this.bot.onText(/\/stop/, msg => {
-      if (msg.chat.id.toString() === this.chatId) {
+      if (msg.chat && msg.chat.id.toString() === this.chatId) {
         this.clearWaitingState();
         this.sendMessage("⏹️ Stopping job monitoring...");
         this.isMonitoring = false;
@@ -74,7 +75,7 @@ class TelegramBotService {
 
     // Status command
     this.bot.onText(/\/status/, msg => {
-      if (msg.chat.id.toString() === this.chatId) {
+      if (msg.chat && msg.chat.id.toString() === this.chatId) {
         this.clearWaitingState();
         const status = this.isMonitoring ? "🟢 Active" : "🔴 Stopped";
         this.sendMessage(`Monitoring Status: ${status}`);
@@ -83,7 +84,7 @@ class TelegramBotService {
 
     // Process order command
     this.bot.onText(/\/process (.+)/, (msg, match) => {
-      if (msg.chat.id.toString() === this.chatId) {
+      if (msg.chat && msg.chat.id.toString() === this.chatId) {
         this.clearWaitingState();
         const orderLink = match[1];
         this.sendMessage(`🔄 Processing order: ${orderLink}`);
@@ -95,7 +96,7 @@ class TelegramBotService {
 
     // Relogin command
     this.bot.onText(/\/relogin/, msg => {
-      if (msg.chat.id.toString() === this.chatId) {
+      if (msg.chat && msg.chat.id.toString() === this.chatId) {
         this.clearWaitingState();
         this.sendMessage("🔄 Initiating relogin process...");
         if (this.onRelogin) {
@@ -106,21 +107,24 @@ class TelegramBotService {
 
     // Settings command - show current settings
     this.bot.onText(/\/settings/, msg => {
-      if (msg.chat.id.toString() === this.chatId) {
+      if (msg.chat && msg.chat.id.toString() === this.chatId) {
         this.clearWaitingState();
         const settingsText = `
 ⚙️ *Current Settings*
 
 💰 *Base Hourly Rate:* $${CONFIG.RATES.BASE_HOURLY_RATE}/hr
-💵 *Minimum Pay Threshold:* $${CONFIG.RATES.MIN_PAY_THRESHOLD}
-🚗 *Travel Rate:* $${CONFIG.DISTANCE.TRAVEL_RATE_PER_MILE}/mile
-📏 *Travel Threshold:* ${CONFIG.DISTANCE.TRAVEL_THRESHOLD_MILES} miles
-⏰ *Working Hours:* ${CONFIG.TIME.WORK_START_TIME} - ${CONFIG.TIME.WORK_END_TIME}
+💵 *Min Pay (FN):* $${CONFIG.RATES.MIN_PAY_THRESHOLD_FIELDNATION}
+💵 *Min Pay (WM):* $${CONFIG.RATES.MIN_PAY_THRESHOLD_WORKMARKET}
+🚗 *Travel Rate:* $${CONFIG.RATES.TRAVEL_RATE}/hr
+📏 *Radius Threshold:* ${CONFIG.DISTANCE.TRAVEL_THRESHOLD_MILES} miles
+⏰ *Work Hours:* ${CONFIG.TIME.WORK_START_TIME} - ${CONFIG.TIME.WORK_END_TIME}
+⏳ *Buffer:* ${CONFIG.BUFFER_MINUTES || CONFIG.TIME.BUFFER_MINUTES} min
 
 *Quick Update Commands:*
-\`/setrate\` - Set hourly rate
-\`/setminpay\` - Set minimum pay  
-\`/settravel\` - Set travel rate per mile
+/setrate - Set hourly rate
+/setminpayfn - Set FN min pay
+/setminpaywm - Set WM min pay
+/setworkhours - Set work hours (e.g., 08:00-20:00)
 
 💡 *Tip:* Changes take effect immediately!
         `;
@@ -132,7 +136,7 @@ class TelegramBotService {
 
     // Set hourly rate command (interactive)
     this.bot.onText(/\/setrate$/, msg => {
-      if (msg.chat.id.toString() === this.chatId) {
+      if (msg.chat && msg.chat.id.toString() === this.chatId) {
         this.waitingForInput = "rate";
         this.sendMessage(
           `💰 Please enter the new hourly rate (current: $${CONFIG.RATES.BASE_HOURLY_RATE}/hr):\n\nExample: 55`
@@ -140,29 +144,39 @@ class TelegramBotService {
       }
     });
 
-    // Set minimum pay command (interactive)
-    this.bot.onText(/\/setminpay$/, msg => {
-      if (msg.chat.id.toString() === this.chatId) {
-        this.waitingForInput = "minpay";
+    // Set FN minimum pay command (interactive)
+    this.bot.onText(/\/setminpayfn$/, msg => {
+      if (msg.chat && msg.chat.id.toString() === this.chatId) {
+        this.waitingForInput = "minpayfn";
         this.sendMessage(
-          `💵 Please enter the new minimum pay threshold (current: $${CONFIG.RATES.MIN_PAY_THRESHOLD}):\n\nExample: 200`
+          `💵 Please enter the new FieldNation minimum pay threshold (current: $${CONFIG.RATES.MIN_PAY_THRESHOLD_FIELDNATION}):\n\nExample: 200`
         );
       }
     });
 
-    // Set travel rate command (interactive)
-    this.bot.onText(/\/settravel$/, msg => {
-      if (msg.chat.id.toString() === this.chatId) {
-        this.waitingForInput = "travel";
+    // Set WM minimum pay command (interactive)
+    this.bot.onText(/\/setminpaywm$/, msg => {
+      if (msg.chat && msg.chat.id.toString() === this.chatId) {
+        this.waitingForInput = "minpaywm";
         this.sendMessage(
-          `🚗 Please enter the new travel rate per mile (current: $${CONFIG.DISTANCE.TRAVEL_RATE_PER_MILE}/mile):\n\nExample: 1.50`
+          `💵 Please enter the new WorkMarket minimum pay threshold (current: $${CONFIG.RATES.MIN_PAY_THRESHOLD_WORKMARKET}):\n\nExample: 100`
+        );
+      }
+    });
+
+    // Set work hours command (interactive)
+    this.bot.onText(/\/setworkhours$/, msg => {
+      if (msg.chat && msg.chat.id.toString() === this.chatId) {
+        this.waitingForInput = "workhours";
+        this.sendMessage(
+          `⏰ Please enter new work hours in HH:MM-HH:MM format (current: ${CONFIG.TIME.WORK_START_TIME}-${CONFIG.TIME.WORK_END_TIME}):\n\nExample: 08:30-21:00`
         );
       }
     });
 
     // Help command
     this.bot.onText(/\/help/, msg => {
-      if (msg.chat.id.toString() === this.chatId) {
+      if (msg.chat && msg.chat.id.toString() === this.chatId) {
         this.clearWaitingState();
         const status = this.isMonitoring ? "🟢 Active" : "🔴 Stopped";
         const helpText = `
@@ -178,16 +192,14 @@ class TelegramBotService {
 
 *Settings Commands:*
 /settings - View current settings
-/setrate - Update hourly rate (interactive)
-/setminpay - Update minimum pay (interactive)
-/settravel - Update travel rate per mile (interactive)
+/setrate - Update hourly rate
+/setminpayfn - Update FN min pay
+/setminpaywm - Update WM min pay
+/setworkhours - Update work hours
 
 *Other Commands:*
 /process <link> - Process specific order
 /help - Show this help
-
-*Example:*
-\`/process https://app.fieldnation.com/workorder/12345\`
 
 💡 *Tip:* Use the menu button (☰) for quick access!
         `;
@@ -199,6 +211,21 @@ class TelegramBotService {
   }
 
   handleUserInput(input) {
+    if (this.waitingForInput === "workhours") {
+      const hoursRegex = /^([01]\d|2[0-3]):([0-5]\d)-([01]\d|2[0-3]):([0-5]\d)$/;
+      if (!hoursRegex.test(input)) {
+        this.sendMessage("❌ Invalid format. Please use HH:MM-HH:MM (e.g., 09:00-18:00).");
+        return;
+      }
+      const [start, end] = input.split("-");
+      CONFIG.TIME.WORK_START_TIME = start;
+      CONFIG.TIME.WORK_END_TIME = end;
+      this.sendMessage(`✅ Work hours updated to ${start} - ${end}`);
+      logger.info(`Settings updated: Work hours set to ${start}-${end}`);
+      this.clearWaitingState();
+      return;
+    }
+
     const value = parseFloat(input);
 
     if (isNaN(value) || value <= 0) {
@@ -219,28 +246,28 @@ class TelegramBotService {
         logger.info(`Settings updated: Base hourly rate set to $${value}`);
         break;
 
-      case "minpay":
+      case "minpayfn":
         if (value > 2000) {
           this.sendMessage(
             "❌ Amount too high. Please enter a value between $1-$2000"
           );
           return;
         }
-        CONFIG.RATES.MIN_PAY_THRESHOLD = value;
-        this.sendMessage(`✅ Minimum pay threshold updated to $${value}`);
-        logger.info(`Settings updated: Minimum pay threshold set to $${value}`);
+        CONFIG.RATES.MIN_PAY_THRESHOLD_FIELDNATION = value;
+        this.sendMessage(`✅ FieldNation minimum pay threshold updated to $${value}`);
+        logger.info(`Settings updated: FN min pay set to $${value}`);
         break;
 
-      case "travel":
-        if (value > 10) {
+      case "minpaywm":
+        if (value > 2000) {
           this.sendMessage(
-            "❌ Rate too high. Please enter a value between $0.01-$10.00"
+            "❌ Amount too high. Please enter a value between $1-$2000"
           );
           return;
         }
-        CONFIG.DISTANCE.TRAVEL_RATE_PER_MILE = value;
-        this.sendMessage(`✅ Travel rate updated to $${value}/mile`);
-        logger.info(`Settings updated: Travel rate set to $${value}/mile`);
+        CONFIG.RATES.MIN_PAY_THRESHOLD_WORKMARKET = value;
+        this.sendMessage(`✅ WorkMarket minimum pay threshold updated to $${value}`);
+        logger.info(`Settings updated: WM min pay set to $${value}`);
         break;
     }
 

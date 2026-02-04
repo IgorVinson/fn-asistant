@@ -57,13 +57,22 @@ const LogItem = ({ type, message, time, platform, id }) => {
 const Dashboard = () => {
   const [isMonitoring, setIsMonitoring] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [showAdvanced, setShowAdvanced] = useState(false);
   const [events, setEvents] = useState([]);
   const [config, setConfig] = useState({
     baseHourly: 0,
     travelRate: 0,
     fieldNationEnabled: false,
     workMarketEnabled: false,
-    testMode: true
+    testMode: true,
+    // Advanced settings
+    minPayWM: 0,
+    minPayFN: 0,
+    workStart: "09:00",
+    workEnd: "19:00",
+    bufferMinutes: 30,
+    avgSpeed: 50,
+    travelThreshold: 30
   });
 
   const [stats, setStats] = useState({
@@ -84,7 +93,14 @@ const Dashboard = () => {
           travelRate: data.config?.RATES?.TRAVEL_RATE || 0,
           fieldNationEnabled: data.config?.FIELDNATION_ENABLED || false,
           workMarketEnabled: data.config?.WORKMARKET_ENABLED || false,
-          testMode: data.config?.TEST_MODE ?? true
+          testMode: data.config?.TEST_MODE ?? true,
+          minPayWM: data.config?.RATES?.MIN_PAY_THRESHOLD_WORKMARKET || 0,
+          minPayFN: data.config?.RATES?.MIN_PAY_THRESHOLD_FIELDNATION || 0,
+          workStart: data.config?.TIME?.WORK_START_TIME || "09:00",
+          workEnd: data.config?.TIME?.WORK_END_TIME || "19:00",
+          bufferMinutes: data.config?.TIME?.BUFFER_MINUTES || 30,
+          avgSpeed: data.config?.DISTANCE?.AVERAGE_SPEED || 50,
+          travelThreshold: data.config?.DISTANCE?.TRAVEL_THRESHOLD_MILES || 30
         };
         setConfig(newCfg);
         setIsLoading(false);
@@ -119,7 +135,18 @@ const Dashboard = () => {
         body: JSON.stringify({
           RATES: {
             BASE_HOURLY_RATE: updatedConfig.baseHourly,
-            TRAVEL_RATE: updatedConfig.travelRate
+            TRAVEL_RATE: updatedConfig.travelRate,
+            MIN_PAY_THRESHOLD_WORKMARKET: updatedConfig.minPayWM,
+            MIN_PAY_THRESHOLD_FIELDNATION: updatedConfig.minPayFN
+          },
+          TIME: {
+            WORK_START_TIME: updatedConfig.workStart,
+            WORK_END_TIME: updatedConfig.workEnd,
+            BUFFER_MINUTES: updatedConfig.bufferMinutes
+          },
+          DISTANCE: {
+            AVERAGE_SPEED: updatedConfig.avgSpeed,
+            TRAVEL_THRESHOLD_MILES: updatedConfig.travelThreshold
           },
           FIELDNATION_ENABLED: updatedConfig.fieldNationEnabled,
           WORKMARKET_ENABLED: updatedConfig.workMarketEnabled,
@@ -131,11 +158,11 @@ const Dashboard = () => {
     }
   };
 
-  const handleRateChange = (key, value) => {
-    const newVal = Number(value);
-    if (isNaN(newVal)) return; // Prevent invalid values
+  const handleConfigChange = (key, value, isNumeric = true) => {
+    const val = isNumeric ? Number(value) : value;
+    if (isNumeric && isNaN(val)) return;
 
-    const updated = { ...config, [key]: newVal };
+    const updated = { ...config, [key]: val };
     setConfig(updated);
     updateBackendConfig(updated);
   };
@@ -244,7 +271,7 @@ const Dashboard = () => {
                       <input
                         type="number"
                         value={config.baseHourly}
-                        onChange={(e) => handleRateChange('baseHourly', e.target.value)}
+                        onChange={(e) => handleConfigChange('baseHourly', e.target.value)}
                         className="bg-transparent font-mono font-bold text-xl w-full focus:outline-none focus:text-blue-400 text-slate-200"
                       />
                     </div>
@@ -253,7 +280,7 @@ const Dashboard = () => {
                       <input
                         type="number"
                         value={config.travelRate}
-                        onChange={(e) => handleRateChange('travelRate', e.target.value)}
+                        onChange={(e) => handleConfigChange('travelRate', e.target.value)}
                         className="bg-transparent font-mono font-bold text-xl w-full focus:outline-none focus:text-blue-400 text-slate-200"
                       />
                     </div>
@@ -261,9 +288,114 @@ const Dashboard = () => {
                 </div>
 
                 <div className="space-y-4">
-                  <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Target Platforms</label>
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Target Platforms</label>
+                    <button 
+                      onClick={() => setShowAdvanced(!showAdvanced)}
+                      className="text-[10px] font-bold text-blue-500 uppercase hover:underline flex items-center gap-1"
+                    >
+                      {showAdvanced ? 'Hide Advanced' : 'Show Advanced'}
+                    </button>
+                  </div>
+                  
                   <ToggleButton label="FieldNation" active={config.fieldNationEnabled} onClick={() => toggleConfig('fieldNationEnabled')} color="blue" />
                   <ToggleButton label="WorkMarket" active={config.workMarketEnabled} onClick={() => toggleConfig('workMarketEnabled')} color="emerald" />
+
+                  {showAdvanced && (
+                    <div className="pt-2 space-y-4 animate-in fade-in slide-in-from-top-2 duration-300">
+                      <div className="h-px bg-slate-800 my-2" />
+                      
+                      <div className="space-y-3">
+                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                           <DollarSign size={10} />
+                           Min Total Pay
+                        </label>
+                        <div className="grid grid-cols-2 gap-2">
+                          <div className="bg-slate-950/50 border border-slate-800/50 p-2 rounded-lg">
+                            <span className="text-[9px] text-slate-500 uppercase block mb-0.5">FieldNation</span>
+                            <input 
+                              type="number" 
+                              value={config.minPayFN} 
+                              onChange={(e) => handleConfigChange('minPayFN', e.target.value)}
+                              className="bg-transparent font-mono text-sm w-full focus:outline-none text-slate-300" 
+                            />
+                          </div>
+                          <div className="bg-slate-950/50 border border-slate-800/50 p-2 rounded-lg">
+                            <span className="text-[9px] text-slate-500 uppercase block mb-0.5">WorkMarket</span>
+                            <input 
+                              type="number" 
+                              value={config.minPayWM} 
+                              onChange={(e) => handleConfigChange('minPayWM', e.target.value)}
+                              className="bg-transparent font-mono text-sm w-full focus:outline-none text-slate-300" 
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="space-y-3">
+                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                           <Clock size={10} />
+                           Work Schedule
+                        </label>
+                        <div className="grid grid-cols-2 gap-2">
+                          <div className="bg-slate-950/50 border border-slate-800/50 p-2 rounded-lg">
+                            <span className="text-[9px] text-slate-500 uppercase block mb-0.5">Start</span>
+                            <input 
+                              type="time" 
+                              value={config.workStart} 
+                              onChange={(e) => handleConfigChange('workStart', e.target.value, false)}
+                              className="bg-transparent font-mono text-sm w-full focus:outline-none text-slate-300 invert brightness-200 contrast-100" 
+                            />
+                          </div>
+                          <div className="bg-slate-950/50 border border-slate-800/50 p-2 rounded-lg">
+                            <span className="text-[9px] text-slate-500 uppercase block mb-0.5">End</span>
+                            <input 
+                              type="time" 
+                              value={config.workEnd} 
+                              onChange={(e) => handleConfigChange('workEnd', e.target.value, false)}
+                              className="bg-transparent font-mono text-sm w-full focus:outline-none text-slate-300 invert brightness-200 contrast-100" 
+                            />
+                          </div>
+                        </div>
+                        <div className="bg-slate-950/50 border border-slate-800/50 p-2 rounded-lg">
+                          <span className="text-[9px] text-slate-500 uppercase block mb-0.5">Buffer Between Jobs (min)</span>
+                          <input 
+                            type="number" 
+                            value={config.bufferMinutes} 
+                            onChange={(e) => handleConfigChange('bufferMinutes', e.target.value)}
+                            className="bg-transparent font-mono text-sm w-full focus:outline-none text-slate-300" 
+                          />
+                        </div>
+                      </div>
+
+                      <div className="space-y-3">
+                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                           <MapPin size={10} />
+                           Travel Settings
+                        </label>
+                        <div className="grid grid-cols-2 gap-2">
+                          <div className="bg-slate-950/50 border border-slate-800/50 p-2 rounded-lg">
+                            <span className="text-[9px] text-slate-500 uppercase block mb-0.5">Avg Speed</span>
+                            <input 
+                              type="number" 
+                              value={config.avgSpeed} 
+                              onChange={(e) => handleConfigChange('avgSpeed', e.target.value)}
+                              className="bg-transparent font-mono text-sm w-full focus:outline-none text-slate-300" 
+                            />
+                          </div>
+                          <div className="bg-slate-950/50 border border-slate-800/50 p-2 rounded-lg">
+                            <span className="text-[9px] text-slate-500 uppercase block mb-0.5">Radius (mi)</span>
+                            <input 
+                              type="number" 
+                              value={config.travelThreshold} 
+                              onChange={(e) => handleConfigChange('travelThreshold', e.target.value)}
+                              className="bg-transparent font-mono text-sm w-full focus:outline-none text-slate-300" 
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
 
                   <div className="h-px bg-slate-800 my-2" />
 

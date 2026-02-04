@@ -86,6 +86,9 @@ app.post("/api/config", (req, res) => {
   const newConfig = req.body;
   
   if (newConfig.RATES) Object.assign(CONFIG.RATES, newConfig.RATES);
+  if (newConfig.TIME) Object.assign(CONFIG.TIME, newConfig.TIME);
+  if (newConfig.DISTANCE) Object.assign(CONFIG.DISTANCE, newConfig.DISTANCE);
+  
   if (newConfig.FIELDNATION_ENABLED !== undefined) CONFIG.FIELDNATION_ENABLED = newConfig.FIELDNATION_ENABLED;
   if (newConfig.WORKMARKET_ENABLED !== undefined) CONFIG.WORKMARKET_ENABLED = newConfig.WORKMARKET_ENABLED;
   if (newConfig.TEST_MODE !== undefined) CONFIG.TEST_MODE = newConfig.TEST_MODE;
