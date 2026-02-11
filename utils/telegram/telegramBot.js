@@ -78,7 +78,8 @@ class TelegramBotService {
       if (msg.chat && msg.chat.id.toString() === this.chatId) {
         this.clearWaitingState();
         const status = this.isMonitoring ? "🟢 Active" : "🔴 Stopped";
-        this.sendMessage(`Monitoring Status: ${status}`);
+        const mode = CONFIG.TEST_MODE ? "🧪 TEST MODE (No applications)" : "🚀 REAL MODE (Live applications)";
+        this.sendMessage(`Monitoring Status: ${status}\nMode: ${mode}`);
       }
     });
 
@@ -290,6 +291,8 @@ class TelegramBotService {
       return text.replace(/[_*[\]()~`>#+=|{}.!-]/g, "\\$&");
     };
 
+    const testModeLabel = CONFIG.TEST_MODE ? " 🧪 *[TEST MODE]*" : "";
+
     let orderIdText;
     if (orderLink) {
       // Create clickable link with escaped text
@@ -299,7 +302,7 @@ class TelegramBotService {
     }
 
     const message = `
-🔔 *New Job Alert*
+🔔 *New Job Alert*${testModeLabel}
 
 *Platform:* ${escapeMarkdown(orderData.platform)}
 *Order ID:* ${orderIdText}
