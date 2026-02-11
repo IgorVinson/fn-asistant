@@ -1,8 +1,9 @@
 export const CONFIG = {
   // Platform configuration
   TEST_MODE: true, // If true, agent will not perform destructive/real actions
-  FIELDNATION_ENABLED: false, // Set to false to disable FieldNation applications
+  FIELDNATION_ENABLED: true, // Set to false to disable FieldNation applications
   WORKMARKET_ENABLED: true, // Set to false to disable WorkMarket applications
+  ONLY_GRANITE: false, // If true, WorkMarket applies only to Granite Telecommunications
 
   // Payment and Rate Settings
   RATES: {

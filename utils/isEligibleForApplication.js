@@ -478,6 +478,24 @@ async function isEligibleForApplication(workOrder) {
     };
   }
 
+  // Check if ONLY_GRANITE mode is enabled for WorkMarket
+  if (
+    workOrder.platform === "WorkMarket" &&
+    CONFIG.ONLY_GRANITE &&
+    workOrder.company !== "Granite Telecommunications"
+  ) {
+    logger.info(
+      `WorkMarket job rejected: ONLY_GRANITE mode is enabled and company is ${workOrder.company}`,
+      workOrder.platform,
+      workOrder.id
+    );
+    return {
+      eligible: false,
+      counterOffer: null,
+      reason: "ONLY_GRANITE_MODE",
+    };
+  }
+
   // Special handling for Granite Telecommunications - skip calendar and payment checks
   if (
     workOrder.platform === "WorkMarket" &&

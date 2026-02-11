@@ -115,22 +115,81 @@ app.post("/api/monitor/:action", async (req, res) => {
 let browser; // Declare a browser instance
 let reloginTimeout; // Timeout for the relogin scheduler
 let monitoringInterval; // Store the monitoring interval
+let isRefreshingCookies = false; // Flag to prevent concurrent cookie refresh attempts
 
-// Function to schedule a relogin with a 4-hour interval + random variance
+// Cleanup function to kill all Chrome processes spawned by puppeteer
+async function cleanupChromeProcesses() {
+  try {
+    console.log("🧹 Cleaning up Chrome processes...");
+    const { execSync } = await import('child_process');
+    try {
+      // Kill Chrome for Testing processes
+      execSync('pkill -9 -f "Google Chrome for Testing" 2>/dev/null');
+      // Also try regular Chrome if spawned
+      execSync('pkill -9 -f "Google Chrome Helper" 2>/dev/null');
+    } catch (e) {
+      // Ignore errors if no processes found
+    }
+    console.log("✅ Chrome cleanup complete");
+  } catch (error) {
+    console.error("❌ Error during Chrome cleanup:", error.message);
+  }
+}
+
+// Graceful shutdown handlers
+async function gracefulShutdown(signal) {
+  console.log(`\n${signal} received. Shutting down gracefully...`);
+  
+  // Stop monitoring
+  if (monitoringInterval) {
+    clearInterval(monitoringInterval);
+    monitoringInterval = null;
+  }
+  
+  if (reloginTimeout) {
+    clearTimeout(reloginTimeout);
+    reloginTimeout = null;
+  }
+  
+  // Close browser
+  if (browser) {
+    try {
+      await browser.close();
+      console.log("✅ Browser closed");
+    } catch (err) {
+      console.error("Error closing browser:", err.message);
+    }
+    browser = null;
+  }
+  
+  // Cleanup zombie Chrome processes
+  await cleanupChromeProcesses();
+  
+  console.log("👋 Goodbye!");
+  process.exit(0);
+}
+
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('exit', async () => {
+  // Final cleanup on exit
+  if (browser) {
+    try { await browser.close(); } catch (e) {}
+  }
+});
+
+// Function to schedule a relogin with a 4-hour interval (strict)
 function scheduleRelogin() {
   // Clear any existing timeout
   if (reloginTimeout) {
     clearTimeout(reloginTimeout);
   }
 
-  // Base interval: 4 hours in milliseconds
+  // Strict interval: 4 hours in milliseconds (no variance)
   const baseInterval = 4 * 60 * 60 * 1000;
 
-  // Random variance: +/- 10 minutes in milliseconds
-  const variance = (Math.random() * 20 - 10) * 60 * 1000;
-
-  // Calculate the next relogin time
-  const nextReloginTime = baseInterval + variance;
+  // Calculate the next relogin time (no random variance)
+  const nextReloginTime = baseInterval;
 
   // Schedule the next relogin
   reloginTimeout = setTimeout(async () => {
@@ -155,6 +214,9 @@ async function saveCookies() {
   try {
     console.log("🚀 Starting automated login process...");
 
+    // Cleanup any zombie Chrome processes before starting
+    await cleanupChromeProcesses();
+
     // Close the existing browser instance if it exists
     if (browser) {
       try {
@@ -163,6 +225,7 @@ async function saveCookies() {
       } catch (err) {
         console.error("Error closing browser:", err);
       }
+      browser = null;
     }
 
     browser = await puppeteer.launch({
@@ -443,59 +506,93 @@ async function processOrder(orderLink) {
 
       // Check if data indicates expired cookies and retry with fresh cookies
       if (isInvalidWorkMarketData(data)) {
-        console.log(
-          "🔄 Invalid WorkMarket data detected, refreshing cookies and retrying..."
-        );
-        logger.info(
-          "Detected expired WorkMarket cookies, refreshing and retrying",
-          platform,
-          "unknown"
-        );
-
-        try {
-          // Refresh cookies using saveCookies function
-          await saveCookies();
-
-          // Wait a bit for cookies to be saved
-          await new Promise(resolve => setTimeout(resolve, 2000));
-
-          // Retry fetching the data
-          console.log(
-            "🔄 Retrying WorkMarket data fetch with fresh cookies..."
-          );
-          data = await getWMorderData(orderLink);
-
-          // Check if retry was successful
-          if (isInvalidWorkMarketData(data)) {
-            // Still invalid? Don't throw, just log it and move on to next email to avoid loop crash
-             console.error("❌ Still receiving invalid data after cookie refresh. Skipping this order.");
-             pushEvent({ platform: 'WorkMarket', status: 'error', message: 'Auth Error: Data still invalid after refresh' });
-             return null;
-          } else {
-            console.log(
-              "✅ Successfully retrieved WorkMarket data after cookie refresh"
-            );
-            logger.info(
-              "Successfully retrieved data after cookie refresh",
-              platform,
-              data.id
-            );
+        // Prevent concurrent refresh attempts
+        if (isRefreshingCookies) {
+          console.log("⏳ Cookie refresh already in progress, waiting...");
+          // Wait for refresh to complete (up to 60 seconds)
+          let waitCount = 0;
+          while (isRefreshingCookies && waitCount < 60) {
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            waitCount++;
           }
-        } catch (refreshError) {
-          console.error(
-            "❌ Failed to refresh cookies or retry data fetch:",
-            refreshError
+          
+          // Retry fetching with (hopefully) fresh cookies
+          console.log("🔄 Retrying WorkMarket data fetch after waiting for refresh...");
+          data = await getWMorderData(orderLink);
+          
+          if (isInvalidWorkMarketData(data)) {
+            console.error("❌ Still invalid data after waiting for refresh. Skipping.");
+            pushEvent({ platform: 'WorkMarket', status: 'error', message: 'Auth Error: Still invalid after refresh wait' });
+            return null;
+          }
+          
+          console.log("✅ Successfully retrieved WorkMarket data after waiting for refresh");
+        } else {
+          // No refresh in progress, start one
+          isRefreshingCookies = true;
+          console.log(
+            "🔄 Invalid WorkMarket data detected, refreshing cookies and retrying..."
           );
-          logger.error(
-            `Failed to refresh cookies: ${refreshError.message}`,
+          logger.info(
+            "Detected expired WorkMarket cookies, refreshing and retrying",
             platform,
             "unknown"
           );
-          telegramBot.sendMessage(
-            `❌ Failed to refresh WorkMarket cookies: ${refreshError.message}`
-          );
-          pushEvent({ platform: 'WorkMarket', status: 'error', message: 'Auth Error: Refresh failed' });
-          return null;
+
+          try {
+            // Refresh cookies by re-logging into WorkMarket
+            console.log("🔑 Re-logging into WorkMarket to refresh cookies...");
+            
+            // Use saveCookies() which properly initializes browser and logs into both platforms
+            await saveCookies();
+            
+            console.log("✅ WorkMarket re-login successful, cookies refreshed");
+            
+            // Wait a bit for cookies to be saved
+            await new Promise(resolve => setTimeout(resolve, 2000));
+
+            // Retry fetching the data
+            console.log(
+              "🔄 Retrying WorkMarket data fetch with fresh cookies..."
+            );
+            data = await getWMorderData(orderLink);
+
+            // Check if retry was successful
+            if (isInvalidWorkMarketData(data)) {
+              // Still invalid? Don't throw, just log it and move on to next email to avoid loop crash
+               console.error("❌ Still receiving invalid data after cookie refresh. Skipping this order.");
+               pushEvent({ platform: 'WorkMarket', status: 'error', message: 'Auth Error: Data still invalid after refresh' });
+               return null;
+            } else {
+              console.log(
+                "✅ Successfully retrieved WorkMarket data after cookie refresh"
+              );
+              logger.info(
+                "Successfully retrieved data after cookie refresh",
+                platform,
+                data.id
+              );
+            }
+          } catch (refreshError) {
+            console.error(
+              "❌ Failed to refresh cookies or retry data fetch:",
+              refreshError
+            );
+            logger.error(
+              `Failed to refresh cookies: ${refreshError.message}`,
+              platform,
+              "unknown"
+            );
+            telegramBot.sendMessage(
+              `❌ Failed to refresh WorkMarket cookies: ${refreshError.message}`
+            );
+            pushEvent({ platform: 'WorkMarket', status: 'error', message: 'Auth Error: Refresh failed' });
+            return null;
+          } finally {
+            // Always reset the flag when done
+            isRefreshingCookies = false;
+            console.log("🔓 Cookie refresh lock released");
+          }
         }
       }
     } else {
@@ -746,14 +843,26 @@ telegramBot.onStopMonitoring = stopMonitoring;
 telegramBot.onProcessOrder = processOrder;
 telegramBot.onRelogin = saveCookies;
 
+// Periodic zombie Chrome cleanup (runs every 30 minutes)
+setInterval(async () => {
+  console.log("🧹 Running periodic zombie Chrome cleanup...");
+  await cleanupChromeProcesses();
+}, 30 * 60 * 1000);
+
 // Start the server
 app.listen(port, async () => {
   console.log(`Server running on port ${port}`);
+  
+  // Clean up any zombies from previous runs on startup
+  await cleanupChromeProcesses();
+  
   telegramBot.sendMessage(
     `🚀 Server started on port ${port}\nUse /help for available commands or the menu button (☰) for quick access`
   );
   // Initialize logs.json with current eventHistory
   await writeEventsToFile(eventHistory);
   // await periodicCheck(); // Don't auto-start, wait for Telegram command
-  // scheduleRelogin();
+  
+  // No scheduled refresh - cookies are refreshed on-demand when they expire
+  console.log("⏰ On-demand cookie refresh enabled (refresh only when expired)");
 });
