@@ -1,10 +1,27 @@
+# Environment variables
+.env
+.env.local
+
+# Google OAuth credentials
 /credentials.json
 /token.json
+
+# Dependencies
 /node_modules
+
+# Session cookies
 /WorkMarket/cookies.json
 /FieldNation/cookies.json
-.idea
-.vscode
 utils/FieldNation/cookies.json
 utils/WorkMarket/cookies.json
+
+# IDE
+.idea
+.vscode
+
+# Logs
 /logs
+
+# Debug files
+debug-*.png
+debug-*.html

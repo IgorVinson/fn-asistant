@@ -10,15 +10,23 @@
  */
 import { saveCookiesCustom } from "../saveCookies.js";
 import { waitForWMcode } from "./getWMcode.js";
+import { CONFIG } from "../../config.js";
 
 export async function loginWMAuto(
   browser,
-  email = "igorvinson@gmail.com",
-  password = "YOUR_PASSWORD_HERE",
+  email = null,
+  password = null,
   verificationCode = null,
   waitForCode = false,
   gmailAuth = null
 ) {
+  // Use environment variables if not provided
+  const wmEmail = email || CONFIG.PLATFORMS.WORK_MARKET.EMAIL;
+  const wmPassword = password || CONFIG.PLATFORMS.WORK_MARKET.PASSWORD;
+
+  if (!wmEmail || !wmPassword) {
+    throw new Error("WorkMarket credentials not configured. Set WM_EMAIL and WM_PASSWORD in .env file");
+  }
   const url = "https://www.workmarket.com/login";
 
   // Create a new page with additional configurations to avoid detection
@@ -53,12 +61,12 @@ export async function loginWMAuto(
     // Step 2: Enter email
     console.log("👤 Entering email...");
     await page.waitForSelector("#login-email", { visible: true });
-    await page.type("#login-email", email, { delay: Math.random() * 100 });
+    await page.type("#login-email", wmEmail, { delay: Math.random() * 100 });
 
     // Step 3: Enter password
     console.log("🔐 Entering password...");
     await page.waitForSelector("#login-password", { visible: true });
-    await page.type("#login-password", password, {
+    await page.type("#login-password", wmPassword, {
       delay: Math.random() * 100,
     });
 

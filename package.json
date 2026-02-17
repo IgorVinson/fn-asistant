@@ -1,16 +1,18 @@
 {
   "name": "field-nation-assist",
   "version": "1.0.0",
-  "description": "",
-  "main": "other/oldIndex.js",
+  "description": "Automation tool for FieldNation & WorkMarket — job scheduling, calendar sync, and Telegram notifications",
+  "main": "index.js",
   "scripts": {
-    "dev": "nodemon other/oldIndex.js",
+    "dev": "nodemon index.js",
+    "start": "node index.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "private": true,
   "dependencies": {
     "@google-cloud/local-auth": "^2.1.0",
     "cheerio": "^1.0.0",
+    "dotenv": "^16.4.5",
     "express": "^4.21.1",
     "googleapis": "^105.0.0",
     "imap": "^0.8.19",
