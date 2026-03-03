@@ -7,6 +7,7 @@
 .vscode
 utils/FieldNation/cookies.json
 utils/WorkMarket/cookies.json
+utils/WorkMarket/autoCookies.json
 /logs
 .env
 /config

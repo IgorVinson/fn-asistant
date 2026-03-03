@@ -801,18 +801,11 @@ async function processOrder(orderLink) {
     ) {
       // Handle counter-offer with alternative time slot
       const slot = eligibilityResult.counterOffer.counterDate;
-      const slotText = `${slot.start.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} - ${slot.end.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} (${slot.durationMinutes}min)`;
-
-      // Check if counter slot is on a different day than requested
-      const requestedDate = new Date(normalizedData.time.start);
-      const counterSlotDate = slot.start;
-      const isDifferentDay = requestedDate.toDateString() !== counterSlotDate.toDateString();
-      const counterDateLabel = isDifferentDay
-        ? `📆 ${counterSlotDate.toLocaleDateString([], { weekday: "short", month: "short", day: "numeric" })} — ${slotText}`
-        : slotText;
+      const slotTimeRange = `${slot.start.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} - ${slot.end.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} (${slot.durationMinutes}min)`;
+      const counterDateLabel = `📆 ${slot.start.toLocaleDateString([], { weekday: "short", month: "short", day: "numeric" })} — ${slotTimeRange}`;
 
       logger.info(
-        `Action: Counter Dates - Offering slot: ${slotText}`,
+        `Action: Counter Dates - Offering slot: ${counterDateLabel}`,
         normalizedData.platform,
         normalizedData.id
       );
@@ -847,14 +840,14 @@ async function processOrder(orderLink) {
         .catch((err) => {
           logger.error(`Failed to send counter dates notification: ${err.message}`);
           telegramBot.sendMessage(
-            `📅 Counter Dates\n\nOrder: ${normalizedData.id}\nCompany: ${normalizedData.company}\nRequested: ${new Date(normalizedData.time.start).toLocaleString()}\n\nCounter Slot: ${slotText}\n\nCounter: $${eligibilityResult.counterOffer.baseAmount} + $${eligibilityResult.counterOffer.travelExpense} travel`
+            `📅 Counter Dates\n\nOrder: ${normalizedData.id}\nCompany: ${normalizedData.company}\nRequested: ${new Date(normalizedData.time.start).toLocaleString()}\n\nCounter Slot: ${counterDateLabel}\n\nCounter: $${eligibilityResult.counterOffer.baseAmount} + $${eligibilityResult.counterOffer.travelExpense} travel`
           );
         });
 
       const counterStatus = CONFIG.TEST_MODE ? "info" : "warning";
       const counterMsg = CONFIG.TEST_MODE
-        ? `TEST: Schedule conflict, counter slot: ${slotText}`
-        : `Counter dates sent: ${slotText}`;
+        ? `TEST: Schedule conflict, counter slot: ${counterDateLabel}`
+        : `Counter dates sent: ${counterDateLabel}`;
       pushEvent({
         platform: normalizedData.platform,
         id: normalizedData.id,
