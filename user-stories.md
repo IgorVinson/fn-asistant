@@ -3,6 +3,7 @@
 ## General
 1. I apply on all jobs with source rate (get all job availible mode) and check only schedule - GET_ALL_JOBS
 2. Only Granite - only granite jobs, but should check schedule and is_counter_rates.
+3. For big jobs > 8h we do not do counter_rates
 
 ## Payment
 3. If wo with hourly rate we counter hourly (if is_counter_rates = true) or with source rate (if is_counter_rates = false)
@@ -11,7 +12,6 @@
 
 * Is counter rates - if true we reapply basic on base hourly rate, that diff for each platform
 * Base hourly rate should be different for fieldnation and workmarket
-
 
 
 ## Schedule
