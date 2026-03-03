@@ -689,7 +689,7 @@ async function processOrder(orderLink) {
       playSound("error");
     } else if (
       eligibilityResult.counterOffer &&
-      eligibilityResult.reason === "PAYMENT_INSUFFICIENT"
+      (eligibilityResult.reason === "PAYMENT_INSUFFICIENT" || eligibilityResult.reason === "TRAVEL_REQUIRED")
     ) {
       // Handle counter offers for both platforms
       if (normalizedData.platform === "FieldNation") {

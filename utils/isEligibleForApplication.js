@@ -44,57 +44,66 @@ function isWithinWorkingHours(startTime, endTime) {
 }
 
 function isPaymentEligible(workOrder) {
-  const MIN_HOURLY_RATE = CONFIG.RATES.BASE_HOURLY_RATE;
+  const isFieldNation = workOrder.platform === "FieldNation";
+  const MIN_HOURLY_RATE = isFieldNation 
+    ? (CONFIG.RATES.BASE_HOURLY_RATE_FIELDNATION || CONFIG.RATES.BASE_HOURLY_RATE)
+    : (CONFIG.RATES.BASE_HOURLY_RATE_WORKMARKET || CONFIG.RATES.BASE_HOURLY_RATE);
   const estHours = workOrder.estLaborHours || CONFIG.TIME.DEFAULT_LABOR_HOURS;
-  const platformMinTotal =
-    workOrder.platform === "FieldNation"
-      ? CONFIG.RATES.MIN_PAY_THRESHOLD_FIELDNATION
-      : CONFIG.RATES.MIN_PAY_THRESHOLD_WORKMARKET;
-  const minTotalFromHourly = MIN_HOURLY_RATE * estHours;
-  const requiredMinTotal = Math.max(minTotalFromHourly, platformMinTotal);
-  const TRAVEL_THRESHOLD = CONFIG.DISTANCE.TRAVEL_THRESHOLD_MILES;
+  const platformMinTotal = isFieldNation
+    ? CONFIG.RATES.MIN_PAY_THRESHOLD_FIELDNATION
+    : CONFIG.RATES.MIN_PAY_THRESHOLD_WORKMARKET;
+
   const isHourly = workOrder.payType === "hourly" || workOrder.hourlyRate > 0;
 
-  // If distance exceeds threshold, ALWAYS counter (need travel expenses)
-  if (workOrder.distance > TRAVEL_THRESHOLD) {
-    const details = `Travel required (${workOrder.distance}mi > ${TRAVEL_THRESHOLD}mi)`;
-    logger.info(
-      `Payment Analysis: ${details} → COUNTER`,
-      workOrder.platform,
-      workOrder.id
-    );
-    return { isAcceptable: false, details };
+  // Calculate their offered total and hourly rate
+  let theirTotal = 0;
+  let theirRate = 0;
+  if (isHourly) {
+    theirRate = workOrder.hourlyRate || workOrder.payRange.min || 0;
+    theirTotal = workOrder.payRange.max || (theirRate * estHours);
+  } else {
+    theirTotal = workOrder.payRange.max || 0;
+    theirRate = theirTotal / (estHours || 1);
   }
 
-  // Check if pay meets minimum
-  if (isHourly) {
-    const theirRate = workOrder.hourlyRate || workOrder.payRange.min || 0;
-    const offeredTotal = workOrder.payRange.max || theirRate * estHours;
-    const isAcceptable =
-      theirRate >= MIN_HOURLY_RATE && offeredTotal >= requiredMinTotal;
-    
-    // Detailed analysis string
-    const details = `$${theirRate}/hr (min $${MIN_HOURLY_RATE}), total $${offeredTotal} vs required $${requiredMinTotal}`;
-    
-    logger.info(
-      `Payment Analysis (hourly): ${details} (platform floor: $${platformMinTotal}) → ${isAcceptable ? "ACCEPT" : "COUNTER"}`,
-      workOrder.platform,
-      workOrder.id
-    );
-    return { isAcceptable, details };
-  } else {
-    const offeredTotal = workOrder.payRange.max || 0;
-    const isAcceptable = offeredTotal >= requiredMinTotal;
-    
-    const details = `$${offeredTotal} total vs required $${requiredMinTotal}`;
-    
-    logger.info(
-      `Payment Analysis (fixed): ${details} ($${MIN_HOURLY_RATE}/hr × ${estHours}hrs, platform floor: $${platformMinTotal}) → ${isAcceptable ? "ACCEPT" : "COUNTER"}`,
-      workOrder.platform,
-      workOrder.id
-    );
-    return { isAcceptable, details };
+  const TRAVEL_THRESHOLD = CONFIG.DISTANCE.TRAVEL_THRESHOLD_MILES;
+  const needsTravelCounter = workOrder.distance > TRAVEL_THRESHOLD;
+  const travelDetails = needsTravelCounter ? `Travel required (${workOrder.distance}mi > ${TRAVEL_THRESHOLD}mi)` : null;
+
+  // RULE 1: If total pay is less than platform minimum -> ALWAYS REJECT (no counter)
+  if (theirTotal < platformMinTotal) {
+    const details = `Total pay $${theirTotal} is below platform minimum threshold $${platformMinTotal}`;
+    logger.info(`Payment Analysis: ${details} -> REJECT`, workOrder.platform, workOrder.id);
+    return { isAcceptable: false, issue: "BELOW_MINIMUM", details };
   }
+
+  // RULE 2: Total pay is OK. But is the rate below BASE_HOURLY_RATE?
+  if (theirRate < MIN_HOURLY_RATE) {
+    const details = `Rate $${Math.round(theirRate)}/hr is below base rate $${MIN_HOURLY_RATE}/hr`;
+    logger.info(
+      `Payment Analysis: ${details} -> ${CONFIG.IS_COUNTER_RATES ? "COUNTER" : "REJECT"}`,
+      workOrder.platform,
+      workOrder.id
+    );
+    return { isAcceptable: false, issue: "LOW_RATE", details };
+  }
+
+  // RULE 3: Payment is good. How about travel?
+  if (needsTravelCounter) {
+    logger.info(
+      `Payment Analysis: Pay OK, but ${travelDetails} -> COUNTER`,
+      workOrder.platform,
+      workOrder.id
+    );
+    return { isAcceptable: false, issue: "TRAVEL", details: travelDetails };
+  }
+
+  logger.info(
+    `Payment Analysis: OK -> ACCEPT`,
+    workOrder.platform,
+    workOrder.id
+  );
+  return { isAcceptable: true, issue: null, details: "Pay and distance OK" };
 }
 
 // New function using Google Calendar for availability checking
@@ -546,14 +555,12 @@ async function findNextAvailableDay(workOrder, maxDays = 7) {
 }
 
 function calculateCounterOffer(workOrder) {
-  const MIN_HOURLY_RATE = CONFIG.RATES.BASE_HOURLY_RATE; // $50/hr from config
+  const isFieldNation = workOrder.platform === "FieldNation";
+  const MIN_HOURLY_RATE = isFieldNation 
+    ? (CONFIG.RATES.BASE_HOURLY_RATE_FIELDNATION || CONFIG.RATES.BASE_HOURLY_RATE)
+    : (CONFIG.RATES.BASE_HOURLY_RATE_WORKMARKET || CONFIG.RATES.BASE_HOURLY_RATE);
+    
   const estHours = workOrder.estLaborHours || CONFIG.TIME.DEFAULT_LABOR_HOURS;
-  const platformMinTotal =
-    workOrder.platform === "FieldNation"
-      ? CONFIG.RATES.MIN_PAY_THRESHOLD_FIELDNATION
-      : CONFIG.RATES.MIN_PAY_THRESHOLD_WORKMARKET;
-  const minTotalFromHourly = MIN_HOURLY_RATE * estHours;
-  const requiredMinTotal = Math.max(minTotalFromHourly, platformMinTotal);
 
   // Calculate travel expense if over distance threshold
   const travelExpense =
@@ -566,34 +573,25 @@ function calculateCounterOffer(workOrder) {
 
   let counterRate;
   let counterTotal;
-  let payType;
 
   if (isHourly) {
-    // Hourly job → counter with hourly rate (max of their rate vs our minimum)
     const theirRate = workOrder.hourlyRate || workOrder.payRange.min || 0;
-    const minRateForTotal = Math.ceil(requiredMinTotal / estHours);
-    counterRate = Math.max(theirRate, MIN_HOURLY_RATE, minRateForTotal);
+    counterRate = Math.max(theirRate, MIN_HOURLY_RATE);
     counterTotal = Math.round(counterRate * estHours);
-    payType = "hourly";
-
-    logger.info(
-      `Counter offer (hourly): Their rate: $${theirRate}/hr, floor rate: $${MIN_HOURLY_RATE}/hr, required total: $${requiredMinTotal} → Counter: $${counterRate}/hr × ${estHours}hrs = $${counterTotal} + Travel: $${travelExpense}`,
-      workOrder.platform,
-      workOrder.id
-    );
   } else {
-    // Fixed rate job → counter with fixed amount (max of their amount vs minimum × hours)
     const theirAmount = workOrder.payRange.max || 0;
-    counterTotal = Math.max(theirAmount, requiredMinTotal);
+    const minTotal = MIN_HOURLY_RATE * estHours;
+    counterTotal = Math.max(theirAmount, minTotal);
     counterRate = Math.round(counterTotal / estHours);
-    payType = "fixed";
-
-    logger.info(
-      `Counter offer (fixed): Their amount: $${theirAmount}, required total: $${requiredMinTotal} ($${MIN_HOURLY_RATE}/hr × ${estHours}hrs, platform floor: $${platformMinTotal}) → Counter: $${counterTotal} + Travel: $${travelExpense}`,
-      workOrder.platform,
-      workOrder.id
-    );
   }
+
+  let payType = isHourly ? "hourly" : "fixed";
+
+  logger.info(
+    `Counter offer generated: Rate: $${counterRate}/hr × ${estHours}hrs = $${counterTotal} + Travel: $${travelExpense}`,
+    workOrder.platform,
+    workOrder.id
+  );
 
   return {
     shouldCounterOffer: true,
@@ -662,16 +660,29 @@ async function isEligibleForApplication(workOrder) {
 
     // Only check if travel is required
     if (workOrder.distance > CONFIG.DISTANCE.TRAVEL_THRESHOLD_MILES) {
-      logger.info(
-        `Granite Telecommunications job requires travel (${workOrder.distance} miles > ${CONFIG.DISTANCE.TRAVEL_THRESHOLD_MILES} miles) - generating counter offer`,
-        workOrder.platform,
-        workOrder.id
-      );
-      return {
-        eligible: false,
-        counterOffer: calculateCounterOffer(workOrder),
-        reason: "PAYMENT_INSUFFICIENT", // Changed from GRANITE_TRAVEL_REQUIRED to trigger counter-offer flow
-      };
+      if (CONFIG.IS_COUNTER_RATES) {
+        logger.info(
+          `Granite Telecommunications job requires travel (${workOrder.distance} miles > ${CONFIG.DISTANCE.TRAVEL_THRESHOLD_MILES} miles) - generating counter offer`,
+          workOrder.platform,
+          workOrder.id
+        );
+        return {
+          eligible: false,
+          counterOffer: calculateCounterOffer(workOrder),
+          reason: "PAYMENT_INSUFFICIENT", // Changed from GRANITE_TRAVEL_REQUIRED to trigger counter-offer flow
+        };
+      } else {
+        logger.info(
+          `Granite Telecommunications job requires travel, but IS_COUNTER_RATES is false. Rejecting.`,
+          workOrder.platform,
+          workOrder.id
+        );
+        return {
+          eligible: false,
+          counterOffer: null,
+          reason: "TRAVEL_REQUIRED_NO_COUNTER",
+        };
+      }
     } else {
       logger.info(
         `Granite Telecommunications job within travel threshold - applying directly`,
@@ -691,7 +702,25 @@ async function isEligibleForApplication(workOrder) {
     workOrder.platform === "FieldNation" ||
     workOrder.platform === "WorkMarket"
   ) {
-    // STEP 1: Check calendar availability FIRST
+    // STEP 1: Check payment eligibility FIRST to catch BELOW_MINIMUM auto-rejects
+    const paymentCheck = isPaymentEligible(workOrder);
+    
+    // Auto-reject garbage pay jobs, even if we have free calendar slots
+    if (!paymentCheck.isAcceptable && paymentCheck.issue === "BELOW_MINIMUM") {
+      logger.info(
+        `Job rejected: Payment below minimum threshold - ${paymentCheck.details}. Rejecting without counter.`,
+        workOrder.platform,
+        workOrder.id
+      );
+      return {
+        eligible: false,
+        counterOffer: null,
+        reason: "PAYMENT_BELOW_MINIMUM",
+        rejectDetails: paymentCheck.details,
+      };
+    }
+
+    // STEP 2: Check calendar availability 
     const calendarResult = await isSlotAvailableCalendar(workOrder);
     const slotAvailable = calendarResult.isAvailable;
 
@@ -757,8 +786,7 @@ async function isEligibleForApplication(workOrder) {
       };
     }
 
-    // STEP 2: Check payment eligibility ONLY if calendar is available
-    const paymentCheck = isPaymentEligible(workOrder);
+    // STEP 3: Check remaining payment rules ONLY if calendar is available
     if (paymentCheck.isAcceptable) {
       // Both calendar and payment are good - apply directly
       return {
@@ -767,18 +795,46 @@ async function isEligibleForApplication(workOrder) {
         reason: "ELIGIBLE",
       };
     } else {
-      // Payment or distance check failed - generate a counter offer
-      logger.info(
-        `Job rejected: Payment/Distance insufficient - ${paymentCheck.details}. Generating counter offer.`,
-        workOrder.platform,
-        workOrder.id
-      );
-      return {
-        eligible: false,
-        counterOffer: calculateCounterOffer(workOrder),
-        reason: "PAYMENT_INSUFFICIENT",
-        rejectDetails: paymentCheck.details,
-      };
+      // Payment or distance check failed 
+      if (paymentCheck.issue === "LOW_RATE") {
+        if (CONFIG.IS_COUNTER_RATES) {
+          logger.info(
+            `Job rejected: Rate too low - ${paymentCheck.details}. Generating counter offer.`,
+            workOrder.platform,
+            workOrder.id
+          );
+          return {
+            eligible: false,
+            counterOffer: calculateCounterOffer(workOrder),
+            reason: "PAYMENT_INSUFFICIENT", // Triggers counter flow in index.js
+            rejectDetails: paymentCheck.details,
+          };
+        } else {
+          logger.info(
+            `Job rejected: Rate too low - ${paymentCheck.details}. IS_COUNTER_RATES is false, rejecting without counter.`,
+            workOrder.platform,
+            workOrder.id
+          );
+          return {
+            eligible: false,
+            counterOffer: null,
+            reason: "PAYMENT_INSUFFICIENT",
+            rejectDetails: paymentCheck.details,
+          };
+        }
+      } else if (paymentCheck.issue === "TRAVEL") {
+        logger.info(
+          `Job rejected: Travel required - ${paymentCheck.details}. Generating counter offer with travel.`,
+          workOrder.platform,
+          workOrder.id
+        );
+        return {
+          eligible: false,
+          counterOffer: calculateCounterOffer(workOrder),
+          reason: "TRAVEL_REQUIRED",
+          rejectDetails: paymentCheck.details,
+        };
+      }
     }
   }
 

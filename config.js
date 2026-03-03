@@ -5,11 +5,13 @@ export const CONFIG = {
   WORKMARKET_ENABLED: true, // Set to false to disable WorkMarket applications
   ONLY_GRANITE: false, // If true, WorkMarket applies only to Granite Telecommunications
   IS_COUNTER_DATES: true, // If true, counter-offer with free calendar slots when job time conflicts; if false, just reject on conflict
-
+  IS_COUNTER_RATES: true, // If true, counter-offer with free calendar slots when job time conflicts; if false, just reject on conflict
   // Payment and Rate Settings
   RATES: {
     BASE_HOURLY_RATE: 50, // Minimum desired hourly rate
-    MIN_PAY_THRESHOLD_WORKMARKET: 100, // Minimum total pay for WorkMarket jobs
+    BASE_HOURLY_RATE_WORKMARKET: 50, // Minimum desired hourly rate
+    BASE_HOURLY_RATE_FIELDNATION: 50, // Minimum desired hourly rate
+    MIN_PAY_THRESHOLD_WORKMARKET: 200, // Minimum total pay for WorkMarket jobs
     MIN_PAY_THRESHOLD_FIELDNATION: 165, // Minimum total pay for FieldNation jobs
     TRAVEL_RATE: 30, // Rate per hour of travel
   },
