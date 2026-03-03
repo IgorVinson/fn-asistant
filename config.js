@@ -4,6 +4,7 @@ export const CONFIG = {
   FIELDNATION_ENABLED: true, // Set to false to disable FieldNation applications
   WORKMARKET_ENABLED: true, // Set to false to disable WorkMarket applications
   ONLY_GRANITE: false, // If true, WorkMarket applies only to Granite Telecommunications
+  IS_COUNTER_DATES: true, // If true, counter-offer with free calendar slots when job time conflicts; if false, just reject on conflict
 
   // Payment and Rate Settings
   RATES: {
@@ -26,7 +27,7 @@ export const CONFIG = {
     DEFAULT_LABOR_HOURS: 2, // Default estimated labor hours if not specified
     MIN_HOURS_BETWEEN_JOBS: 1, // Minimum hours required between jobs
     WORK_START_TIME: "09:00", // Earliest time to accept jobs
-    WORK_END_TIME: "19:00", // Latest time to accept jobs
+    WORK_END_TIME: "18:00", // Latest time to accept jobs
     BUFFER_MINUTES: 30, // Buffer time between jobs
   },
 

@@ -700,7 +700,10 @@ async function processOrder(orderLink) {
         );
 
         try {
-          const counterDetails = `Base: $${eligibilityResult.counterOffer.baseAmount}\nTravel: $${eligibilityResult.counterOffer.travelExpense}`;
+          const co = eligibilityResult.counterOffer;
+          const counterDetails = co.payType === "hourly"
+            ? `Rate: $${co.counterRate}/hr × ${co.estHours}hrs = $${co.baseAmount}\nTravel: $${co.travelExpense}`
+            : `Fixed: $${co.baseAmount}\nTravel: $${co.travelExpense}`;
           telegramBot.sendOrderNotification(
             normalizedData,
             "💰 COUNTER OFFER",
@@ -709,27 +712,27 @@ async function processOrder(orderLink) {
           );
           
           const counterStatus = CONFIG.TEST_MODE ? 'info' : 'warning';
-          const counterMsg = CONFIG.TEST_MODE ? `TEST: Rate low, counter suggested: $${eligibilityResult.counterOffer.baseAmount}` : `Sent FN Counter Offer: $${eligibilityResult.counterOffer.baseAmount}`;
+          const counterMsg = CONFIG.TEST_MODE ? `TEST: Counter suggested: $${co.baseAmount} + $${co.travelExpense} travel` : `Sent FN Counter Offer: $${co.baseAmount}`;
           pushEvent({ platform: normalizedData.platform, id: normalizedData.id, title: normalizedData.title, status: counterStatus, message: counterMsg });
 
           if (!CONFIG.TEST_MODE) {
             await postFNCounterOffer(
               normalizedData.id,
-              eligibilityResult.counterOffer.baseAmount,
-              eligibilityResult.counterOffer.travelExpense,
-              eligibilityResult.counterOffer.payType,
-              eligibilityResult.counterOffer.baseHours,
-              eligibilityResult.counterOffer.additionalHours,
-              eligibilityResult.counterOffer.additionalAmount
+              co.baseAmount,
+              co.travelExpense,
+              co.payType,
+              co.payType === "hourly" ? 0 : co.estHours,
+              0,
+              co.counterRate
             );
           }
 
           playSound("applied");
           logger.info(
             `Result: Counter offer sent successfully 🔊
-             Base: $${eligibilityResult.counterOffer.baseAmount} (${eligibilityResult.counterOffer.baseHours}hr)
-             Additional: $${eligibilityResult.counterOffer.additionalAmount}/hr (${eligibilityResult.counterOffer.additionalHours}hr)
-             Travel: $${eligibilityResult.counterOffer.travelExpense}`,
+             Type: ${co.payType}
+             ${co.payType === "hourly" ? `Rate: $${co.counterRate}/hr × ${co.estHours}hrs` : `Fixed: $${co.baseAmount}`}
+             Travel: $${co.travelExpense}`,
             normalizedData.platform,
             normalizedData.id
           );
@@ -750,13 +753,10 @@ async function processOrder(orderLink) {
         );
 
         try {
-          // Calculate proper hourly rate for WorkMarket counter offer
-          const hourlyRate = Math.ceil(
-            eligibilityResult.counterOffer.baseAmount /
-              normalizedData.estLaborHours
-          );
-
-          const counterDetails = `Base: $${eligibilityResult.counterOffer.baseAmount}\nTravel: $${eligibilityResult.counterOffer.travelExpense}`;
+          const co = eligibilityResult.counterOffer;
+          const counterDetails = co.payType === "hourly"
+            ? `Rate: $${co.counterRate}/hr × ${co.estHours}hrs = $${co.baseAmount}\nTravel: $${co.travelExpense}`
+            : `Fixed: $${co.baseAmount}\nTravel: $${co.travelExpense}`;
           telegramBot.sendOrderNotification(
             normalizedData,
             "💰 COUNTER OFFER",
@@ -765,21 +765,21 @@ async function processOrder(orderLink) {
           );
           
           const counterStatus = CONFIG.TEST_MODE ? 'info' : 'warning';
-          const counterMsg = CONFIG.TEST_MODE ? `TEST: Rate low, counter suggested: $${eligibilityResult.counterOffer.baseAmount}` : `Sent WM Counter Offer: $${eligibilityResult.counterOffer.baseAmount}`;
+          const counterMsg = CONFIG.TEST_MODE ? `TEST: Counter suggested: $${co.baseAmount} + $${co.travelExpense} travel` : `Sent WM Counter Offer: $${co.baseAmount}`;
           pushEvent({ platform: normalizedData.platform, id: normalizedData.id, title: normalizedData.title, status: counterStatus, message: counterMsg });
 
           if (!CONFIG.TEST_MODE) {
             await postWMCounterOffer(
               normalizedData.id,
-              hourlyRate,
-              normalizedData.estLaborHours,
+              co.counterRate,
+              co.estHours,
               normalizedData.distance
             );
           }
 
           playSound("applied");
           logger.info(
-            `Result: Counter offer sent successfully with travel expenses 🔊`,
+            `Result: WM Counter offer sent 🔊 Type: ${co.payType}, Rate: $${co.counterRate}/hr, Total: $${co.baseAmount}, Travel: $${co.travelExpense}`,
             normalizedData.platform,
             normalizedData.id
           );
@@ -795,6 +795,75 @@ async function processOrder(orderLink) {
           playSound("error");
         }
       }
+    } else if (
+      eligibilityResult.counterOffer &&
+      eligibilityResult.reason === "COUNTER_DATES"
+    ) {
+      // Handle counter-offer with alternative time slot
+      const slot = eligibilityResult.counterOffer.counterDate;
+      const slotText = `${slot.start.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} - ${slot.end.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} (${slot.durationMinutes}min)`;
+
+      // Check if counter slot is on a different day than requested
+      const requestedDate = new Date(normalizedData.time.start);
+      const counterSlotDate = slot.start;
+      const isDifferentDay = requestedDate.toDateString() !== counterSlotDate.toDateString();
+      const counterDateLabel = isDifferentDay
+        ? `📆 ${counterSlotDate.toLocaleDateString([], { weekday: "short", month: "short", day: "numeric" })} — ${slotText}`
+        : slotText;
+
+      logger.info(
+        `Action: Counter Dates - Offering slot: ${slotText}`,
+        normalizedData.platform,
+        normalizedData.id
+      );
+
+      // Send a custom Telegram message with better formatting for counter dates
+      const modesLabel = telegramBot.getActiveModesHTML();
+      const orderIdLink = orderLink
+        ? `<a href="${orderLink}">${normalizedData.id}</a>`
+        : normalizedData.id;
+
+      const telegramMsg = `📅 <b>Counter Dates</b>${modesLabel}
+
+<b>Platform:</b> ${normalizedData.platform}
+<b>Order ID:</b> ${orderIdLink}
+<b>Company:</b> ${normalizedData.company}
+<b>Title:</b> ${normalizedData.title}
+<b>Pay:</b> $${normalizedData.payRange.min}-$${normalizedData.payRange.max}
+<b>Distance:</b> ${normalizedData.distance}mi
+
+<b>Requested:</b> ${new Date(normalizedData.time.start).toLocaleString()}
+❌ <i>Conflict with existing schedule</i>
+
+<b>✅ Counter Slot:</b> ${counterDateLabel}
+
+<b>Counter Offer:</b> ${eligibilityResult.counterOffer.payType === "hourly" ? `$${eligibilityResult.counterOffer.counterRate}/hr × ${eligibilityResult.counterOffer.estHours}hrs = $${eligibilityResult.counterOffer.baseAmount}` : `$${eligibilityResult.counterOffer.baseAmount} (fixed)`} + $${eligibilityResult.counterOffer.travelExpense} travel`;
+
+      telegramBot.bot
+        .sendMessage(telegramBot.chatId, telegramMsg, {
+          parse_mode: "HTML",
+          disable_web_page_preview: true,
+        })
+        .catch((err) => {
+          logger.error(`Failed to send counter dates notification: ${err.message}`);
+          telegramBot.sendMessage(
+            `📅 Counter Dates\n\nOrder: ${normalizedData.id}\nCompany: ${normalizedData.company}\nRequested: ${new Date(normalizedData.time.start).toLocaleString()}\n\nCounter Slot: ${slotText}\n\nCounter: $${eligibilityResult.counterOffer.baseAmount} + $${eligibilityResult.counterOffer.travelExpense} travel`
+          );
+        });
+
+      const counterStatus = CONFIG.TEST_MODE ? "info" : "warning";
+      const counterMsg = CONFIG.TEST_MODE
+        ? `TEST: Schedule conflict, counter slot: ${slotText}`
+        : `Counter dates sent: ${slotText}`;
+      pushEvent({
+        platform: normalizedData.platform,
+        id: normalizedData.id,
+        title: normalizedData.title,
+        status: counterStatus,
+        message: counterMsg,
+      });
+
+      playSound("applied");
     } else {
       // Handle all other rejection cases
       let rejectReason = "Unknown reason";
@@ -857,11 +926,13 @@ app.listen(port, async () => {
   await cleanupChromeProcesses();
   
   telegramBot.sendMessage(
-    `🚀 Server started on port ${port}\nUse /help for available commands or the menu button (☰) for quick access`
+    `🚀 Server started on port ${port}\nMonitoring auto-started ✅\nUse /help for available commands or the menu button (☰) for quick access`
   );
   // Initialize logs.json with current eventHistory
   await writeEventsToFile(eventHistory);
-  // await periodicCheck(); // Don't auto-start, wait for Telegram command
+  
+  // Auto-start monitoring on server launch
+  startMonitoring();
   
   // No scheduled refresh - cookies are refreshed on-demand when they expire
   console.log("⏰ On-demand cookie refresh enabled (refresh only when expired)");

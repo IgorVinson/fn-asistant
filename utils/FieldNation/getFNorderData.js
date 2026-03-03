@@ -59,6 +59,33 @@ export async function getFNorderData(url) {
 
         const workOrder = JSON.parse(match[1].trim());
 
+        // Calculate pay range properly based on pay type
+        let payRange = { min: 0, max: 0 };
+        let payType = "fixed"; // fixed or hourly
+        let hourlyRate = 0;
+        const pay = workOrder.pay;
+
+        if (pay.type === 'hourly' || (pay.rate && pay.rate.pay)) {
+            // Hourly rate
+            payType = "hourly";
+            hourlyRate = pay.rate?.pay || pay.range?.min || 0;
+            const estHours = workOrder.schedule.est_labor_hours || 2;
+            payRange = {
+                min: Math.round(hourlyRate * 1),
+                max: Math.round(hourlyRate * estHours),
+            };
+        } else if (pay.range && pay.range.min > 0 && pay.range.max > 0) {
+            // Fixed/blended with valid range
+            payType = "fixed";
+            payRange = pay.range;
+        } else if (pay.range) {
+            // Fallback to whatever range exists
+            payType = "fixed";
+            payRange = {
+                min: pay.range.min || 0,
+                max: pay.range.max || pay.range.min || 0,
+            };
+        }
 
         return {
             id: workOrder.id,
@@ -69,7 +96,9 @@ export async function getFNorderData(url) {
                 start: workOrder.schedule.service_window.start.local,
                 end: workOrder.schedule.service_window.end.local
             },
-            payRange: workOrder.pay.range,
+            payRange: payRange,
+            payType: payType,
+            hourlyRate: hourlyRate,
             estLaborHours: workOrder.schedule.est_labor_hours,
             distance: Math.floor(Number(workOrder.coords.distance)),
         };

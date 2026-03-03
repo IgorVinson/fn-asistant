@@ -285,13 +285,30 @@ class TelegramBotService {
     });
   }
 
+  // Build active modes string for notifications
+  getActiveModesMarkdown() {
+    const modes = [];
+    if (CONFIG.TEST_MODE) modes.push("🧪 TEST");
+    if (CONFIG.ONLY_GRANITE) modes.push("🪨 GRANITE ONLY");
+    if (CONFIG.IS_COUNTER_DATES) modes.push("📅 COUNTER SLOTS");
+    return modes.length > 0 ? ` *[${modes.join(" | ")}]*` : "";
+  }
+
+  getActiveModesHTML() {
+    const modes = [];
+    if (CONFIG.TEST_MODE) modes.push("🧪 TEST");
+    if (CONFIG.ONLY_GRANITE) modes.push("🪨 GRANITE ONLY");
+    if (CONFIG.IS_COUNTER_DATES) modes.push("📅 COUNTER SLOTS");
+    return modes.length > 0 ? ` <b>[${modes.join(" | ")}]</b>` : "";
+  }
+
   sendOrderNotification(orderData, action, details = "", orderLink = "") {
     // Escape special characters for Markdown
     const escapeMarkdown = text => {
       return text.replace(/[_*[\]()~`>#+=|{}.!-]/g, "\\$&");
     };
 
-    const testModeLabel = CONFIG.TEST_MODE ? " 🧪 *[TEST MODE]*" : "";
+    const modesLabel = this.getActiveModesMarkdown();
 
     let orderIdText;
     if (orderLink) {
@@ -302,7 +319,7 @@ class TelegramBotService {
     }
 
     const message = `
-🔔 *New Job Alert*${testModeLabel}
+🔔 *New Job Alert*${modesLabel}
 
 *Platform:* ${escapeMarkdown(orderData.platform)}
 *Order ID:* ${orderIdText}
