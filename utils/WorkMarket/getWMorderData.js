@@ -218,11 +218,39 @@ export async function getWMorderData(url) {
 
     let totalPayment = 0;
     let originalAmount = 0;
+    
+    // Attempt robust JSON parsing of "pricing" from the page config
+    let jsonHourlyRate = 0;
+    let jsonMaxHours = null;
+    let jsonPayType = null;
+    let jsonTotalPayment = 0;
 
-    if (totalBudgetMatch) {
-      totalPayment = parseFloat(totalBudgetMatch[1].replace(",", ""));
-      originalAmount = totalPayment;
+    const pricingMatch = body.match(/"pricing"\s*:\s*({[^}]+})/);
+    if (pricingMatch) {
+      try {
+        const pricingJSON = JSON.parse(pricingMatch[1]);
+        if (pricingJSON.type === "PER_HOUR") {
+          jsonPayType = "hourly";
+          jsonHourlyRate = pricingJSON.perHourPrice || 0;
+          jsonMaxHours = pricingJSON.maxNumberOfHours || null;
+          // Use maxSpendLimit as total budget, or calculate from rate * hours 
+          jsonTotalPayment = pricingJSON.maxSpendLimit || (jsonHourlyRate * (jsonMaxHours || 4));
+        } else {
+          jsonPayType = "fixed";
+          jsonTotalPayment = pricingJSON.flatPrice || pricingJSON.maxSpendLimit || 0;
+        }
+      } catch (e) {
+        console.error("Could not parse pricing JSON:", e.message);
+      }
     }
+
+    if (jsonTotalPayment > 0) {
+      totalPayment = jsonTotalPayment;
+    } else if (totalBudgetMatch) {
+      totalPayment = parseFloat(totalBudgetMatch[1].replace(",", ""));
+    }
+    
+    originalAmount = totalPayment;
 
     if (marketplaceFeeMatch) {
       const marketplaceFee = parseFloat(
@@ -231,6 +259,15 @@ export async function getWMorderData(url) {
       originalAmount = totalPayment + marketplaceFee;
     }
 
+    // Determine finalized hourly rate and max hours (prefer JSON, fallback to regex)
+    const finalHourlyRate = jsonHourlyRate > 0 
+      ? jsonHourlyRate 
+      : (hourlyRateMatch ? parseFloat(hourlyRateMatch[1].replace(",", "")) : 0);
+      
+    const finalMaxHours = jsonMaxHours !== null 
+      ? jsonMaxHours 
+      : (maxHoursMatch ? parseInt(maxHoursMatch[1]) : 4);
+
     const data = {
       id: workOrderId,
       platform: "WorkMarket",
@@ -238,12 +275,11 @@ export async function getWMorderData(url) {
       title: titleMatch
         ? titleMatch[1].trim().replace(" - Work Market", "")
         : "No Title",
-      hourlyRate: hourlyRateMatch
-        ? parseFloat(hourlyRateMatch[1].replace(",", ""))
-        : 0,
-      hoursOfWork: maxHoursMatch ? parseInt(maxHoursMatch[1]) : 4, // Default to 4 hours
+      hourlyRate: finalHourlyRate,
+      hoursOfWork: finalMaxHours,
       totalPayment: totalPayment,
       originalAmount: originalAmount, // Original amount before fees
+      payType: jsonPayType || (finalHourlyRate > 0 ? "hourly" : "fixed"),
       date: formattedDate || new Date().toISOString().split("T")[0], // Default to today
       time: formattedTime || "09:00 AM EST", // Default time
       distance: distanceMatch
