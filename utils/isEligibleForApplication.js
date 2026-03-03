@@ -7,26 +7,34 @@ function isWithinWorkingHours(startTime, endTime) {
   const workStartTime = CONFIG.TIME.WORK_START_TIME;
   const workEndTime = CONFIG.TIME.WORK_END_TIME;
 
-  // Parse the job times — all times are local (Eastern)
+  // Format the job start time to Eastern Time string "HH:MM:SS" (24-hour clock)
+  // This avoids Node.js UTC offset shifts on AWS/VPS
   const jobStart = new Date(startTime);
-  const jobEnd = new Date(endTime);
+  const formatter = new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/New_York",
+    hour12: false,
+    hour: "numeric",
+    minute: "numeric",
+  });
+  const estTimeString = formatter.format(jobStart); // e.g., "11:00"
 
   // Compare using local hours/minutes directly (no UTC conversion)
   const [workStartH, workStartM] = workStartTime.split(":").map(Number);
   const [workEndH, workEndM] = workEndTime.split(":").map(Number);
+  const [jobStartH, jobStartM] = estTimeString.split(":").map(Number);
 
-  const jobStartMinutes = jobStart.getHours() * 60 + jobStart.getMinutes();
-  const jobEndMinutes = jobEnd.getHours() * 60 + jobEnd.getMinutes();
+  const jobStartMinutes = jobStartH * 60 + jobStartM;
   const workStartMinutes = workStartH * 60 + workStartM;
   const workEndMinutes = workEndH * 60 + workEndM;
 
+  // Only check if job starts within working hours
   const isWithinHours =
-    jobStartMinutes >= workStartMinutes && jobEndMinutes <= workEndMinutes;
+    jobStartMinutes >= workStartMinutes && jobStartMinutes <= workEndMinutes;
 
   logger.info(
     `Working Hours Check:
-    - Job Date: ${jobStart.toLocaleDateString()}
-    - Job Time: ${jobStart.toLocaleTimeString()} - ${jobEnd.toLocaleTimeString()}
+    - Job Date (Local): ${jobStart.toLocaleDateString()}
+    - Job Start (ET): ${estTimeString} 
     - Work Hours: ${workStartTime} - ${workEndTime}
     - Within Hours: ${isWithinHours}`,
     "SCHEDULE_CHECK"
