@@ -38,6 +38,12 @@ function isWithinWorkingHours(startTime, endTime) {
 function isPaymentEligible(workOrder) {
   const MIN_HOURLY_RATE = CONFIG.RATES.BASE_HOURLY_RATE;
   const estHours = workOrder.estLaborHours || CONFIG.TIME.DEFAULT_LABOR_HOURS;
+  const platformMinTotal =
+    workOrder.platform === "FieldNation"
+      ? CONFIG.RATES.MIN_PAY_THRESHOLD_FIELDNATION
+      : CONFIG.RATES.MIN_PAY_THRESHOLD_WORKMARKET;
+  const minTotalFromHourly = MIN_HOURLY_RATE * estHours;
+  const requiredMinTotal = Math.max(minTotalFromHourly, platformMinTotal);
   const TRAVEL_THRESHOLD = CONFIG.DISTANCE.TRAVEL_THRESHOLD_MILES;
   const isHourly = workOrder.payType === "hourly" || workOrder.hourlyRate > 0;
 
@@ -54,18 +60,20 @@ function isPaymentEligible(workOrder) {
   // Check if pay meets minimum
   if (isHourly) {
     const theirRate = workOrder.hourlyRate || workOrder.payRange.min || 0;
-    const isAcceptable = theirRate >= MIN_HOURLY_RATE;
+    const offeredTotal = workOrder.payRange.max || theirRate * estHours;
+    const isAcceptable =
+      theirRate >= MIN_HOURLY_RATE && offeredTotal >= requiredMinTotal;
     logger.info(
-      `Payment Analysis (hourly): $${theirRate}/hr vs min $${MIN_HOURLY_RATE}/hr → ${isAcceptable ? "ACCEPT" : "COUNTER"}`,
+      `Payment Analysis (hourly): $${theirRate}/hr, total $${offeredTotal} vs required total $${requiredMinTotal} (hourly floor: $${MIN_HOURLY_RATE}/hr, platform floor: $${platformMinTotal}) → ${isAcceptable ? "ACCEPT" : "COUNTER"}`,
       workOrder.platform,
       workOrder.id
     );
     return isAcceptable;
   } else {
-    const minTotal = MIN_HOURLY_RATE * estHours;
-    const isAcceptable = workOrder.payRange.max >= minTotal;
+    const offeredTotal = workOrder.payRange.max || 0;
+    const isAcceptable = offeredTotal >= requiredMinTotal;
     logger.info(
-      `Payment Analysis (fixed): $${workOrder.payRange.max} vs min $${minTotal} ($${MIN_HOURLY_RATE}/hr × ${estHours}hrs) → ${isAcceptable ? "ACCEPT" : "COUNTER"}`,
+      `Payment Analysis (fixed): $${offeredTotal} vs required total $${requiredMinTotal} ($${MIN_HOURLY_RATE}/hr × ${estHours}hrs, platform floor: $${platformMinTotal}) → ${isAcceptable ? "ACCEPT" : "COUNTER"}`,
       workOrder.platform,
       workOrder.id
     );
@@ -524,6 +532,12 @@ async function findNextAvailableDay(workOrder, maxDays = 7) {
 function calculateCounterOffer(workOrder) {
   const MIN_HOURLY_RATE = CONFIG.RATES.BASE_HOURLY_RATE; // $50/hr from config
   const estHours = workOrder.estLaborHours || CONFIG.TIME.DEFAULT_LABOR_HOURS;
+  const platformMinTotal =
+    workOrder.platform === "FieldNation"
+      ? CONFIG.RATES.MIN_PAY_THRESHOLD_FIELDNATION
+      : CONFIG.RATES.MIN_PAY_THRESHOLD_WORKMARKET;
+  const minTotalFromHourly = MIN_HOURLY_RATE * estHours;
+  const requiredMinTotal = Math.max(minTotalFromHourly, platformMinTotal);
 
   // Calculate travel expense if over distance threshold
   const travelExpense =
@@ -541,25 +555,25 @@ function calculateCounterOffer(workOrder) {
   if (isHourly) {
     // Hourly job → counter with hourly rate (max of their rate vs our minimum)
     const theirRate = workOrder.hourlyRate || workOrder.payRange.min || 0;
-    counterRate = Math.max(theirRate, MIN_HOURLY_RATE);
+    const minRateForTotal = Math.ceil(requiredMinTotal / estHours);
+    counterRate = Math.max(theirRate, MIN_HOURLY_RATE, minRateForTotal);
     counterTotal = Math.round(counterRate * estHours);
     payType = "hourly";
 
     logger.info(
-      `Counter offer (hourly): Their rate: $${theirRate}/hr, Our min: $${MIN_HOURLY_RATE}/hr → Counter: $${counterRate}/hr × ${estHours}hrs = $${counterTotal} + Travel: $${travelExpense}`,
+      `Counter offer (hourly): Their rate: $${theirRate}/hr, floor rate: $${MIN_HOURLY_RATE}/hr, required total: $${requiredMinTotal} → Counter: $${counterRate}/hr × ${estHours}hrs = $${counterTotal} + Travel: $${travelExpense}`,
       workOrder.platform,
       workOrder.id
     );
   } else {
     // Fixed rate job → counter with fixed amount (max of their amount vs minimum × hours)
     const theirAmount = workOrder.payRange.max || 0;
-    const minTotal = MIN_HOURLY_RATE * estHours;
-    counterTotal = Math.max(theirAmount, minTotal);
+    counterTotal = Math.max(theirAmount, requiredMinTotal);
     counterRate = Math.round(counterTotal / estHours);
     payType = "fixed";
 
     logger.info(
-      `Counter offer (fixed): Their amount: $${theirAmount}, Our min: $${minTotal} ($${MIN_HOURLY_RATE}/hr × ${estHours}hrs) → Counter: $${counterTotal} + Travel: $${travelExpense}`,
+      `Counter offer (fixed): Their amount: $${theirAmount}, required total: $${requiredMinTotal} ($${MIN_HOURLY_RATE}/hr × ${estHours}hrs, platform floor: $${platformMinTotal}) → Counter: $${counterTotal} + Travel: $${travelExpense}`,
       workOrder.platform,
       workOrder.id
     );
@@ -736,15 +750,15 @@ async function isEligibleForApplication(workOrder) {
         reason: "ELIGIBLE",
       };
     } else {
-      // Calendar is available but payment is insufficient - generate counter offer
+      // Calendar is available but payment is insufficient - reject (no counter-offer)
       logger.info(
-        `Calendar available but payment insufficient - generating counter offer`,
+        `Job rejected: Payment insufficient`,
         workOrder.platform,
         workOrder.id
       );
       return {
-        eligible: false, // Changed from true to false
-        counterOffer: calculateCounterOffer(workOrder),
+        eligible: false,
+        counterOffer: null,
         reason: "PAYMENT_INSUFFICIENT",
       };
     }
