@@ -57,12 +57,13 @@ function isPaymentEligible(workOrder) {
 
   // If distance exceeds threshold, ALWAYS counter (need travel expenses)
   if (workOrder.distance > TRAVEL_THRESHOLD) {
+    const details = `Travel required (${workOrder.distance}mi > ${TRAVEL_THRESHOLD}mi)`;
     logger.info(
-      `Payment Analysis: Travel required (${workOrder.distance}mi > ${TRAVEL_THRESHOLD}mi) → COUNTER`,
+      `Payment Analysis: ${details} → COUNTER`,
       workOrder.platform,
       workOrder.id
     );
-    return false;
+    return { isAcceptable: false, details };
   }
 
   // Check if pay meets minimum
@@ -71,21 +72,28 @@ function isPaymentEligible(workOrder) {
     const offeredTotal = workOrder.payRange.max || theirRate * estHours;
     const isAcceptable =
       theirRate >= MIN_HOURLY_RATE && offeredTotal >= requiredMinTotal;
+    
+    // Detailed analysis string
+    const details = `$${theirRate}/hr (min $${MIN_HOURLY_RATE}), total $${offeredTotal} vs required $${requiredMinTotal}`;
+    
     logger.info(
-      `Payment Analysis (hourly): $${theirRate}/hr, total $${offeredTotal} vs required total $${requiredMinTotal} (hourly floor: $${MIN_HOURLY_RATE}/hr, platform floor: $${platformMinTotal}) → ${isAcceptable ? "ACCEPT" : "COUNTER"}`,
+      `Payment Analysis (hourly): ${details} (platform floor: $${platformMinTotal}) → ${isAcceptable ? "ACCEPT" : "COUNTER"}`,
       workOrder.platform,
       workOrder.id
     );
-    return isAcceptable;
+    return { isAcceptable, details };
   } else {
     const offeredTotal = workOrder.payRange.max || 0;
     const isAcceptable = offeredTotal >= requiredMinTotal;
+    
+    const details = `$${offeredTotal} total vs required $${requiredMinTotal}`;
+    
     logger.info(
-      `Payment Analysis (fixed): $${offeredTotal} vs required total $${requiredMinTotal} ($${MIN_HOURLY_RATE}/hr × ${estHours}hrs, platform floor: $${platformMinTotal}) → ${isAcceptable ? "ACCEPT" : "COUNTER"}`,
+      `Payment Analysis (fixed): ${details} ($${MIN_HOURLY_RATE}/hr × ${estHours}hrs, platform floor: $${platformMinTotal}) → ${isAcceptable ? "ACCEPT" : "COUNTER"}`,
       workOrder.platform,
       workOrder.id
     );
-    return isAcceptable;
+    return { isAcceptable, details };
   }
 }
 
@@ -750,7 +758,8 @@ async function isEligibleForApplication(workOrder) {
     }
 
     // STEP 2: Check payment eligibility ONLY if calendar is available
-    if (isPaymentEligible(workOrder)) {
+    const paymentCheck = isPaymentEligible(workOrder);
+    if (paymentCheck.isAcceptable) {
       // Both calendar and payment are good - apply directly
       return {
         eligible: true,
@@ -760,7 +769,7 @@ async function isEligibleForApplication(workOrder) {
     } else {
       // Calendar is available but payment is insufficient - reject (no counter-offer)
       logger.info(
-        `Job rejected: Payment insufficient`,
+        `Job rejected: Payment insufficient - ${paymentCheck.details}`,
         workOrder.platform,
         workOrder.id
       );
@@ -768,6 +777,7 @@ async function isEligibleForApplication(workOrder) {
         eligible: false,
         counterOffer: null,
         reason: "PAYMENT_INSUFFICIENT",
+        rejectDetails: paymentCheck.details,
       };
     }
   }

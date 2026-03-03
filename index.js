@@ -1,9 +1,9 @@
-import express from "express";
 import cors from "cors";
 import "dotenv/config";
+import express from "express";
 import fs from "fs/promises";
-import path from "path";
 import { google } from "googleapis";
+import path from "path";
 import puppeteer from "puppeteer";
 import { CONFIG } from "./config.js";
 import { getFNorderData } from "./utils/FieldNation/getFNorderData.js";
@@ -862,7 +862,9 @@ async function processOrder(orderLink) {
       let rejectReason = "Unknown reason";
       switch (eligibilityResult.reason) {
         case "PAYMENT_INSUFFICIENT":
-          rejectReason = "Payment below minimum threshold";
+          rejectReason = `Payment below minimum threshold${
+            eligibilityResult.rejectDetails ? `\nReason: ${eligibilityResult.rejectDetails}` : ""
+          }`;
           break;
         case "SLOT_UNAVAILABLE":
           rejectReason = "Time slot unavailable";
