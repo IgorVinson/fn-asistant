@@ -767,15 +767,15 @@ async function isEligibleForApplication(workOrder) {
         reason: "ELIGIBLE",
       };
     } else {
-      // Calendar is available but payment is insufficient - reject (no counter-offer)
+      // Payment or distance check failed - generate a counter offer
       logger.info(
-        `Job rejected: Payment insufficient - ${paymentCheck.details}`,
+        `Job rejected: Payment/Distance insufficient - ${paymentCheck.details}. Generating counter offer.`,
         workOrder.platform,
         workOrder.id
       );
       return {
         eligible: false,
-        counterOffer: null,
+        counterOffer: calculateCounterOffer(workOrder),
         reason: "PAYMENT_INSUFFICIENT",
         rejectDetails: paymentCheck.details,
       };
