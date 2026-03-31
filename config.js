@@ -50,6 +50,8 @@ export const CONFIG = {
   TELEGRAM: {
     BOT_TOKEN: process.env.TELEGRAM_BOT_TOKEN,
     CHAT_ID: process.env.TELEGRAM_CHAT_ID,
+    BOT_TOKEN_2: process.env.TELEGRAM_BOT_TOKEN2,
+    CHAT_ID_2: process.env.TELEGRAM_CHAT_ID2,
     COMMANDS: {
       START_MONITORING: "/start",
       STOP_MONITORING: "/stop",

@@ -6,10 +6,85 @@ class TelegramBotService {
   constructor() {
     this.bot = new TelegramBot(CONFIG.TELEGRAM.BOT_TOKEN, { polling: true });
     this.chatId = CONFIG.TELEGRAM.CHAT_ID;
+    this.ingestBot = null;
+    this.ingestChatId = CONFIG.TELEGRAM.CHAT_ID_2;
     this.isMonitoring = false;
     this.waitingForInput = null; // Track what input we're waiting for
+    
+    // Log all messages to help identify chat IDs
+    this.bot.on("message", msg => {
+      console.log("📱 Bot1 (MAIN) received message:", {
+        chatId: msg.chat?.id?.toString(),
+        fromId: msg.from?.id?.toString(),
+        text: msg.text?.substring(0, 50),
+      });
+    });
+    
+    this.setupInboundPhoneBot();
     this.setupCommands();
     this.setupPersistentMenu();
+  }
+
+  setupInboundPhoneBot() {
+    const secondaryToken = CONFIG.TELEGRAM.BOT_TOKEN_2;
+    const primaryToken = CONFIG.TELEGRAM.BOT_TOKEN;
+
+    console.log("🔧 Setting up inbound phone bot...", {
+      hasToken2: !!secondaryToken,
+      token2MatchesPrimary: secondaryToken === primaryToken,
+      chatId2: CONFIG.TELEGRAM.CHAT_ID_2,
+    });
+
+    if (!secondaryToken || secondaryToken === primaryToken) {
+      console.log("⚠️ No secondary token or matches primary - skipping inbound phone bot");
+      return;
+    }
+
+    console.log("✅ Initializing inbound phone bot with token2");
+    this.ingestBot = new TelegramBot(secondaryToken, { polling: true });
+    
+    this.ingestBot.on("message", msg => {
+      this.handlePhoneMessage(msg, this.ingestChatId);
+    });
+    
+    this.ingestBot.on("polling_error", error => {
+      console.log("❌ Bot2 polling error:", error.message);
+      logger.error(`Bot2 polling error: ${error.message}`);
+    });
+    
+    this.ingestBot.on("error", error => {
+      console.log("❌ Bot2 error:", error.message);
+      logger.error(`Bot2 error: ${error.message}`);
+    });
+    
+    console.log("✅ Inbound phone bot setup complete");
+  }
+
+  handlePhoneMessage(msg, expectedChatId) {
+    console.log("\n📱 Phone message received:", {
+      from: msg.chat?.id?.toString(),
+      expected: expectedChatId,
+      textPreview: msg.text?.substring(0, 100),
+    });
+
+    if (!msg.chat || msg.chat.id.toString() !== expectedChatId) {
+      console.log("❌ Chat ID mismatch - ignoring message");
+      return;
+    }
+    
+    if (!msg.text || !msg.text.startsWith("FN_ALERT")) {
+      console.log("❌ Message doesn't start with FN_ALERT");
+      console.log("   Received text:", msg.text?.substring(0, 200));
+      console.log("   First 10 chars:", JSON.stringify(msg.text?.substring(0, 10)));
+      console.log("   Hex bytes:", Buffer.from(msg.text?.substring(0, 20) || "").toString('hex'));
+      return;
+    }
+
+    console.log("✅ Valid FN_ALERT received, processing...");
+    const alert = this.parsePhoneAlert(msg.text);
+    if (this.onPhoneAlert) {
+      this.onPhoneAlert(alert, msg);
+    }
   }
 
   async setupPersistentMenu() {
@@ -41,6 +116,11 @@ class TelegramBotService {
 
       // Skip if it's a command (starts with /)
       if (msg.text && msg.text.startsWith("/")) return;
+
+      if (msg.text && msg.text.startsWith("FN_ALERT")) {
+        this.handlePhoneMessage(msg, this.chatId);
+        return;
+      }
 
       // Handle waiting for input
       if (this.waitingForInput && msg.text) {
@@ -279,6 +359,30 @@ class TelegramBotService {
     this.waitingForInput = null;
   }
 
+  parsePhoneAlert(text) {
+    const lines = text
+      .split("\n")
+      .map(line => line.trim())
+      .filter(Boolean);
+    const alert = {
+      raw: text,
+      type: lines[0] || "FN_ALERT",
+    };
+
+    for (const line of lines.slice(1)) {
+      const separatorIndex = line.indexOf("=");
+      if (separatorIndex === -1) continue;
+
+      const key = line.slice(0, separatorIndex).trim();
+      const value = line.slice(separatorIndex + 1).trim();
+      if (key) {
+        alert[key] = value;
+      }
+    }
+
+    return alert;
+  }
+
   sendMessage(text) {
     this.bot.sendMessage(this.chatId, text).catch(error => {
       logger.error(`Failed to send Telegram message: ${error.message}`);
@@ -368,6 +472,7 @@ ${details}
   onStopMonitoring = null;
   onProcessOrder = null;
   onRelogin = null;
+  onPhoneAlert = null;
 }
 
 export default new TelegramBotService();

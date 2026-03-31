@@ -97,6 +97,41 @@ app.post("/api/config", (req, res) => {
   res.json({ success: true, config: CONFIG });
 });
 
+// Webhook endpoint for Macrodroid phone alerts
+app.post("/api/phone-alert", async (req, res) => {
+  console.log("\n📱 Received phone alert webhook:", req.body);
+  
+  const { text } = req.body;
+  
+  if (!text || !text.startsWith("FN_ALERT")) {
+    console.log("❌ Invalid alert format:", text?.substring(0, 100));
+    return res.status(400).json({ error: "Invalid alert format. Must start with FN_ALERT" });
+  }
+  
+  const alert = {
+    raw: text,
+    type: "FN_ALERT",
+  };
+  
+  // Parse key=value pairs
+  const lines = text.split("\n").map(line => line.trim()).filter(Boolean);
+  for (const line of lines.slice(1)) {
+    const separatorIndex = line.indexOf("=");
+    if (separatorIndex === -1) continue;
+    
+    const key = line.slice(0, separatorIndex).trim();
+    const value = line.slice(separatorIndex + 1).trim();
+    if (key) {
+      alert[key] = value;
+    }
+  }
+  
+  console.log("✅ Valid FN_ALERT received via webhook, processing...");
+  await handlePhoneAlert(alert);
+  
+  res.json({ success: true, message: "Alert processed" });
+});
+
 // Start/Stop Agent
 app.post("/api/monitor/:action", async (req, res) => {
   const { action } = req.params;
@@ -116,6 +151,91 @@ let browser; // Declare a browser instance
 let reloginTimeout; // Timeout for the relogin scheduler
 let monitoringInterval; // Store the monitoring interval
 let isRefreshingCookies = false; // Flag to prevent concurrent cookie refresh attempts
+const phoneAlertDedup = new Map();
+
+function buildPhoneAlertKey(alert) {
+  return [
+    alert?.source || "unknown",
+    alert?.title || "",
+    alert?.text || "",
+    alert?.action || "",
+  ].join("|");
+}
+
+function isDuplicatePhoneAlert(alert) {
+  const key = buildPhoneAlertKey(alert);
+  const now = Date.now();
+  const ttlMs = 5 * 60 * 1000;
+
+  for (const [storedKey, expiresAt] of phoneAlertDedup.entries()) {
+    if (expiresAt <= now) {
+      phoneAlertDedup.delete(storedKey);
+    }
+  }
+
+  const existingExpiry = phoneAlertDedup.get(key);
+  if (existingExpiry && existingExpiry > now) {
+    return true;
+  }
+
+  phoneAlertDedup.set(key, now + ttlMs);
+  return false;
+}
+
+function extractFieldNationOrderLinkFromAlert(alert) {
+  const candidates = [alert?.link, alert?.url, alert?.text, alert?.title, alert?.raw].filter(Boolean);
+
+  for (const candidate of candidates) {
+    const directLink = extractOrderLink(candidate);
+    if (directLink) {
+      return directLink;
+    }
+  }
+
+  for (const candidate of candidates) {
+    const workOrderMatch = candidate.match(/\bWO\s*#?\s*(\d{6,})\b/i);
+    if (workOrderMatch) {
+      return `https://app.fieldnation.com/workorders/${workOrderMatch[1]}`;
+    }
+  }
+
+  return null;
+}
+
+async function handlePhoneAlert(alert) {
+  if (!alert || alert.type !== "FN_ALERT") {
+    return;
+  }
+
+  if (isDuplicatePhoneAlert(alert)) {
+    console.log("⏭️ Duplicate phone alert skipped");
+    await pushEvent({
+      platform: "FieldNation",
+      status: "info",
+      message: "Duplicate phone alert skipped",
+      title: alert.title || "Phone Alert",
+      source: "phone_telegram",
+    });
+    return;
+  }
+
+  const orderLink = extractFieldNationOrderLinkFromAlert(alert);
+
+  await pushEvent({
+    platform: "FieldNation",
+    status: orderLink ? "info" : "warning",
+    message: orderLink
+      ? "Phone alert received: extracted FieldNation link"
+      : "Phone alert received: no FieldNation link found",
+    title: alert.title || "Phone Alert",
+    source: "phone_telegram",
+  });
+
+  if (orderLink) {
+    console.log("📱 Processing FieldNation order from phone alert:", orderLink);
+    await processOrder(orderLink);
+  }
+}
 
 // Cleanup function to kill all Chrome processes spawned by puppeteer
 async function cleanupChromeProcesses() {
@@ -922,6 +1042,7 @@ telegramBot.onStartMonitoring = startMonitoring;
 telegramBot.onStopMonitoring = stopMonitoring;
 telegramBot.onProcessOrder = processOrder;
 telegramBot.onRelogin = saveCookies;
+telegramBot.onPhoneAlert = handlePhoneAlert;
 
 // Periodic zombie Chrome cleanup (runs every 30 minutes)
 setInterval(async () => {
