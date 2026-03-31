@@ -1,5 +1,6 @@
 import fs from 'fs';
 import path from 'path';
+import { CONFIG } from '../../config.js';
 
 // Шлях до файлу з куками
 const cookiesFilePath = path.resolve('utils', 'FieldNation', 'cookies.json');
@@ -15,16 +16,20 @@ function getCookies() {
 
 // Функція для виконання запиту і аналізу даних
 export async function postFNworkOrderRequest(url, time, estHours) {
-
-    console.log(time)
-
     try {
-        // Отримуємо куки
         const cookies = getCookies();
         const workOrderId = url.split('?')[0].split('/').pop();
+        const etaStartLocal =
+            (typeof time === 'string' ? time : null) ||
+            time?.start ||
+            time?.local;
+        const hourEstimate = Number(estHours) || CONFIG.TIME.DEFAULT_LABOR_HOURS;
 
-        // Виконуємо запит
-        await fetch(`https://app.fieldnation.com/v2/workorders/${workOrderId}/requests?acting_user_id=0&clientPayTermsAccepted=true`, {
+        if (!etaStartLocal) {
+            throw new Error('FieldNation ETA start time is missing.');
+        }
+
+        const response = await fetch(`https://app.fieldnation.com/v2/workorders/${workOrderId}/requests?acting_user_id=${CONFIG.PLATFORMS.FIELD_NATION.USER_ID}&clientPayTermsAccepted=true`, {
             headers: {
                 "accept": "application/json",
                 "accept-language": "en-US,en;q=0.9,uk-UA;q=0.8,uk;q=0.7,ru-UA;q=0.6,ru;q=0.5",
@@ -43,26 +48,25 @@ export async function postFNworkOrderRequest(url, time, estHours) {
             body: JSON.stringify({
                 "work_order_id": workOrderId,
                 eta: {
-                    start: {local: time.local},
-                    hour_estimate: estHours
+                    start: { local: etaStartLocal },
+                    hour_estimate: hourEstimate
                 }
-
             }),
             method: "POST",
-        }).then(
-            response => {
-                if (response.ok) {
-                    console.log("Work order request sent successfully");
-                }
-            }
-        ).catch(
-            error => {
-                console.error("Error sending work order request:", error);
-            }
-        )
-        
+        });
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(
+                `FieldNation request failed (${response.status}): ${errorText}`
+            );
+        }
+
+        const responseText = await response.text();
+        console.log("Work order request sent successfully", responseText);
+        return responseText;
     } catch (error) {
         console.error('Помилка:', error.message);
-        return null;
+        throw error;
     }
 }

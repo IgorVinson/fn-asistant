@@ -311,10 +311,24 @@ async function periodicCheck() {
   telegramBot.sendMessage("🚀 Job monitoring started!");
   playSound("notification");
 
+  let isCheckingEmail = false;
+
   monitoringInterval = setInterval(async () => {
     if (!telegramBot.isMonitoring) {
       return; // Skip if monitoring is disabled via Telegram
     }
+
+    // Do not proceed with email check if cookies are being refreshed
+    if (isRefreshingCookies) {
+      return;
+    }
+
+    // Do not overlap email processing requests
+    if (isCheckingEmail) {
+      return;
+    }
+
+    isCheckingEmail = true;
 
     try {
       const lastEmailBody = await getLastUnreadEmail(auth, gmail);
@@ -336,6 +350,8 @@ async function periodicCheck() {
     } catch (error) {
       console.error("Error during email check:", error);
       telegramBot.sendMessage(`❌ Error during monitoring: ${error.message}`);
+    } finally {
+      isCheckingEmail = false;
     }
   }, 1000); // Check every sec
 }
@@ -558,7 +574,7 @@ async function processOrder(orderLink) {
             data = await getWMorderData(orderLink);
 
             // Check if retry was successful
-            if (isInvalidWorkMarketData(data)) {
+            if (!data || isInvalidWorkMarketData(data)) {
               // Still invalid? Don't throw, just log it and move on to next email to avoid loop crash
                console.error("❌ Still receiving invalid data after cookie refresh. Skipping this order.");
                pushEvent({ platform: 'WorkMarket', status: 'error', message: 'Auth Error: Data still invalid after refresh' });

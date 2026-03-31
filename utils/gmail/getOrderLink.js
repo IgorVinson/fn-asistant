@@ -5,8 +5,8 @@
  * @returns {string|null} - Посилання на замовлення або null, якщо не знайдено
  */
 export function getOrderLink(emailBody) {
-    // Регулярний вираз для пошуку посилання на замовлення
-    const fnLink = emailBody.match(/https:\/\/app\.fieldnation\.com\/workorders\/\d+\?t=ActionNewWorkOrder&src=Email/);
+    // Accept both legacy and current Field Nation work order email links.
+    const fnLink = emailBody.match(/https:\/\/app\.fieldnation\.com\/workorders\/\d+(?:\?[^\s"'<>]+)?/i);
     const wmLink = emailBody.match(/https?:\/\/sendgrid\.workmarket\.com\/uni\/ls\/click\?upn=[^"]+/);
 
     if (fnLink) {

@@ -1,6 +1,5 @@
 import fs from "fs";
 import path from "path";
-import { loginToWorkMarket } from "./loginToWorkMarket.js";
 
 const cookiesFilePath = path.resolve("utils", "WorkMarket", "autoCookies.json");
 
@@ -38,16 +37,29 @@ function getCookies() {
   }
 }
 
+function getInvalidDataSkeleton(workOrderId = "unknown") {
+  return {
+    id: workOrderId,
+    platform: "WorkMarket",
+    company: "Unknown Company",
+    title: "No Title",
+    hourlyRate: 0,
+    hoursOfWork: 4,
+    totalPayment: 0,
+    originalAmount: 0,
+    payType: "fixed",
+    date: new Date().toISOString().split("T")[0],
+    time: "09:00 AM EST",
+    distance: 0,
+  };
+}
+
 export async function getWMorderData(url) {
   try {
     let cookies = await getCookies();
     if (!cookies) {
-      console.log("No cookies found, attempting to login...");
-      await loginToWorkMarket();
-      cookies = await getCookies();
-      if (!cookies) {
-        throw new Error("Failed to get cookies even after login attempt");
-      }
+      console.log("No cookies found, requesting new session via invalid data indicator...");
+      return getInvalidDataSkeleton();
     }
 
     // First, follow the sendgrid link to get the actual WorkMarket URL
@@ -104,46 +116,10 @@ export async function getWMorderData(url) {
 
     let body = await response.text();
 
-    // If redirected to login, try to login and fetch again
+    // If redirected to login, session has expired. Return dummy data to trigger refresh.
     if (body.includes("login?redirectTo=") || body.includes("Please sign in")) {
-      console.log("Session expired, attempting to login...");
-      await loginToWorkMarket();
-      cookies = await getCookies();
-
-      // Retry the request with new cookies
-      response = await fetch(workMarketUrl, {
-        headers: {
-          accept:
-            "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
-          "accept-language": "en-US,en;q=0.9",
-          "cache-control": "no-cache",
-          pragma: "no-cache",
-          "sec-ch-ua": '"Not_A Brand";v="8", "Chromium";v="120"',
-          "sec-ch-ua-mobile": "?0",
-          "sec-ch-ua-platform": '"macOS"',
-          "sec-fetch-dest": "document",
-          "sec-fetch-mode": "navigate",
-          "sec-fetch-site": "same-origin",
-          "sec-fetch-user": "?1",
-          "upgrade-insecure-requests": "1",
-          cookie: cookies,
-          "User-Agent":
-            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-        },
-        method: "GET",
-        credentials: "include",
-        redirect: "follow",
-      });
-
-      body = await response.text();
-
-      // If still getting login page, there's a problem
-      if (
-        body.includes("login?redirectTo=") ||
-        body.includes("Please sign in")
-      ) {
-        throw new Error("Still getting login page after login attempt");
-      }
+      console.log("Session expired, requesting new session via invalid data indicator...");
+      return getInvalidDataSkeleton(workOrderId);
     }
 
     // Save response for debugging
