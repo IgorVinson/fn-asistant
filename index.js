@@ -18,6 +18,7 @@ import isEligibleForApplication from "./utils/isEligibleForApplication.js";
 import logger from "./utils/logger.js";
 import normalizeDateFromWO from "./utils/normalizedDateFromWO.js";
 import playSound from "./utils/playSound.js";
+import { saveReplay } from "./utils/saveReplay.js";
 import telegramBot from "./utils/telegram/telegramBot.js";
 import { getWMorderData } from "./utils/WorkMarket/getWMorderData.js";
 import { loginWMAuto } from "./utils/WorkMarket/loginWMAuto.js";
@@ -32,29 +33,29 @@ const port = 3001;
 
 // --- Global State for Dashboard ---
 let eventHistory = [];
-const logsFilePath = path.join(process.cwd(), 'logs', 'logs.json');
+const logsFilePath = path.join(process.cwd(), "logs", "logs.json");
 
 // Function to write events to logs.json file
-const writeEventsToFile = async (events) => {
+const writeEventsToFile = async events => {
   try {
-    await fs.writeFile(logsFilePath, JSON.stringify(events, null, 2), 'utf8');
+    await fs.writeFile(logsFilePath, JSON.stringify(events, null, 2), "utf8");
   } catch (error) {
     console.error("Error writing to logs.json:", error);
   }
 };
 
 // Function to push event to both memory and logs.json
-const pushEvent = async (event) => {
-  const newEvent = { 
-    ...event, 
+const pushEvent = async event => {
+  const newEvent = {
+    ...event,
     id: event.id || Math.random().toString(36).substr(2, 9),
-    time: new Date().toLocaleTimeString() 
+    time: new Date().toLocaleTimeString(),
   };
-  
+
   // Add to memory
   eventHistory.unshift(newEvent);
   if (eventHistory.length > 50) eventHistory.pop();
-  
+
   // Write to logs.json
   await writeEventsToFile(eventHistory);
 };
@@ -65,7 +66,7 @@ const pushEvent = async (event) => {
 app.get("/api/status", (req, res) => {
   res.json({
     isMonitoring: telegramBot.isMonitoring,
-    config: CONFIG
+    config: CONFIG,
   });
 });
 
@@ -73,7 +74,7 @@ app.get("/api/status", (req, res) => {
 app.get("/api/events", async (req, res) => {
   try {
     // Read from logs.json file
-    const events = await fs.readFile(logsFilePath, 'utf8');
+    const events = await fs.readFile(logsFilePath, "utf8");
     res.json(JSON.parse(events));
   } catch (error) {
     console.error("Error reading logs.json:", error);
@@ -84,13 +85,15 @@ app.get("/api/events", async (req, res) => {
 // Update config
 app.post("/api/config", (req, res) => {
   const newConfig = req.body;
-  
+
   if (newConfig.RATES) Object.assign(CONFIG.RATES, newConfig.RATES);
   if (newConfig.TIME) Object.assign(CONFIG.TIME, newConfig.TIME);
   if (newConfig.DISTANCE) Object.assign(CONFIG.DISTANCE, newConfig.DISTANCE);
-  
-  if (newConfig.FIELDNATION_ENABLED !== undefined) CONFIG.FIELDNATION_ENABLED = newConfig.FIELDNATION_ENABLED;
-  if (newConfig.WORKMARKET_ENABLED !== undefined) CONFIG.WORKMARKET_ENABLED = newConfig.WORKMARKET_ENABLED;
+
+  if (newConfig.FIELDNATION_ENABLED !== undefined)
+    CONFIG.FIELDNATION_ENABLED = newConfig.FIELDNATION_ENABLED;
+  if (newConfig.WORKMARKET_ENABLED !== undefined)
+    CONFIG.WORKMARKET_ENABLED = newConfig.WORKMARKET_ENABLED;
   if (newConfig.TEST_MODE !== undefined) CONFIG.TEST_MODE = newConfig.TEST_MODE;
 
   console.log("⚙️ Configuration updated via UI:", CONFIG);
@@ -100,42 +103,47 @@ app.post("/api/config", (req, res) => {
 // Webhook endpoint for Macrodroid phone alerts
 app.post("/api/phone-alert", async (req, res) => {
   console.log("\n📱 Received phone alert webhook:", req.body);
-  
+
   const { text } = req.body;
-  
+
   if (!text || !text.startsWith("FN_ALERT")) {
     console.log("❌ Invalid alert format:", text?.substring(0, 100));
-    return res.status(400).json({ error: "Invalid alert format. Must start with FN_ALERT" });
+    return res
+      .status(400)
+      .json({ error: "Invalid alert format. Must start with FN_ALERT" });
   }
-  
+
   const alert = {
     raw: text,
     type: "FN_ALERT",
   };
-  
+
   // Parse key=value pairs
-  const lines = text.split("\n").map(line => line.trim()).filter(Boolean);
+  const lines = text
+    .split("\n")
+    .map(line => line.trim())
+    .filter(Boolean);
   for (const line of lines.slice(1)) {
     const separatorIndex = line.indexOf("=");
     if (separatorIndex === -1) continue;
-    
+
     const key = line.slice(0, separatorIndex).trim();
     const value = line.slice(separatorIndex + 1).trim();
     if (key) {
       alert[key] = value;
     }
   }
-  
+
   console.log("✅ Valid FN_ALERT received via webhook, processing...");
   await handlePhoneAlert(alert);
-  
+
   res.json({ success: true, message: "Alert processed" });
 });
 
 // Start/Stop Agent
 app.post("/api/monitor/:action", async (req, res) => {
   const { action } = req.params;
-  
+
   if (action === "start") {
     startMonitoring();
     res.json({ success: true, isMonitoring: true });
@@ -183,7 +191,13 @@ function isDuplicatePhoneAlert(alert) {
 }
 
 function extractFieldNationOrderLinkFromAlert(alert) {
-  const candidates = [alert?.link, alert?.url, alert?.text, alert?.title, alert?.raw].filter(Boolean);
+  const candidates = [
+    alert?.link,
+    alert?.url,
+    alert?.text,
+    alert?.title,
+    alert?.raw,
+  ].filter(Boolean);
 
   for (const candidate of candidates) {
     const directLink = extractOrderLink(candidate);
@@ -241,7 +255,7 @@ async function handlePhoneAlert(alert) {
 async function cleanupChromeProcesses() {
   try {
     console.log("🧹 Cleaning up Chrome processes...");
-    const { execSync } = await import('child_process');
+    const { execSync } = await import("child_process");
     try {
       // Kill Chrome for Testing processes
       execSync('pkill -9 -f "Google Chrome for Testing" 2>/dev/null');
@@ -259,18 +273,18 @@ async function cleanupChromeProcesses() {
 // Graceful shutdown handlers
 async function gracefulShutdown(signal) {
   console.log(`\n${signal} received. Shutting down gracefully...`);
-  
+
   // Stop monitoring
   if (monitoringInterval) {
     clearInterval(monitoringInterval);
     monitoringInterval = null;
   }
-  
+
   if (reloginTimeout) {
     clearTimeout(reloginTimeout);
     reloginTimeout = null;
   }
-  
+
   // Close browser
   if (browser) {
     try {
@@ -281,20 +295,22 @@ async function gracefulShutdown(signal) {
     }
     browser = null;
   }
-  
+
   // Cleanup zombie Chrome processes
   await cleanupChromeProcesses();
-  
+
   console.log("👋 Goodbye!");
   process.exit(0);
 }
 
-process.on('SIGINT', () => gracefulShutdown('SIGINT'));
-process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
-process.on('exit', async () => {
+process.on("SIGINT", () => gracefulShutdown("SIGINT"));
+process.on("SIGTERM", () => gracefulShutdown("SIGTERM"));
+process.on("exit", async () => {
   // Final cleanup on exit
   if (browser) {
-    try { await browser.close(); } catch (e) {}
+    try {
+      await browser.close();
+    } catch (e) {}
   }
 });
 
@@ -516,7 +532,9 @@ async function applyForJob(orderLink, startDateAndTime, estLaborHours, id) {
   const platform = determinePlatform(orderLink);
 
   if (CONFIG.TEST_MODE) {
-    console.log(`🧪 TEST_MODE: Application for ${platform} order ${id} suppressed.`);
+    console.log(
+      `🧪 TEST_MODE: Application for ${platform} order ${id} suppressed.`
+    );
     return;
   }
 
@@ -615,7 +633,11 @@ async function processOrder(orderLink) {
       telegramBot.sendMessage(
         `⏭️ FieldNation order skipped (platform disabled)`
       );
-      pushEvent({ platform: 'FieldNation', status: 'info', message: 'Order skipped: Platform disabled' });
+      pushEvent({
+        platform: "FieldNation",
+        status: "info",
+        message: "Order skipped: Platform disabled",
+      });
       return null;
     }
 
@@ -629,7 +651,11 @@ async function processOrder(orderLink) {
       telegramBot.sendMessage(
         `⏭️ WorkMarket order skipped (platform disabled)`
       );
-      pushEvent({ platform: 'WorkMarket', status: 'info', message: 'Order skipped: Platform disabled' });
+      pushEvent({
+        platform: "WorkMarket",
+        status: "info",
+        message: "Order skipped: Platform disabled",
+      });
       return null;
     }
 
@@ -651,18 +677,28 @@ async function processOrder(orderLink) {
             await new Promise(resolve => setTimeout(resolve, 1000));
             waitCount++;
           }
-          
+
           // Retry fetching with (hopefully) fresh cookies
-          console.log("🔄 Retrying WorkMarket data fetch after waiting for refresh...");
+          console.log(
+            "🔄 Retrying WorkMarket data fetch after waiting for refresh..."
+          );
           data = await getWMorderData(orderLink);
-          
+
           if (isInvalidWorkMarketData(data)) {
-            console.error("❌ Still invalid data after waiting for refresh. Skipping.");
-            pushEvent({ platform: 'WorkMarket', status: 'error', message: 'Auth Error: Still invalid after refresh wait' });
+            console.error(
+              "❌ Still invalid data after waiting for refresh. Skipping."
+            );
+            pushEvent({
+              platform: "WorkMarket",
+              status: "error",
+              message: "Auth Error: Still invalid after refresh wait",
+            });
             return null;
           }
-          
-          console.log("✅ Successfully retrieved WorkMarket data after waiting for refresh");
+
+          console.log(
+            "✅ Successfully retrieved WorkMarket data after waiting for refresh"
+          );
         } else {
           // No refresh in progress, start one
           isRefreshingCookies = true;
@@ -678,12 +714,12 @@ async function processOrder(orderLink) {
           try {
             // Refresh cookies by re-logging into WorkMarket
             console.log("🔑 Re-logging into WorkMarket to refresh cookies...");
-            
+
             // Use saveCookies() which properly initializes browser and logs into both platforms
             await saveCookies();
-            
+
             console.log("✅ WorkMarket re-login successful, cookies refreshed");
-            
+
             // Wait a bit for cookies to be saved
             await new Promise(resolve => setTimeout(resolve, 2000));
 
@@ -696,9 +732,15 @@ async function processOrder(orderLink) {
             // Check if retry was successful
             if (!data || isInvalidWorkMarketData(data)) {
               // Still invalid? Don't throw, just log it and move on to next email to avoid loop crash
-               console.error("❌ Still receiving invalid data after cookie refresh. Skipping this order.");
-               pushEvent({ platform: 'WorkMarket', status: 'error', message: 'Auth Error: Data still invalid after refresh' });
-               return null;
+              console.error(
+                "❌ Still receiving invalid data after cookie refresh. Skipping this order."
+              );
+              pushEvent({
+                platform: "WorkMarket",
+                status: "error",
+                message: "Auth Error: Data still invalid after refresh",
+              });
+              return null;
             } else {
               console.log(
                 "✅ Successfully retrieved WorkMarket data after cookie refresh"
@@ -722,7 +764,11 @@ async function processOrder(orderLink) {
             telegramBot.sendMessage(
               `❌ Failed to refresh WorkMarket cookies: ${refreshError.message}`
             );
-            pushEvent({ platform: 'WorkMarket', status: 'error', message: 'Auth Error: Refresh failed' });
+            pushEvent({
+              platform: "WorkMarket",
+              status: "error",
+              message: "Auth Error: Refresh failed",
+            });
             return null;
           } finally {
             // Always reset the flag when done
@@ -752,11 +798,11 @@ async function processOrder(orderLink) {
        Time: ${new Date(
          normalizedData.time.start
        ).toLocaleString()} - ${new Date(
-        normalizedData.time.end
-      ).toLocaleString()}
+         normalizedData.time.end
+       ).toLocaleString()}
        Pay Range: $${normalizedData.payRange.min}-$${
-        normalizedData.payRange.max
-      }
+         normalizedData.payRange.max
+       }
        Est. Hours: ${normalizedData.estLaborHours}
        Distance: ${normalizedData.distance}mi`,
       normalizedData.platform,
@@ -779,10 +825,18 @@ async function processOrder(orderLink) {
         "Order meets all criteria",
         orderLink
       );
-      
-      const appStatus = CONFIG.TEST_MODE ? 'info' : 'success';
-      const appMsg = CONFIG.TEST_MODE ? 'TEST: Matches criteria (not applied)' : 'Applied for job (Criteria Met)';
-      pushEvent({ platform: normalizedData.platform, id: normalizedData.id, title: normalizedData.title, status: appStatus, message: appMsg });
+
+      const appStatus = CONFIG.TEST_MODE ? "info" : "success";
+      const appMsg = CONFIG.TEST_MODE
+        ? "TEST: Matches criteria (not applied)"
+        : "Applied for job (Criteria Met)";
+      pushEvent({
+        platform: normalizedData.platform,
+        id: normalizedData.id,
+        title: normalizedData.title,
+        status: appStatus,
+        message: appMsg,
+      });
 
       await applyForJob(
         orderLink,
@@ -804,8 +858,14 @@ async function processOrder(orderLink) {
         "Outside working hours",
         orderLink
       );
-      
-      pushEvent({ platform: normalizedData.platform, id: normalizedData.id, title: normalizedData.title, status: 'error', message: 'Rejected: Outside Working Hours' });
+
+      pushEvent({
+        platform: normalizedData.platform,
+        id: normalizedData.id,
+        title: normalizedData.title,
+        status: "error",
+        message: "Rejected: Outside Working Hours",
+      });
       playSound("error");
     } else if (eligibilityResult.reason === "SLOT_UNAVAILABLE") {
       logger.info(
@@ -820,12 +880,19 @@ async function processOrder(orderLink) {
         "Calendar conflict",
         orderLink
       );
-      
-      pushEvent({ platform: normalizedData.platform, id: normalizedData.id, title: normalizedData.title, status: 'error', message: 'Rejected: Calendar Conflict' });
+
+      pushEvent({
+        platform: normalizedData.platform,
+        id: normalizedData.id,
+        title: normalizedData.title,
+        status: "error",
+        message: "Rejected: Calendar Conflict",
+      });
       playSound("error");
     } else if (
       eligibilityResult.counterOffer &&
-      (eligibilityResult.reason === "PAYMENT_INSUFFICIENT" || eligibilityResult.reason === "TRAVEL_REQUIRED")
+      (eligibilityResult.reason === "PAYMENT_INSUFFICIENT" ||
+        eligibilityResult.reason === "TRAVEL_REQUIRED")
     ) {
       // Handle counter offers for both platforms
       if (normalizedData.platform === "FieldNation") {
@@ -837,19 +904,28 @@ async function processOrder(orderLink) {
 
         try {
           const co = eligibilityResult.counterOffer;
-          const counterDetails = co.payType === "hourly"
-            ? `Rate: $${co.counterRate}/hr × ${co.estHours}hrs = $${co.baseAmount}\nTravel: $${co.travelExpense}`
-            : `Fixed: $${co.baseAmount}\nTravel: $${co.travelExpense}`;
+          const counterDetails =
+            co.payType === "hourly"
+              ? `Rate: $${co.counterRate}/hr × ${co.estHours}hrs = $${co.baseAmount}\nTravel: $${co.travelExpense}`
+              : `Fixed: $${co.baseAmount}\nTravel: $${co.travelExpense}`;
           telegramBot.sendOrderNotification(
             normalizedData,
             "💰 COUNTER OFFER",
             counterDetails,
             orderLink
           );
-          
-          const counterStatus = CONFIG.TEST_MODE ? 'info' : 'warning';
-          const counterMsg = CONFIG.TEST_MODE ? `TEST: Counter suggested: $${co.baseAmount} + $${co.travelExpense} travel` : `Sent FN Counter Offer: $${co.baseAmount}`;
-          pushEvent({ platform: normalizedData.platform, id: normalizedData.id, title: normalizedData.title, status: counterStatus, message: counterMsg });
+
+          const counterStatus = CONFIG.TEST_MODE ? "info" : "warning";
+          const counterMsg = CONFIG.TEST_MODE
+            ? `TEST: Counter suggested: $${co.baseAmount} + $${co.travelExpense} travel`
+            : `Sent FN Counter Offer: $${co.baseAmount}`;
+          pushEvent({
+            platform: normalizedData.platform,
+            id: normalizedData.id,
+            title: normalizedData.title,
+            status: counterStatus,
+            message: counterMsg,
+          });
 
           if (!CONFIG.TEST_MODE) {
             await postFNCounterOffer(
@@ -878,7 +954,9 @@ async function processOrder(orderLink) {
             normalizedData.platform,
             normalizedData.id
           );
-          telegramBot.sendMessage(`❌ Failed to send counter offer: ${error.message}`);
+          telegramBot.sendMessage(
+            `❌ Failed to send counter offer: ${error.message}`
+          );
           playSound("error");
         }
       } else if (normalizedData.platform === "WorkMarket") {
@@ -890,19 +968,28 @@ async function processOrder(orderLink) {
 
         try {
           const co = eligibilityResult.counterOffer;
-          const counterDetails = co.payType === "hourly"
-            ? `Rate: $${co.counterRate}/hr × ${co.estHours}hrs = $${co.baseAmount}\nTravel: $${co.travelExpense}`
-            : `Fixed: $${co.baseAmount}\nTravel: $${co.travelExpense}`;
+          const counterDetails =
+            co.payType === "hourly"
+              ? `Rate: $${co.counterRate}/hr × ${co.estHours}hrs = $${co.baseAmount}\nTravel: $${co.travelExpense}`
+              : `Fixed: $${co.baseAmount}\nTravel: $${co.travelExpense}`;
           telegramBot.sendOrderNotification(
             normalizedData,
             "💰 COUNTER OFFER",
             counterDetails,
             orderLink
           );
-          
-          const counterStatus = CONFIG.TEST_MODE ? 'info' : 'warning';
-          const counterMsg = CONFIG.TEST_MODE ? `TEST: Counter suggested: $${co.baseAmount} + $${co.travelExpense} travel` : `Sent WM Counter Offer: $${co.baseAmount}`;
-          pushEvent({ platform: normalizedData.platform, id: normalizedData.id, title: normalizedData.title, status: counterStatus, message: counterMsg });
+
+          const counterStatus = CONFIG.TEST_MODE ? "info" : "warning";
+          const counterMsg = CONFIG.TEST_MODE
+            ? `TEST: Counter suggested: $${co.baseAmount} + $${co.travelExpense} travel`
+            : `Sent WM Counter Offer: $${co.baseAmount}`;
+          pushEvent({
+            platform: normalizedData.platform,
+            id: normalizedData.id,
+            title: normalizedData.title,
+            status: counterStatus,
+            message: counterMsg,
+          });
 
           if (!CONFIG.TEST_MODE) {
             await postWMCounterOffer(
@@ -973,8 +1060,10 @@ async function processOrder(orderLink) {
           parse_mode: "HTML",
           disable_web_page_preview: true,
         })
-        .catch((err) => {
-          logger.error(`Failed to send counter dates notification: ${err.message}`);
+        .catch(err => {
+          logger.error(
+            `Failed to send counter dates notification: ${err.message}`
+          );
           telegramBot.sendMessage(
             `📅 Counter Dates\n\nOrder: ${normalizedData.id}\nCompany: ${normalizedData.company}\nRequested: ${new Date(normalizedData.time.start).toLocaleString()}\n\nCounter Slot: ${counterDateLabel}\n\nCounter: $${eligibilityResult.counterOffer.baseAmount} + $${eligibilityResult.counterOffer.travelExpense} travel`
           );
@@ -999,7 +1088,9 @@ async function processOrder(orderLink) {
       switch (eligibilityResult.reason) {
         case "PAYMENT_INSUFFICIENT":
           rejectReason = `Payment below minimum threshold${
-            eligibilityResult.rejectDetails ? `\nReason: ${eligibilityResult.rejectDetails}` : ""
+            eligibilityResult.rejectDetails
+              ? `\nReason: ${eligibilityResult.rejectDetails}`
+              : ""
           }`;
           break;
         case "SLOT_UNAVAILABLE":
@@ -1024,11 +1115,17 @@ async function processOrder(orderLink) {
         rejectReason,
         orderLink
       );
-      
-      pushEvent({ platform: normalizedData.platform, id: normalizedData.id, title: normalizedData.title, status: 'error', message: `Rejected: ${rejectReason}` });
+
+      pushEvent({
+        platform: normalizedData.platform,
+        id: normalizedData.id,
+        title: normalizedData.title,
+        status: "error",
+        message: `Rejected: ${rejectReason}`,
+      });
       playSound("error");
     }
-
+    await saveReplay(normalizedData, eligibilityResult);
     return normalizedData;
   } catch (error) {
     console.error("Error processing order:", error);
@@ -1045,27 +1142,32 @@ telegramBot.onRelogin = saveCookies;
 telegramBot.onPhoneAlert = handlePhoneAlert;
 
 // Periodic zombie Chrome cleanup (runs every 30 minutes)
-setInterval(async () => {
-  console.log("🧹 Running periodic zombie Chrome cleanup...");
-  await cleanupChromeProcesses();
-}, 30 * 60 * 1000);
+setInterval(
+  async () => {
+    console.log("🧹 Running periodic zombie Chrome cleanup...");
+    await cleanupChromeProcesses();
+  },
+  30 * 60 * 1000
+);
 
 // Start the server
 app.listen(port, async () => {
   console.log(`Server running on port ${port}`);
-  
+
   // Clean up any zombies from previous runs on startup
   await cleanupChromeProcesses();
-  
+
   telegramBot.sendMessage(
     `🚀 Server started on port ${port}\nMonitoring auto-started ✅\nUse /help for available commands or the menu button (☰) for quick access`
   );
   // Initialize logs.json with current eventHistory
   await writeEventsToFile(eventHistory);
-  
+
   // Auto-start monitoring on server launch
   startMonitoring();
-  
+
   // No scheduled refresh - cookies are refreshed on-demand when they expire
-  console.log("⏰ On-demand cookie refresh enabled (refresh only when expired)");
+  console.log(
+    "⏰ On-demand cookie refresh enabled (refresh only when expired)"
+  );
 });
