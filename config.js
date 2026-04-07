@@ -3,16 +3,16 @@ export const CONFIG = {
   TEST_MODE: true, // If true, agent will not perform destructive/real actions
   FIELDNATION_ENABLED: true, // Set to false to disable FieldNation applications
   WORKMARKET_ENABLED: true, // Set to false to disable WorkMarket applications
-  ONLY_GRANITE: false, // If true, WorkMarket applies only to Granite Telecommunications
+  ONLY_GRANITE: true, // If true, WorkMarket applies only to Granite Telecommunications
   IS_COUNTER_DATES: true, // If true, counter-offer with free calendar slots when job time conflicts; if false, just reject on conflict
   IS_COUNTER_RATES: true, // If true, counter-offer with free calendar slots when job time conflicts; if false, just reject on conflict
   // Payment and Rate Settings
   RATES: {
     BASE_HOURLY_RATE: 50, // Minimum desired hourly rate
-    BASE_HOURLY_RATE_WORKMARKET: 50, // Minimum desired hourly rate
+    BASE_HOURLY_RATE_WORKMARKET: 65, // Minimum desired hourly rate
     BASE_HOURLY_RATE_FIELDNATION: 50, // Minimum desired hourly rate
     MIN_PAY_THRESHOLD_WORKMARKET: 200, // Minimum total pay for WorkMarket jobs
-    MIN_PAY_THRESHOLD_FIELDNATION: 165, // Minimum total pay for FieldNation jobs
+    MIN_PAY_THRESHOLD_FIELDNATION: 300, // Minimum total pay for FieldNation jobs
     TRAVEL_RATE: 30, // Rate per hour of travel
   },
 
@@ -23,6 +23,7 @@ export const CONFIG = {
     FREE_TRAVEL_LIMIT: 50 / 60, // Free travel time in hours (50 minutes)
     AVERAGE_SPEED: 50, // Average travel speed in miles per hour
   },
+  FLAT_TRAVEL: 30, // Flat travel fee added to all counter offers
 
   // Time and Schedule Settings
   TIME: {

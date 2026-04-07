@@ -562,11 +562,14 @@ function calculateCounterOffer(workOrder) {
     
   const estHours = workOrder.estLaborHours || CONFIG.TIME.DEFAULT_LABOR_HOURS;
 
-  // Calculate travel expense if over distance threshold
-  const travelExpense =
-    workOrder.distance > CONFIG.DISTANCE.TRAVEL_THRESHOLD_MILES
-      ? Math.round(workOrder.distance * CONFIG.DISTANCE.TRAVEL_RATE_PER_MILE)
-      : 0;
+  // Calculate travel expense: flat fee + rate/mile for distance over threshold
+  let travelExpense = CONFIG.FLAT_TRAVEL;
+  if (workOrder.distance > CONFIG.DISTANCE.TRAVEL_THRESHOLD_MILES) {
+    travelExpense += Math.round(
+      (workOrder.distance - CONFIG.DISTANCE.TRAVEL_THRESHOLD_MILES) 
+      * CONFIG.DISTANCE.TRAVEL_RATE_PER_MILE
+    );
+  }
 
   // Determine pay type from order data
   const isHourly = workOrder.payType === "hourly" || workOrder.hourlyRate > 0;
@@ -647,57 +650,7 @@ async function isEligibleForApplication(workOrder) {
     };
   }
 
-  // Special handling for Granite Telecommunications - skip calendar and payment checks
-  if (
-    workOrder.platform === "WorkMarket" &&
-    workOrder.company === "Granite Telecommunications"
-  ) {
-    logger.info(
-      `Primary company detected (Granite Telecommunications) - skipping calendar and payment checks, only checking distance`,
-      workOrder.platform,
-      workOrder.id
-    );
-
-    // Only check if travel is required
-    if (workOrder.distance > CONFIG.DISTANCE.TRAVEL_THRESHOLD_MILES) {
-      if (CONFIG.IS_COUNTER_RATES) {
-        logger.info(
-          `Granite Telecommunications job requires travel (${workOrder.distance} miles > ${CONFIG.DISTANCE.TRAVEL_THRESHOLD_MILES} miles) - generating counter offer`,
-          workOrder.platform,
-          workOrder.id
-        );
-        return {
-          eligible: false,
-          counterOffer: calculateCounterOffer(workOrder),
-          reason: "PAYMENT_INSUFFICIENT", // Changed from GRANITE_TRAVEL_REQUIRED to trigger counter-offer flow
-        };
-      } else {
-        logger.info(
-          `Granite Telecommunications job requires travel, but IS_COUNTER_RATES is false. Rejecting.`,
-          workOrder.platform,
-          workOrder.id
-        );
-        return {
-          eligible: false,
-          counterOffer: null,
-          reason: "TRAVEL_REQUIRED_NO_COUNTER",
-        };
-      }
-    } else {
-      logger.info(
-        `Granite Telecommunications job within travel threshold - applying directly`,
-        workOrder.platform,
-        workOrder.id
-      );
-      return {
-        eligible: true,
-        counterOffer: null,
-        reason: "GRANITE_ELIGIBLE",
-      };
-    }
-  }
-
-  // Check eligibility for both FieldNation and WorkMarket (non-Granite)
+  // Check eligibility for both FieldNation and WorkMarket
   if (
     workOrder.platform === "FieldNation" ||
     workOrder.platform === "WorkMarket"
@@ -853,3 +806,4 @@ async function isEligibleForApplication(workOrder) {
 }
 
 export default isEligibleForApplication;
+export { calculateCounterOffer, findFreeSlots, isSlotAvailableStatic };
