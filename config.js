@@ -3,9 +3,11 @@ export const CONFIG = {
   TEST_MODE: true, // If true, agent will not perform destructive/real actions
   FIELDNATION_ENABLED: true, // Set to false to disable FieldNation applications
   WORKMARKET_ENABLED: true, // Set to false to disable WorkMarket applications
-  ONLY_GRANITE: true, // If true, WorkMarket applies only to Granite Telecommunications
+  APPLICATION_MODE: "granite_only", // "granite_only" | "all_companies" | "disabled"
+  ALLOW_ALL_COMPANIES_ON_DATES: [], // YYYY-MM-DD dates where non-Granite jobs are allowed
   IS_COUNTER_DATES: true, // If true, counter-offer with free calendar slots when job time conflicts; if false, just reject on conflict
   IS_COUNTER_RATES: true, // If true, counter-offer with free calendar slots when job time conflicts; if false, just reject on conflict
+  ENFORCE_MIN_PAYMENT: true, // If true, reject jobs below platform minimum threshold
   // Payment and Rate Settings
   RATES: {
     BASE_HOURLY_RATE: 50, // Minimum desired hourly rate

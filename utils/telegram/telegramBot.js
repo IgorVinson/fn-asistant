@@ -95,6 +95,12 @@ class TelegramBotService {
         { command: "stop", description: "⏹️ Stop job monitoring" },
         { command: "status", description: "📊 Check monitoring status" },
         { command: "settings", description: "⚙️ View/update settings" },
+        { command: "mode", description: "🧭 Show application mode" },
+        { command: "setmode", description: "🧭 Set application mode" },
+        { command: "dates", description: "📅 Show override dates" },
+        { command: "adddate", description: "📅 Add override date" },
+        { command: "deldate", description: "🗑️ Remove override date" },
+        { command: "cleardates", description: "🧹 Clear override dates" },
         { command: "setrate", description: "💰 Set hourly rate" },
         { command: "setminpayfn", description: "💵 Set FN min pay" },
         { command: "setminpaywm", description: "💵 Set WM min pay" },
@@ -110,6 +116,13 @@ class TelegramBotService {
   }
 
   setupCommands() {
+    const formatOverrideDates = () =>
+      CONFIG.ALLOW_ALL_COMPANIES_ON_DATES.length > 0
+        ? CONFIG.ALLOW_ALL_COMPANIES_ON_DATES.join(", ")
+        : "None";
+
+    const isValidIsoDate = value => /^\d{4}-\d{2}-\d{2}$/.test(value);
+
     // Handle all text messages (for interactive input)
     this.bot.on("message", msg => {
       if (!msg.chat || msg.chat.id.toString() !== this.chatId) return;
@@ -159,7 +172,9 @@ class TelegramBotService {
         this.clearWaitingState();
         const status = this.isMonitoring ? "🟢 Active" : "🔴 Stopped";
         const mode = CONFIG.TEST_MODE ? "🧪 TEST MODE (No applications)" : "🚀 REAL MODE (Live applications)";
-        this.sendMessage(`Monitoring Status: ${status}\nMode: ${mode}`);
+        this.sendMessage(
+          `Monitoring Status: ${status}\nMode: ${mode}\nApplication Policy: ${CONFIG.APPLICATION_MODE}\nOverride Dates: ${formatOverrideDates()}`
+        );
       }
     });
 
@@ -193,6 +208,10 @@ class TelegramBotService {
         const settingsText = `
 ⚙️ *Current Settings*
 
+🧪 *Test Mode:* ${CONFIG.TEST_MODE ? "ON" : "OFF"}
+🧭 *Application Mode:* ${CONFIG.APPLICATION_MODE}
+📅 *All-Company Override Dates:* ${formatOverrideDates()}
+
 💰 *Base Hourly Rate:* $${CONFIG.RATES.BASE_HOURLY_RATE}/hr
 💵 *Min Pay (FN):* $${CONFIG.RATES.MIN_PAY_THRESHOLD_FIELDNATION}
 💵 *Min Pay (WM):* $${CONFIG.RATES.MIN_PAY_THRESHOLD_WORKMARKET}
@@ -202,6 +221,12 @@ class TelegramBotService {
 ⏳ *Buffer:* ${CONFIG.BUFFER_MINUTES || CONFIG.TIME.BUFFER_MINUTES} min
 
 *Quick Update Commands:*
+/mode - Show current mode
+/setmode granite_only|all_companies|disabled
+/dates - Show override dates
+/adddate YYYY-MM-DD
+/deldate YYYY-MM-DD
+/cleardates
 /setrate - Set hourly rate
 /setminpayfn - Set FN min pay
 /setminpaywm - Set WM min pay
@@ -212,6 +237,97 @@ class TelegramBotService {
         this.bot.sendMessage(this.chatId, settingsText, {
           parse_mode: "Markdown",
         });
+      }
+    });
+
+    this.bot.onText(/\/mode$/, msg => {
+      if (msg.chat && msg.chat.id.toString() === this.chatId) {
+        this.clearWaitingState();
+        this.sendMessage(
+          `🧭 Application mode: ${CONFIG.APPLICATION_MODE}\n📅 Override dates: ${formatOverrideDates()}`
+        );
+      }
+    });
+
+    this.bot.onText(/\/setmode(?:\s+(.+))?$/, (msg, match) => {
+      if (msg.chat && msg.chat.id.toString() === this.chatId) {
+        this.clearWaitingState();
+        const nextMode = (match?.[1] || "").trim();
+        const validModes = ["granite_only", "all_companies", "disabled"];
+
+        if (!validModes.includes(nextMode)) {
+          this.sendMessage(
+            "❌ Invalid mode. Use: /setmode granite_only|all_companies|disabled"
+          );
+          return;
+        }
+
+        CONFIG.APPLICATION_MODE = nextMode;
+        this.sendMessage(`✅ Application mode updated to ${nextMode}`);
+        logger.info(`Settings updated: Application mode set to ${nextMode}`);
+      }
+    });
+
+    this.bot.onText(/\/dates$/, msg => {
+      if (msg.chat && msg.chat.id.toString() === this.chatId) {
+        this.clearWaitingState();
+        this.sendMessage(`📅 Override dates: ${formatOverrideDates()}`);
+      }
+    });
+
+    this.bot.onText(/\/adddate(?:\s+(.+))?$/, (msg, match) => {
+      if (msg.chat && msg.chat.id.toString() === this.chatId) {
+        this.clearWaitingState();
+        const nextDate = (match?.[1] || "").trim();
+
+        if (!isValidIsoDate(nextDate)) {
+          this.sendMessage("❌ Invalid date. Use: /adddate YYYY-MM-DD");
+          return;
+        }
+
+        if (CONFIG.ALLOW_ALL_COMPANIES_ON_DATES.includes(nextDate)) {
+          this.sendMessage(`ℹ️ Override date already exists: ${nextDate}`);
+          return;
+        }
+
+        CONFIG.ALLOW_ALL_COMPANIES_ON_DATES.push(nextDate);
+        CONFIG.ALLOW_ALL_COMPANIES_ON_DATES.sort();
+        this.sendMessage(`✅ Added override date: ${nextDate}`);
+        logger.info(`Settings updated: Added override date ${nextDate}`);
+      }
+    });
+
+    this.bot.onText(/\/deldate(?:\s+(.+))?$/, (msg, match) => {
+      if (msg.chat && msg.chat.id.toString() === this.chatId) {
+        this.clearWaitingState();
+        const targetDate = (match?.[1] || "").trim();
+
+        if (!isValidIsoDate(targetDate)) {
+          this.sendMessage("❌ Invalid date. Use: /deldate YYYY-MM-DD");
+          return;
+        }
+
+        const nextDates = CONFIG.ALLOW_ALL_COMPANIES_ON_DATES.filter(
+          date => date !== targetDate
+        );
+
+        if (nextDates.length === CONFIG.ALLOW_ALL_COMPANIES_ON_DATES.length) {
+          this.sendMessage(`ℹ️ Override date not found: ${targetDate}`);
+          return;
+        }
+
+        CONFIG.ALLOW_ALL_COMPANIES_ON_DATES = nextDates;
+        this.sendMessage(`✅ Removed override date: ${targetDate}`);
+        logger.info(`Settings updated: Removed override date ${targetDate}`);
+      }
+    });
+
+    this.bot.onText(/\/cleardates$/, msg => {
+      if (msg.chat && msg.chat.id.toString() === this.chatId) {
+        this.clearWaitingState();
+        CONFIG.ALLOW_ALL_COMPANIES_ON_DATES = [];
+        this.sendMessage("✅ Cleared all override dates");
+        logger.info("Settings updated: Cleared all override dates");
       }
     });
 
@@ -272,6 +388,12 @@ class TelegramBotService {
 /relogin - Trigger relogin to platforms
 
 *Settings Commands:*
+/mode - Show application mode
+/setmode - Update application mode
+/dates - Show override dates
+/adddate - Add override date
+/deldate - Remove override date
+/cleardates - Clear override dates
 /settings - View current settings
 /setrate - Update hourly rate
 /setminpayfn - Update FN min pay
@@ -393,7 +515,10 @@ class TelegramBotService {
   getActiveModesMarkdown() {
     const modes = [];
     if (CONFIG.TEST_MODE) modes.push("🧪 TEST");
-    if (CONFIG.ONLY_GRANITE) modes.push("🪨 GRANITE ONLY");
+    if (CONFIG.APPLICATION_MODE === "granite_only") modes.push("🪨 GRANITE ONLY");
+    if (CONFIG.APPLICATION_MODE === "all_companies") modes.push("🌐 ALL COMPANIES");
+    if (CONFIG.APPLICATION_MODE === "disabled") modes.push("⛔ DISABLED");
+    if (CONFIG.ALLOW_ALL_COMPANIES_ON_DATES.length > 0) modes.push("📆 DATE OVERRIDES");
     if (CONFIG.IS_COUNTER_DATES) modes.push("📅 COUNTER SLOTS");
     return modes.length > 0 ? ` *[${modes.join(" | ")}]*` : "";
   }
@@ -401,7 +526,10 @@ class TelegramBotService {
   getActiveModesHTML() {
     const modes = [];
     if (CONFIG.TEST_MODE) modes.push("🧪 TEST");
-    if (CONFIG.ONLY_GRANITE) modes.push("🪨 GRANITE ONLY");
+    if (CONFIG.APPLICATION_MODE === "granite_only") modes.push("🪨 GRANITE ONLY");
+    if (CONFIG.APPLICATION_MODE === "all_companies") modes.push("🌐 ALL COMPANIES");
+    if (CONFIG.APPLICATION_MODE === "disabled") modes.push("⛔ DISABLED");
+    if (CONFIG.ALLOW_ALL_COMPANIES_ON_DATES.length > 0) modes.push("📆 DATE OVERRIDES");
     if (CONFIG.IS_COUNTER_DATES) modes.push("📅 COUNTER SLOTS");
     return modes.length > 0 ? ` <b>[${modes.join(" | ")}]</b>` : "";
   }

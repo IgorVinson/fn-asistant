@@ -2,6 +2,78 @@ import { CONFIG } from "../config.js";
 import schedule from "../schedule.js";
 import logger from "./logger.js";
 
+function getWorkOrderLocalDate(workOrder) {
+  const startDate = new Date(workOrder.time.start);
+  const formatter = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/New_York",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  });
+
+  return formatter.format(startDate);
+}
+
+function isGraniteCompany(companyName) {
+  return (companyName || "").trim().toLowerCase() === "granite telecommunications";
+}
+
+function evaluateApplicationPolicy(workOrder) {
+  const workOrderDate = getWorkOrderLocalDate(workOrder);
+  const mode = CONFIG.APPLICATION_MODE || "granite_only";
+  const isGranite = isGraniteCompany(workOrder.company);
+  const overrideDates = CONFIG.ALLOW_ALL_COMPANIES_ON_DATES || [];
+  const isDateOverride = overrideDates.includes(workOrderDate);
+
+  if (mode === "disabled") {
+    return {
+      allowed: false,
+      reason: "MODE_DISABLED",
+      details: "Application mode is disabled",
+      workOrderDate,
+    };
+  }
+
+  if (mode === "all_companies") {
+    return {
+      allowed: true,
+      reason: "POLICY_ALLOWED_ALL_COMPANIES",
+      details: "All companies are allowed by application mode",
+      workOrderDate,
+    };
+  }
+
+  if (mode === "granite_only") {
+    if (isGranite) {
+      return {
+        allowed: true,
+        reason: "POLICY_ALLOWED_GRANITE",
+        details: "Granite job allowed by granite_only mode",
+        workOrderDate,
+      };
+    }
+
+    if (isDateOverride) {
+      return {
+        allowed: true,
+        reason: "POLICY_ALLOWED_DATE_OVERRIDE",
+        details: `Non-Granite job allowed on override date ${workOrderDate}`,
+        workOrderDate,
+      };
+    }
+  }
+
+  return {
+    allowed: false,
+    reason: "POLICY_REJECTED",
+    details:
+      mode === "granite_only"
+        ? `Non-Granite jobs are allowed only on override dates (${overrideDates.join(", ") || "none configured"})`
+        : `Unsupported application mode: ${mode}`,
+    workOrderDate,
+  };
+}
+
 // Function to check if time is within working hours
 function isWithinWorkingHours(startTime, endTime) {
   const workStartTime = CONFIG.TIME.WORK_START_TIME;
@@ -71,7 +143,7 @@ function isPaymentEligible(workOrder) {
   const travelDetails = needsTravelCounter ? `Travel required (${workOrder.distance}mi > ${TRAVEL_THRESHOLD}mi)` : null;
 
   // RULE 1: If total pay is less than platform minimum -> ALWAYS REJECT (no counter)
-  if (theirTotal < platformMinTotal) {
+  if (CONFIG.ENFORCE_MIN_PAYMENT && theirTotal < platformMinTotal) {
     const details = `Total pay $${theirTotal} is below platform minimum threshold $${platformMinTotal}`;
     logger.info(`Payment Analysis: ${details} -> REJECT`, workOrder.platform, workOrder.id);
     return { isAcceptable: false, issue: "BELOW_MINIMUM", details };
@@ -613,6 +685,34 @@ async function isEligibleForApplication(workOrder) {
     workOrder.id
   );
 
+  const policyCheck = evaluateApplicationPolicy(workOrder);
+  logger.info(
+    `Application Policy Check:
+    - Mode: ${CONFIG.APPLICATION_MODE}
+    - Company: ${workOrder.company}
+    - Work Order Date: ${policyCheck.workOrderDate}
+    - Result: ${policyCheck.reason}
+    - Allowed: ${policyCheck.allowed}`,
+    workOrder.platform,
+    workOrder.id
+  );
+
+  if (!policyCheck.allowed) {
+    logger.info(
+      `Job rejected by application policy: ${policyCheck.details}`,
+      workOrder.platform,
+      workOrder.id
+    );
+    return {
+      eligible: false,
+      counterOffer: null,
+      reason: policyCheck.reason,
+      rejectDetails: policyCheck.details,
+      policyReason: policyCheck.reason,
+      workOrderDate: policyCheck.workOrderDate,
+    };
+  }
+
   // First check if the job is within working hours
   const isInWorkingHours = isWithinWorkingHours(
     workOrder.time.start,
@@ -630,23 +730,6 @@ async function isEligibleForApplication(workOrder) {
       eligible: false,
       counterOffer: null, // No counter-offer for jobs outside working hours
       reason: "OUTSIDE_WORKING_HOURS",
-    };
-  }
-
-  // Check if ONLY_GRANITE mode is enabled (applies to all platforms)
-  if (
-    CONFIG.ONLY_GRANITE &&
-    workOrder.company !== "Granite Telecommunications"
-  ) {
-    logger.info(
-      `Job rejected: ONLY_GRANITE mode is enabled and company is ${workOrder.company}`,
-      workOrder.platform,
-      workOrder.id
-    );
-    return {
-      eligible: false,
-      counterOffer: null,
-      reason: "ONLY_GRANITE_MODE",
     };
   }
 
@@ -806,4 +889,11 @@ async function isEligibleForApplication(workOrder) {
 }
 
 export default isEligibleForApplication;
-export { calculateCounterOffer, findFreeSlots, isSlotAvailableStatic };
+export {
+  calculateCounterOffer,
+  evaluateApplicationPolicy,
+  findFreeSlots,
+  getWorkOrderLocalDate,
+  isSlotAvailableStatic,
+  isGraniteCompany,
+};

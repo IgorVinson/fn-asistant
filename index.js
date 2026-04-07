@@ -1026,6 +1026,8 @@ async function processOrder(orderLink) {
       const slot = eligibilityResult.counterOffer.counterDate;
       const slotTimeRange = `${slot.start.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} - ${slot.end.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} (${slot.durationMinutes}min)`;
       const counterDateLabel = `📆 ${slot.start.toLocaleDateString([], { weekday: "short", month: "short", day: "numeric" })} — ${slotTimeRange}`;
+      const isRealWorkMarketSubmission =
+        normalizedData.platform === "WorkMarket" && !CONFIG.TEST_MODE;
 
       logger.info(
         `Action: Counter Dates - Offering slot: ${counterDateLabel}`,
@@ -1052,6 +1054,7 @@ async function processOrder(orderLink) {
 ❌ <i>Conflict with existing schedule</i>
 
 <b>✅ Counter Slot:</b> ${counterDateLabel}
+${normalizedData.platform === "WorkMarket" && !isRealWorkMarketSubmission ? "\n\n<i>WorkMarket alternate date submission will be simulated in TEST mode only.</i>" : ""}
 
 <b>Counter Offer:</b> ${eligibilityResult.counterOffer.payType === "hourly" ? `$${eligibilityResult.counterOffer.counterRate}/hr × ${eligibilityResult.counterOffer.estHours}hrs = $${eligibilityResult.counterOffer.baseAmount}` : `$${eligibilityResult.counterOffer.baseAmount} (fixed)`} + $${eligibilityResult.counterOffer.travelExpense} travel`;
 
@@ -1081,6 +1084,38 @@ async function processOrder(orderLink) {
         message: counterMsg,
       });
 
+      if (!CONFIG.TEST_MODE && normalizedData.platform === "WorkMarket") {
+        try {
+          const co = eligibilityResult.counterOffer;
+          await postWMCounterOffer(
+            normalizedData.id,
+            co.counterRate,
+            co.estHours,
+            normalizedData.distance,
+            {
+              counterDate: slot,
+              note: `Requesting alternate date/time due to schedule conflict: ${counterDateLabel}`,
+            }
+          );
+          logger.info(
+            `Result: WM counter date submitted successfully`,
+            normalizedData.platform,
+            normalizedData.id
+          );
+        } catch (error) {
+          logger.error(
+            `Result: Failed to send WM counter date - ${error.message}`,
+            normalizedData.platform,
+            normalizedData.id
+          );
+          telegramBot.sendMessage(
+            `❌ Failed to send WorkMarket counter date: ${error.message}`
+          );
+          playSound("error");
+          return;
+        }
+      }
+
       playSound("applied");
     } else {
       // Handle all other rejection cases
@@ -1098,6 +1133,14 @@ async function processOrder(orderLink) {
           break;
         case "OUTSIDE_WORKING_HOURS":
           rejectReason = "Outside working hours";
+          break;
+        case "MODE_DISABLED":
+          rejectReason = "Application mode is disabled";
+          break;
+        case "POLICY_REJECTED":
+          rejectReason =
+            eligibilityResult.rejectDetails ||
+            "Rejected by company/date application policy";
           break;
         default:
           rejectReason = eligibilityResult.reason;
