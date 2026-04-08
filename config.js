@@ -13,19 +13,19 @@ export const CONFIG = {
     BASE_HOURLY_RATE: 50, // Minimum desired hourly rate
     BASE_HOURLY_RATE_WORKMARKET: 65, // Minimum desired hourly rate
     BASE_HOURLY_RATE_FIELDNATION: 50, // Minimum desired hourly rate
-    MIN_PAY_THRESHOLD_WORKMARKET: 200, // Minimum total pay for WorkMarket jobs
-    MIN_PAY_THRESHOLD_FIELDNATION: 300, // Minimum total pay for FieldNation jobs
+    MIN_PAY_THRESHOLD_WORKMARKET: 100, // Minimum total pay for WorkMarket jobs
+    MIN_PAY_THRESHOLD_FIELDNATION: 150, // Minimum total pay for FieldNation jobs
     TRAVEL_RATE: 30, // Rate per hour of travel
   },
 
   // Distance and Travel Settings
   DISTANCE: {
-    TRAVEL_THRESHOLD_MILES: 30, // Miles before charging travel expenses
+    TRAVEL_THRESHOLD_MILES: 20, // Miles before charging travel expenses
     TRAVEL_RATE_PER_MILE: 1.25, // Amount to charge per mile over threshold
     FREE_TRAVEL_LIMIT: 50 / 60, // Free travel time in hours (50 minutes)
     AVERAGE_SPEED: 50, // Average travel speed in miles per hour
   },
-  FLAT_TRAVEL: 30, // Flat travel fee added to all counter offers
+  FLAT_TRAVEL: 0, // Flat travel fee added to all counter offers
 
   // Time and Schedule Settings
   TIME: {

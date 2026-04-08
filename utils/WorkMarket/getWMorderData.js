@@ -54,6 +54,19 @@ function getInvalidDataSkeleton(workOrderId = "unknown") {
   };
 }
 
+function convert24HourClockTo12Hour(timeStr) {
+  const [rawHours, rawMinutes = "00", rawSeconds = "00"] = timeStr.split(":");
+  let hours = Number(rawHours);
+  const minutes = rawMinutes.padStart(2, "0");
+  const seconds = rawSeconds.padStart(2, "0");
+  const period = hours >= 12 ? "PM" : "AM";
+
+  hours = hours % 12;
+  if (hours === 0) hours = 12;
+
+  return `${hours}:${minutes}:${seconds} ${period}`;
+}
+
 export async function getWMorderData(url) {
   try {
     let cookies = await getCookies();
@@ -168,6 +181,8 @@ export async function getWMorderData(url) {
     // Parse the schedule data
     let formattedDate = null;
     let formattedTime = null;
+    let latestStartTime = null;
+    let isRequestedWindow = false;
 
     if (scheduleMatch) {
       const startDate = scheduleMatch[2]; // e.g., "05/30/2025"
@@ -185,6 +200,19 @@ export async function getWMorderData(url) {
       } else {
         formattedTime = `${startTime} ${timezone}`;
       }
+    }
+
+    const titleWindowMatch = titleMatch?.[1]?.match(
+      /\|\s*(\d{2}\/\d{2}\/\d{4})\s+(\d{2}:\d{2}:\d{2})\s*-\s*(\d{2}:\d{2}:\d{2})\s+([A-Z]{3})\s*\|\s*Requested Window/i
+    );
+
+    if (titleWindowMatch) {
+      const [, startDate, startTime24, latestStart24, timezone] = titleWindowMatch;
+      const dateObj = new Date(startDate);
+      formattedDate = dateObj.toISOString().split("T")[0];
+      formattedTime = `${convert24HourClockTo12Hour(startTime24)} to ${convert24HourClockTo12Hour(latestStart24)} ${timezone}`;
+      latestStartTime = `${convert24HourClockTo12Hour(latestStart24)} ${timezone}`;
+      isRequestedWindow = true;
     }
 
     // Extract marketplace fee and calculate pricing
@@ -258,6 +286,8 @@ export async function getWMorderData(url) {
       payType: jsonPayType || (finalHourlyRate > 0 ? "hourly" : "fixed"),
       date: formattedDate || new Date().toISOString().split("T")[0], // Default to today
       time: formattedTime || "09:00 AM EST", // Default time
+      latestStartTime,
+      isRequestedWindow,
       distance: distanceMatch
         ? parseFloat(distanceMatch[1].replace(",", ""))
         : 0,

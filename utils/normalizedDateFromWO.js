@@ -3,8 +3,8 @@ export default function normalizeDateFromWO(data) {
   function convertTo24Hour(timeStr) {
     if (!timeStr) return timeStr;
 
-    // Remove EST or any timezone indicator
-    timeStr = timeStr.replace(/\s*EST/i, '').trim();
+    // Remove trailing timezone indicators before parsing.
+    timeStr = timeStr.replace(/\s+[A-Z]{2,4}$/i, "").trim();
 
     // Parse the time
     const [time, period] = timeStr.split(/\s*([AP]M)/i);
@@ -48,10 +48,15 @@ export default function normalizeDateFromWO(data) {
     (typeof data.time === 'string' && data.time.split(' to ')[0]) ||
     '00:00:00';
   const startTime = convertTo24Hour(startTimeRaw);
+  const latestStartRaw =
+    data.time?.latestStart?.time ||
+    data.latestStartTime ||
+    null;
+  const latestStart = latestStartRaw ? convertTo24Hour(latestStartRaw) : null;
 
   // Calculate end time
   let endDate, endTime;
-  if (data.time?.end?.date || data.time?.end?.time) {
+  if (!data.isRequestedWindow && (data.time?.end?.date || data.time?.end?.time)) {
     endDate = standardizeDate(
       data.time?.end?.date || data.date?.split(' to ')[1] || startDate
     );
@@ -94,6 +99,7 @@ export default function normalizeDateFromWO(data) {
     time: {
       start: `${startDate}T${startTime}`,
       end: `${endDate}T${endTime}`,
+      ...(latestStart ? { latestStart: `${startDate}T${latestStart}` } : {}),
     },
     payRange: {
       min: data.payRange?.min || parseFloat(data.hourlyRate || 0),

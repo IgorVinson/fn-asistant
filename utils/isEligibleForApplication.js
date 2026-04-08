@@ -18,6 +18,22 @@ function isGraniteCompany(companyName) {
   return (companyName || "").trim().toLowerCase() === "granite telecommunications";
 }
 
+function getEtMinutes(dateLike) {
+  const formatter = new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/New_York",
+    hour12: false,
+    hour: "numeric",
+    minute: "numeric",
+  });
+
+  const [hours, minutes] = formatter
+    .format(new Date(dateLike))
+    .split(":")
+    .map(Number);
+
+  return hours * 60 + minutes;
+}
+
 function evaluateApplicationPolicy(workOrder) {
   const workOrderDate = getWorkOrderLocalDate(workOrder);
   const mode = CONFIG.APPLICATION_MODE || "granite_only";
@@ -74,39 +90,31 @@ function evaluateApplicationPolicy(workOrder) {
   };
 }
 
-// Function to check if time is within working hours
-function isWithinWorkingHours(startTime, endTime) {
+// Function to check if any requested start is within working hours.
+function isWithinWorkingHours(startTime, timeWindow = {}) {
   const workStartTime = CONFIG.TIME.WORK_START_TIME;
   const workEndTime = CONFIG.TIME.WORK_END_TIME;
 
-  // Format the job start time to Eastern Time string "HH:MM:SS" (24-hour clock)
-  // This avoids Node.js UTC offset shifts on AWS/VPS
   const jobStart = new Date(startTime);
-  const formatter = new Intl.DateTimeFormat("en-US", {
-    timeZone: "America/New_York",
-    hour12: false,
-    hour: "numeric",
-    minute: "numeric",
-  });
-  const estTimeString = formatter.format(jobStart); // e.g., "11:00"
-
-  // Compare using local hours/minutes directly (no UTC conversion)
   const [workStartH, workStartM] = workStartTime.split(":").map(Number);
   const [workEndH, workEndM] = workEndTime.split(":").map(Number);
-  const [jobStartH, jobStartM] = estTimeString.split(":").map(Number);
-
-  const jobStartMinutes = jobStartH * 60 + jobStartM;
+  const jobStartMinutes = getEtMinutes(startTime);
+  const jobLatestStartMinutes = timeWindow.latestStart
+    ? getEtMinutes(timeWindow.latestStart)
+    : jobStartMinutes;
   const workStartMinutes = workStartH * 60 + workStartM;
   const workEndMinutes = workEndH * 60 + workEndM;
 
-  // Only check if job starts within working hours
+  // The start window is workable if it overlaps the configured workday.
   const isWithinHours =
-    jobStartMinutes >= workStartMinutes && jobStartMinutes <= workEndMinutes;
+    jobLatestStartMinutes >= workStartMinutes &&
+    jobStartMinutes <= workEndMinutes;
 
   logger.info(
     `Working Hours Check:
     - Job Date (Local): ${jobStart.toLocaleDateString()}
-    - Job Start (ET): ${estTimeString} 
+    - Earliest Start (ET): ${String(Math.floor(jobStartMinutes / 60)).padStart(2, "0")}:${String(jobStartMinutes % 60).padStart(2, "0")}
+    - Latest Start (ET): ${String(Math.floor(jobLatestStartMinutes / 60)).padStart(2, "0")}:${String(jobLatestStartMinutes % 60).padStart(2, "0")}
     - Work Hours: ${workStartTime} - ${workEndTime}
     - Within Hours: ${isWithinHours}`,
     "SCHEDULE_CHECK"
@@ -176,6 +184,56 @@ function isPaymentEligible(workOrder) {
     workOrder.id
   );
   return { isAcceptable: true, issue: null, details: "Pay and distance OK" };
+}
+
+function getJobDurationMs(workOrder) {
+  return (workOrder.estLaborHours || CONFIG.TIME.DEFAULT_LABOR_HOURS) * 60 * 60 * 1000;
+}
+
+function getRequestedStartWindow(workOrder, targetDate = null) {
+  const requestedStart = new Date(workOrder.time.start);
+  const requestedLatestStart = workOrder.time.latestStart
+    ? new Date(workOrder.time.latestStart)
+    : new Date(workOrder.time.start);
+
+  if (!targetDate) {
+    return {
+      earliestStart: requestedStart,
+      latestStart: requestedLatestStart,
+    };
+  }
+
+  const sameRequestedDay =
+    requestedStart.getFullYear() === targetDate.getFullYear() &&
+    requestedStart.getMonth() === targetDate.getMonth() &&
+    requestedStart.getDate() === targetDate.getDate();
+
+  if (sameRequestedDay) {
+    return {
+      earliestStart: requestedStart,
+      latestStart: requestedLatestStart,
+    };
+  }
+
+  const [wsH, wsM] = CONFIG.TIME.WORK_START_TIME.split(":").map(Number);
+  const [weH, weM] = CONFIG.TIME.WORK_END_TIME.split(":").map(Number);
+
+  return {
+    earliestStart: new Date(
+      targetDate.getFullYear(),
+      targetDate.getMonth(),
+      targetDate.getDate(),
+      wsH,
+      wsM
+    ),
+    latestStart: new Date(
+      targetDate.getFullYear(),
+      targetDate.getMonth(),
+      targetDate.getDate(),
+      weH,
+      weM
+    ),
+  };
 }
 
 // New function using Google Calendar for availability checking
@@ -303,7 +361,13 @@ async function isSlotAvailableCalendar(workOrder) {
       }
     }
 
-    const isAvailable = totalConflicts === 0;
+    const requestedSlot = findFeasibleSlot(workOrderDate, allBusyBlocks, workOrder, {
+      allowShift: false,
+    });
+    const counterSlot = findFeasibleSlot(workOrderDate, allBusyBlocks, workOrder, {
+      allowShift: true,
+    });
+    const isAvailable = Boolean(requestedSlot);
 
     logger.info(
       `Calendar Availability Check:
@@ -313,6 +377,8 @@ async function isSlotAvailableCalendar(workOrder) {
       - Calendars Checked: ${allCalendars.length}
       - Total Events Found: ${totalEvents}
       - Conflicts Found: ${totalConflicts}
+      - Requested Slot Available: ${requestedSlot ? `${requestedSlot.start.toLocaleTimeString()} - ${requestedSlot.end.toLocaleTimeString()}` : "NO"}
+      - Counter Slot Available: ${counterSlot ? `${counterSlot.start.toLocaleTimeString()} - ${counterSlot.end.toLocaleTimeString()}` : "NO"}
       - Decision: ${isAvailable ? "AVAILABLE" : "CONFLICT"}`,
       workOrder.platform,
       workOrder.id
@@ -336,7 +402,13 @@ async function isSlotAvailableCalendar(workOrder) {
       );
     }
 
-    return { isAvailable, busyBlocks: allBusyBlocks, workOrderDate };
+    return {
+      isAvailable,
+      busyBlocks: allBusyBlocks,
+      workOrderDate,
+      requestedSlot,
+      counterSlot,
+    };
   } catch (error) {
     logger.error(
       `Error checking calendar availability: ${error.message}. Falling back to static schedule.`,
@@ -345,7 +417,13 @@ async function isSlotAvailableCalendar(workOrder) {
     );
 
     // Fallback to static schedule if calendar check fails
-    return { isAvailable: isSlotAvailableStatic(workOrder), busyBlocks: [], workOrderDate: null };
+    return {
+      isAvailable: isSlotAvailableStatic(workOrder),
+      busyBlocks: [],
+      workOrderDate: null,
+      requestedSlot: null,
+      counterSlot: null,
+    };
   }
 }
 
@@ -532,13 +610,41 @@ function findFreeSlots(workOrderDate, busyBlocks, minDurationMinutes = 60) {
   return freeSlots;
 }
 
+function findFeasibleSlot(workOrderDate, busyBlocks, workOrder, options = {}) {
+  const durationMs = getJobDurationMs(workOrder);
+  const durationMinutes = Math.round(durationMs / (60 * 1000));
+  const freeSlots = findFreeSlots(workOrderDate, busyBlocks, durationMinutes);
+
+  if (freeSlots.length === 0) {
+    return null;
+  }
+
+  const { allowShift = false } = options;
+  const requestedWindow = getRequestedStartWindow(workOrder, workOrderDate);
+  const earliestAllowedMs = requestedWindow.earliestStart.getTime();
+  const latestAllowedMs = allowShift
+    ? Number.POSITIVE_INFINITY
+    : requestedWindow.latestStart.getTime();
+
+  for (const slot of freeSlots) {
+    const candidateStartMs = Math.max(slot.start.getTime(), earliestAllowedMs);
+    const latestSlotStartMs = slot.end.getTime() - durationMs;
+    const effectiveLatestStartMs = Math.min(latestSlotStartMs, latestAllowedMs);
+
+    if (candidateStartMs <= effectiveLatestStartMs) {
+      return {
+        start: new Date(candidateStartMs),
+        end: new Date(candidateStartMs + durationMs),
+        durationMinutes,
+      };
+    }
+  }
+
+  return null;
+}
+
 // Search upcoming days (up to maxDays) for a free slot via Google Calendar
 async function findNextAvailableDay(workOrder, maxDays = 7) {
-  const jobDurationMin = (workOrder.estLaborHours || CONFIG.TIME.DEFAULT_LABOR_HOURS) * 60;
-  const [wsH, wsM] = CONFIG.TIME.WORK_START_TIME.split(":").map(Number);
-  const [weH, weM] = CONFIG.TIME.WORK_END_TIME.split(":").map(Number);
-  const BUFFER = CONFIG.TIME.BUFFER_MINUTES;
-
   try {
     const { authorize } = await import("./gmail/login.js");
     const { google } = await import("googleapis");
@@ -599,14 +705,17 @@ async function findNextAvailableDay(workOrder, maxDays = 7) {
         }
       }
 
-      const freeSlots = findFreeSlots(checkDate, busyBlocks, jobDurationMin);
-      if (freeSlots.length > 0) {
+      const bestSlot = findFeasibleSlot(checkDate, busyBlocks, workOrder, {
+        allowShift: true,
+      });
+
+      if (bestSlot) {
         logger.info(
-          `Next available day: ${checkDate.toDateString()} with ${freeSlots.length} slot(s)`,
+          `Next available day: ${checkDate.toDateString()} with slot ${bestSlot.start.toLocaleTimeString()} - ${bestSlot.end.toLocaleTimeString()}`,
           workOrder.platform,
           workOrder.id
         );
-        return { date: checkDate, freeSlots };
+        return { date: checkDate, bestSlot };
       }
     }
 
@@ -634,13 +743,18 @@ function calculateCounterOffer(workOrder) {
     
   const estHours = workOrder.estLaborHours || CONFIG.TIME.DEFAULT_LABOR_HOURS;
 
-  // Calculate travel expense: flat fee + rate/mile for distance over threshold
-  let travelExpense = CONFIG.FLAT_TRAVEL;
-  if (workOrder.distance > CONFIG.DISTANCE.TRAVEL_THRESHOLD_MILES) {
-    travelExpense += Math.round(
-      (workOrder.distance - CONFIG.DISTANCE.TRAVEL_THRESHOLD_MILES) 
-      * CONFIG.DISTANCE.TRAVEL_RATE_PER_MILE
-    );
+  // Travel rules:
+  // - When FLAT_TRAVEL > 0, it is a universal minimum floor.
+  // - When FLAT_TRAVEL <= 0, travel only applies after crossing the threshold.
+  let travelExpense = 0;
+  const mileageTravel = Math.round(
+    workOrder.distance * CONFIG.DISTANCE.TRAVEL_RATE_PER_MILE
+  );
+
+  if (CONFIG.FLAT_TRAVEL > 0) {
+    travelExpense = Math.max(mileageTravel, CONFIG.FLAT_TRAVEL);
+  } else if (workOrder.distance > CONFIG.DISTANCE.TRAVEL_THRESHOLD_MILES) {
+    travelExpense = mileageTravel;
   }
 
   // Determine pay type from order data
@@ -716,21 +830,23 @@ async function isEligibleForApplication(workOrder) {
   // First check if the job is within working hours
   const isInWorkingHours = isWithinWorkingHours(
     workOrder.time.start,
-    workOrder.time.end
+    workOrder.time
   );
 
-  // If outside working hours, not eligible for direct application or counter-offer
+  // Outside-hours jobs may still counter with an in-hours slot if enabled.
   if (!isInWorkingHours) {
-    logger.info(
-      `Job rejected: Outside working hours (${CONFIG.TIME.WORK_START_TIME}-${CONFIG.TIME.WORK_END_TIME})`,
-      workOrder.platform,
-      workOrder.id
-    );
-    return {
-      eligible: false,
-      counterOffer: null, // No counter-offer for jobs outside working hours
-      reason: "OUTSIDE_WORKING_HOURS",
-    };
+    if (!CONFIG.IS_COUNTER_DATES) {
+      logger.info(
+        `Job rejected: Outside working hours (${CONFIG.TIME.WORK_START_TIME}-${CONFIG.TIME.WORK_END_TIME})`,
+        workOrder.platform,
+        workOrder.id
+      );
+      return {
+        eligible: false,
+        counterOffer: null,
+        reason: "OUTSIDE_WORKING_HOURS",
+      };
+    }
   }
 
   // Check eligibility for both FieldNation and WorkMarket
@@ -760,41 +876,63 @@ async function isEligibleForApplication(workOrder) {
     const calendarResult = await isSlotAvailableCalendar(workOrder);
     const slotAvailable = calendarResult.isAvailable;
 
+    if (!isInWorkingHours) {
+      let bestSlot = calendarResult.counterSlot;
+
+      if (!bestSlot) {
+        logger.info(
+          `No same-day in-hours slots found, searching upcoming days for outside-hours job...`,
+          workOrder.platform,
+          workOrder.id
+        );
+        const nextDay = await findNextAvailableDay(workOrder);
+        bestSlot = nextDay?.bestSlot || null;
+      }
+
+      if (bestSlot) {
+        logger.info(
+          `Outside-hours job will counter with slot ${bestSlot.start.toLocaleTimeString()} - ${bestSlot.end.toLocaleTimeString()}`,
+          workOrder.platform,
+          workOrder.id
+        );
+        const counterOffer = calculateCounterOffer(workOrder);
+        counterOffer.counterDate = bestSlot;
+        return {
+          eligible: false,
+          counterOffer,
+          reason: "COUNTER_DATES",
+        };
+      }
+
+      logger.info(
+        `Job rejected: Outside working hours and no alternate slots found`,
+        workOrder.platform,
+        workOrder.id
+      );
+      return {
+        eligible: false,
+        counterOffer: null,
+        reason: "OUTSIDE_WORKING_HOURS",
+      };
+    }
+
     if (!slotAvailable) {
       // IS_COUNTER_DATES: instead of rejecting, find free slots and counter-offer with them
       if (CONFIG.IS_COUNTER_DATES && calendarResult.workOrderDate) {
-        let freeSlots = [];
-        let counterDate = calendarResult.workOrderDate;
-
-        // Try same day first (if we have busy blocks)
-        if (calendarResult.busyBlocks.length > 0) {
-          freeSlots = findFreeSlots(calendarResult.workOrderDate, calendarResult.busyBlocks);
-        }
+        let bestSlot = calendarResult.counterSlot;
 
         // If no slots on same day, search upcoming days
-        if (freeSlots.length === 0) {
+        if (!bestSlot) {
           logger.info(
             `No free slots on requested day, searching upcoming days...`,
             workOrder.platform,
             workOrder.id
           );
           const nextDay = await findNextAvailableDay(workOrder);
-          if (nextDay) {
-            freeSlots = nextDay.freeSlots;
-            counterDate = nextDay.date;
-          }
+          bestSlot = nextDay?.bestSlot || null;
         }
 
-        if (freeSlots.length > 0) {
-          // Pick the earliest available slot, trimmed to job duration
-          const slot = freeSlots[0];
-          const jobDurationMs = (workOrder.estLaborHours || CONFIG.TIME.DEFAULT_LABOR_HOURS) * 60 * 60 * 1000;
-          const slotEnd = new Date(Math.min(slot.start.getTime() + jobDurationMs, slot.end.getTime()));
-          const bestSlot = {
-            start: slot.start,
-            end: slotEnd,
-            durationMinutes: Math.round((slotEnd - slot.start) / (60 * 1000)),
-          };
+        if (bestSlot) {
           logger.info(
             `IS_COUNTER_DATES enabled - countering with earliest slot: ${bestSlot.start.toLocaleTimeString()} - ${bestSlot.end.toLocaleTimeString()} (${bestSlot.durationMinutes}min for ${workOrder.estLaborHours || CONFIG.TIME.DEFAULT_LABOR_HOURS}hr job)`,
             workOrder.platform,
