@@ -11,3 +11,5 @@ utils/WorkMarket/autoCookies.json
 /logs
 .env
 /config
+node_modules
+v2/config/token.json

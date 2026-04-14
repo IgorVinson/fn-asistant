@@ -1,0 +1,45 @@
+{
+  "name": "fieldops-v2",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": "22.x"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "dev": "tsx watch src/index.ts",
+    "execute:job": "tsx src/index.ts execute-job",
+    "import:fn": "tsx src/index.ts import-fn",
+    "import:wm": "tsx src/index.ts import-wm",
+    "inspect:job": "tsx src/index.ts inspect-job",
+    "list:jobs": "tsx src/index.ts list-jobs",
+    "list:sessions": "tsx src/index.ts list-sessions",
+    "monitor:once": "tsx src/index.ts monitor-once",
+    "monitor:start": "tsx src/index.ts start-monitoring",
+    "preview:execution": "tsx src/index.ts preview-execution",
+    "refresh:session": "tsx src/index.ts refresh-session",
+    "replay:job": "tsx src/index.ts replay-job",
+    "replay:seed": "tsx src/index.ts replay-seed",
+    "replay:seed:fn": "tsx src/index.ts replay-seed fieldnation",
+    "replay:granite": "tsx src/index.ts replay-granite",
+    "phone:webhook": "tsx src/index.ts start-phone-webhook",
+    "start": "node --enable-source-maps dist/index.js",
+    "check": "tsc --noEmit -p tsconfig.json",
+    "test": "tsx --test tests/*.test.ts"
+  },
+  "dependencies": {
+    "@google-cloud/local-auth": "^3.0.1",
+    "better-sqlite3": "^11.10.0",
+    "dotenv": "^16.4.5",
+    "googleapis": "^144.0.0",
+    "playwright": "^1.52.0",
+    "zod": "^3.24.4"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.13",
+    "@types/node": "^22.15.17",
+    "tsx": "^4.19.3",
+    "typescript": "^5.8.3"
+  }
+}
