@@ -134,6 +134,7 @@ test("disabled mode blocks all jobs early", () => {
 test("WorkMarket counter-offer payload includes alternate date fields", () => {
   const counterDate = {
     start: new Date("2026-04-08T13:30:00-04:00"),
+    end: new Date("2026-04-08T16:30:00-04:00"),
   };
 
   const formData = buildWMCounterOfferFormData({
@@ -143,6 +144,11 @@ test("WorkMarket counter-offer payload includes alternate date fields", () => {
     distance: 42,
     options: {
       counterDate,
+      payType: "fixed",
+      priceType: "1",
+      rescheduleOption: "window",
+      isRequestedWindow: true,
+      baseAmount: 195,
       note: "Requesting alternate date/time",
     },
   });
@@ -150,11 +156,45 @@ test("WorkMarket counter-offer payload includes alternate date fields", () => {
   assert.equal(formData.get("_tk"), "csrf123");
   assert.equal(formData.get("price_negotiation"), "on");
   assert.equal(formData.get("schedule_negotiation"), "on");
-  assert.equal(formData.get("reschedule_option"), "time");
+  assert.equal(formData.get("reschedule_option"), "window");
   assert.equal(formData.get("from"), "04/08/2026");
-  assert.equal(formData.get("fromtime"), "1:30PM");
+  assert.equal(formData.get("fromtime"), "1:30pm");
+  assert.equal(formData.get("to"), "04/08/2026");
+  assert.equal(formData.get("totime"), "4:30pm");
+  assert.equal(formData.get("priceType"), "1");
   assert.equal(formData.get("per_hour_price"), "65");
   assert.equal(formData.get("max_number_of_hours"), "3");
   assert.equal(formData.get("additional_expenses"), "53");
   assert.equal(formData.get("note"), "Requesting alternate date/time");
+});
+
+test("WorkMarket hourly hard-start payload can submit a slot window", () => {
+  const counterDate = {
+    start: new Date("2026-04-30T12:00:00-04:00"),
+    end: new Date("2026-04-30T13:00:00-04:00"),
+  };
+
+  const formData = buildWMCounterOfferFormData({
+    csrfToken: "csrf123",
+    hourlyRate: 65,
+    hours: 1,
+    distance: 16.8,
+    options: {
+      counterDate,
+      payType: "hourly",
+      travelExpense: 0,
+      rescheduleOption: "window",
+      isRequestedWindow: true,
+      note: "",
+    },
+  });
+
+  assert.equal(formData.get("priceType"), "2");
+  assert.equal(formData.get("reschedule_option"), "window");
+  assert.equal(formData.get("from"), "04/30/2026");
+  assert.equal(formData.get("fromtime"), "12:00pm");
+  assert.equal(formData.get("to"), "04/30/2026");
+  assert.equal(formData.get("totime"), "1:00pm");
+  assert.equal(formData.get("additional_expenses"), "0");
+  assert.equal(formData.get("flat_price"), "");
 });

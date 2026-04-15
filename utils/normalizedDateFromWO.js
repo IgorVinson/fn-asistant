@@ -96,6 +96,7 @@ export default function normalizeDateFromWO(data) {
     platform: data.platform || 'Unknown',
     company: data.company || 'Unknown Company',
     title: data.title || 'No Title Provided',
+    isRequestedWindow: Boolean(data.isRequestedWindow),
     time: {
       start: `${startDate}T${startTime}`,
       end: `${endDate}T${endTime}`,

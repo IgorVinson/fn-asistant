@@ -996,7 +996,12 @@ async function processOrder(orderLink) {
               normalizedData.id,
               co.counterRate,
               co.estHours,
-              normalizedData.distance
+              normalizedData.distance,
+              {
+                payType: co.payType,
+                baseAmount: co.baseAmount,
+                travelExpense: co.travelExpense,
+              }
             );
           }
 
@@ -1075,7 +1080,7 @@ ${normalizedData.platform === "WorkMarket" && !isRealWorkMarketSubmission ? "\n\
       const counterStatus = CONFIG.TEST_MODE ? "info" : "warning";
       const counterMsg = CONFIG.TEST_MODE
         ? `TEST: Schedule conflict, counter slot: ${counterDateLabel}`
-        : `Counter dates sent: ${counterDateLabel}`;
+        : `Attempting counter dates: ${counterDateLabel}`;
       pushEvent({
         platform: normalizedData.platform,
         id: normalizedData.id,
@@ -1087,22 +1092,41 @@ ${normalizedData.platform === "WorkMarket" && !isRealWorkMarketSubmission ? "\n\
       if (!CONFIG.TEST_MODE && normalizedData.platform === "WorkMarket") {
         try {
           const co = eligibilityResult.counterOffer;
-          await postWMCounterOffer(
+          const wmCounterResult = await postWMCounterOffer(
             normalizedData.id,
             co.counterRate,
             co.estHours,
             normalizedData.distance,
             {
               counterDate: slot,
-              note: `Requesting alternate date/time due to schedule conflict: ${counterDateLabel}`,
+              payType: co.payType,
+              baseAmount: co.baseAmount,
+              travelExpense: co.travelExpense,
+              rescheduleOption: slot?.end ? "window" : "time",
+              isRequestedWindow: true,
+              note: "",
             }
           );
+          pushEvent({
+            platform: normalizedData.platform,
+            id: normalizedData.id,
+            title: normalizedData.title,
+            status: "success",
+            message: `WM counter dates submitted: ${counterDateLabel}`,
+          });
           logger.info(
-            `Result: WM counter date submitted successfully`,
+            `Result: WM counter date submitted successfully (status=${wmCounterResult?.status ?? "unknown"}, location=${wmCounterResult?.location ?? "n/a"})`,
             normalizedData.platform,
             normalizedData.id
           );
         } catch (error) {
+          pushEvent({
+            platform: normalizedData.platform,
+            id: normalizedData.id,
+            title: normalizedData.title,
+            status: "error",
+            message: `WM counter dates failed: ${error.message}`,
+          });
           logger.error(
             `Result: Failed to send WM counter date - ${error.message}`,
             normalizedData.platform,
