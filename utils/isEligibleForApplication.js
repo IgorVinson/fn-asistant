@@ -1,6 +1,6 @@
 import { CONFIG } from "../config.js";
-import schedule from "../schedule.js";
 import logger from "./logger.js";
+import { fetchWMAssignments } from "./WorkMarket/getWMAssignments.js";
 
 function getWorkOrderLocalDate(workOrder) {
   const startDate = new Date(workOrder.time.start);
@@ -237,7 +237,7 @@ function getRequestedStartWindow(workOrder, targetDate = null) {
 }
 
 // New function using Google Calendar for availability checking
-async function isSlotAvailableCalendar(workOrder) {
+async function isSlotAvailableCalendar(workOrder, externalBusyBlocks = []) {
   const MIN_BUFFER_MINUTES = CONFIG.TIME.BUFFER_MINUTES;
   const { start: startTime, end: endTime } = workOrder.time;
 
@@ -361,6 +361,15 @@ async function isSlotAvailableCalendar(workOrder) {
       }
     }
 
+    // Merge external busy blocks (e.g. existing WM assignments)
+    for (const block of externalBusyBlocks) {
+      allBusyBlocks.push({
+        start: block.start,
+        end: block.end,
+        summary: block.summary || "Busy (external)",
+      });
+    }
+
     const requestedSlot = findFeasibleSlot(workOrderDate, allBusyBlocks, workOrder, {
       allowShift: false,
     });
@@ -416,135 +425,14 @@ async function isSlotAvailableCalendar(workOrder) {
       workOrder.id
     );
 
-    // Fallback to static schedule if calendar check fails
     return {
-      isAvailable: isSlotAvailableStatic(workOrder),
+      isAvailable: false,
       busyBlocks: [],
       workOrderDate: null,
       requestedSlot: null,
       counterSlot: null,
     };
   }
-}
-
-// Renamed original function as fallback
-function isSlotAvailableStatic(workOrder) {
-  const DAY_WORK_START_TIME = CONFIG.TIME.WORK_START_TIME;
-  const DAY_WORK_END_TIME = CONFIG.TIME.WORK_END_TIME;
-  const MIN_BUFFER_MINUTES = CONFIG.TIME.BUFFER_MINUTES;
-
-  const { start: startTime, end: endTime } = workOrder.time;
-  const orderStart = new Date(startTime);
-  const orderEnd = new Date(endTime);
-  const orderDate = new Date(
-    orderStart.getFullYear(),
-    orderStart.getMonth(),
-    orderStart.getDate()
-  );
-
-  // Debug logging with better date formatting
-  logger.info(
-    `Static Schedule Check:
-    - Order Date: ${orderDate.toDateString()}
-    - Order Time: ${orderStart.toLocaleTimeString()} - ${orderEnd.toLocaleTimeString()}
-    - Work Hours: ${DAY_WORK_START_TIME} - ${DAY_WORK_END_TIME}
-    - Buffer: ${MIN_BUFFER_MINUTES} minutes`,
-    workOrder.platform,
-    workOrder.id
-  );
-
-  const stampStartTime = orderStart.getTime();
-  const stampEndTime = orderEnd.getTime();
-
-  // Create work hours boundaries for the order date using local time
-  const [wsH, wsM] = DAY_WORK_START_TIME.split(":").map(Number);
-  const [weH, weM] = DAY_WORK_END_TIME.split(":").map(Number);
-  const WORK_START = new Date(
-    orderDate.getFullYear(), orderDate.getMonth(), orderDate.getDate(), wsH, wsM
-  ).getTime();
-  const WORK_END = new Date(
-    orderDate.getFullYear(), orderDate.getMonth(), orderDate.getDate(), weH, weM
-  ).getTime();
-
-  if (stampStartTime < WORK_START || stampEndTime > WORK_END) {
-    logger.info(
-      `Time is not available: Outside work hours (${DAY_WORK_START_TIME}-${DAY_WORK_END_TIME})`,
-      workOrder.platform,
-      workOrder.id
-    );
-    return false;
-  }
-
-  // Get all events for comparison
-  const allEvents = Object.values(schedule).flatMap(week =>
-    Object.entries(week).flatMap(([day, events]) => {
-      return events.map(event => ({
-        day,
-        start: new Date(event.time.start).getTime(),
-        end: new Date(event.time.end).getTime(),
-      }));
-    })
-  );
-
-  // Filter events for the same date (year, month, day)
-  const sameDayEvents = allEvents.filter(event => {
-    const eventDate = new Date(event.start);
-    return (
-      eventDate.getDate() === orderDate.getDate() &&
-      eventDate.getMonth() === orderDate.getMonth() &&
-      eventDate.getFullYear() === orderDate.getFullYear()
-    );
-  });
-
-  // If no events on this day, the slot is available
-  if (sameDayEvents.length === 0) {
-    logger.info(
-      `Time is available: No other events scheduled for ${orderDate.toDateString()}`,
-      workOrder.platform,
-      workOrder.id
-    );
-    return true;
-  }
-
-  // Sort events by start time
-  const sortedEvents = sameDayEvents.sort((a, b) => a.start - b.start);
-
-  let prevEndTime = WORK_START;
-
-  // Check for conflicts with existing events
-  for (const event of sortedEvents) {
-    if (
-      stampStartTime >= prevEndTime + MIN_BUFFER_MINUTES * 60 * 1000 &&
-      stampEndTime <= event.start - MIN_BUFFER_MINUTES * 60 * 1000
-    ) {
-      logger.info(
-        `Time is available: Slot found between ${new Date(
-          prevEndTime
-        ).toLocaleTimeString()} and ${new Date(
-          event.start
-        ).toLocaleTimeString()}`,
-        workOrder.platform,
-        workOrder.id
-      );
-      return true;
-    }
-    prevEndTime = event.end;
-  }
-
-  // Final check for end of day
-  const isAvailable =
-    stampStartTime >= prevEndTime + MIN_BUFFER_MINUTES * 60 * 1000 &&
-    stampEndTime <= WORK_END;
-
-  logger.info(
-    `Time ${isAvailable ? "is" : "is not"} available: ${
-      isAvailable ? "Slot found at end of day" : "No available slots found"
-    }`,
-    workOrder.platform,
-    workOrder.id
-  );
-
-  return isAvailable;
 }
 
 // Find free time slots on a given day based on busy blocks
@@ -644,7 +532,7 @@ function findFeasibleSlot(workOrderDate, busyBlocks, workOrder, options = {}) {
 }
 
 // Search upcoming days (up to maxDays) for a free slot via Google Calendar
-async function findNextAvailableDay(workOrder, maxDays = 7) {
+async function findNextAvailableDay(workOrder, maxDays = 7, externalBusyBlocks = []) {
   try {
     const { authorize } = await import("./gmail/login.js");
     const { google } = await import("googleapis");
@@ -702,6 +590,18 @@ async function findNextAvailableDay(workOrder, maxDays = 7) {
           }
         } catch (e) {
           // skip calendar errors
+        }
+      }
+
+      // Merge external busy blocks (e.g. existing WM assignments) for this day
+      for (const block of externalBusyBlocks) {
+        const blockDate = new Date(block.start);
+        if (
+          blockDate.getFullYear() === checkDate.getFullYear() &&
+          blockDate.getMonth() === checkDate.getMonth() &&
+          blockDate.getDate() === checkDate.getDate()
+        ) {
+          busyBlocks.push({ start: block.start, end: block.end, summary: block.summary || "Busy (external)" });
         }
       }
 
@@ -872,8 +772,11 @@ async function isEligibleForApplication(workOrder) {
       };
     }
 
-    // STEP 2: Check calendar availability 
-    const calendarResult = await isSlotAvailableCalendar(workOrder);
+    // STEP 2: Fetch existing WorkMarket assignments as busy blocks
+    const wmBusyBlocks = await fetchWMAssignments();
+
+    // STEP 3: Check calendar availability (merged with WM busy blocks)
+    const calendarResult = await isSlotAvailableCalendar(workOrder, wmBusyBlocks);
     const slotAvailable = calendarResult.isAvailable;
 
     if (!isInWorkingHours) {
@@ -885,7 +788,7 @@ async function isEligibleForApplication(workOrder) {
           workOrder.platform,
           workOrder.id
         );
-        const nextDay = await findNextAvailableDay(workOrder);
+        const nextDay = await findNextAvailableDay(workOrder, 7, wmBusyBlocks);
         bestSlot = nextDay?.bestSlot || null;
       }
 
@@ -928,7 +831,7 @@ async function isEligibleForApplication(workOrder) {
             workOrder.platform,
             workOrder.id
           );
-          const nextDay = await findNextAvailableDay(workOrder);
+          const nextDay = await findNextAvailableDay(workOrder, 7, wmBusyBlocks);
           bestSlot = nextDay?.bestSlot || null;
         }
 
@@ -1032,6 +935,5 @@ export {
   evaluateApplicationPolicy,
   findFreeSlots,
   getWorkOrderLocalDate,
-  isSlotAvailableStatic,
   isGraniteCompany,
 };
