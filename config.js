@@ -31,8 +31,8 @@ export const CONFIG = {
   TIME: {
     DEFAULT_LABOR_HOURS: 2, // Default estimated labor hours if not specified
     MIN_HOURS_BETWEEN_JOBS: 1, // Minimum hours required between jobs
-    WORK_START_TIME: "09:00", // Earliest time to accept jobs
-    WORK_END_TIME: "18:00", // Latest time to accept jobs
+    WORK_START_TIME: "9:30", // Earliest time to accept jobs
+    WORK_END_TIME: "20:00", // Latest time to accept jobs
     BUFFER_MINUTES: 30, // Buffer time between jobs
   },
 
