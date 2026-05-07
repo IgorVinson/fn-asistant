@@ -811,6 +811,100 @@ async function processOrder(orderLink) {
 
     const eligibilityResult = await isEligibleForApplication(normalizedData);
 
+    // ── DEBUG: Always run new scheduler beside old for comparison ──
+    if (
+      CONFIG.IS_COUNTER_DATES &&
+      Array.isArray(eligibilityResult.busyBlocks)
+    ) {
+      const { evaluateWorkOrder, computeFreeBlocks, calculateTravelMinutes } =
+        await import("./utils/schedule-new/index.js");
+      const travel = calculateTravelMinutes(normalizedData.distance || 0);
+      const woDate = new Date(
+        new Date(normalizedData.time.start).getFullYear(),
+        new Date(normalizedData.time.start).getMonth(),
+        new Date(normalizedData.time.start).getDate()
+      );
+      const free = computeFreeBlocks(woDate, eligibilityResult.busyBlocks);
+      const newSlot = evaluateWorkOrder(
+        normalizedData,
+        eligibilityResult.busyBlocks,
+        { today: new Date() }
+      );
+      const oldAction = eligibilityResult.eligible
+        ? "APPLY"
+        : eligibilityResult.reason;
+      logger.info(
+        `[SCHEDULE-COMPARE] distance=${normalizedData.distance}mi travel=${travel.toFixed(1)}min one-way | freeBlocks=${free.length} ${free.map(b => `${b.start.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}-${b.end.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}(${b.durationMinutes}m)`).join(" ")} | Old: ${oldAction} | New: ${newSlot.action}${newSlot.laborStart ? ` @ ${newSlot.laborStart.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}` : ""}`,
+        normalizedData.platform,
+        normalizedData.id
+      );
+    }
+    // ── END DEBUG ──
+
+    // ── Override scheduling decisions with improved travel-aware logic ──
+    const SHOULD_OVERRIDE_SCHEDULING =
+      CONFIG.IS_COUNTER_DATES &&
+      Array.isArray(eligibilityResult.busyBlocks) &&
+      (eligibilityResult.reason === "SLOT_UNAVAILABLE" ||
+        eligibilityResult.reason === "OUTSIDE_WORKING_HOURS" ||
+        eligibilityResult.reason === "COUNTER_DATES" ||
+        eligibilityResult.eligible);
+
+    if (SHOULD_OVERRIDE_SCHEDULING) {
+      const { evaluateWorkOrder } =
+        await import("./utils/schedule-new/index.js");
+      const newSlot = evaluateWorkOrder(
+        normalizedData,
+        eligibilityResult.busyBlocks,
+        { today: new Date() }
+      );
+
+      if (newSlot.action === "COUNTER") {
+        logger.info(
+          `New scheduler override: found counter slot ${newSlot.laborStart.toLocaleTimeString()} - ${newSlot.laborEnd.toLocaleTimeString()} on ${newSlot.day.toDateString()}`,
+          normalizedData.platform,
+          normalizedData.id
+        );
+        const { calculateCounterOffer } =
+          await import("./utils/isEligibleForApplication.js");
+        const counterOffer = calculateCounterOffer(normalizedData);
+        counterOffer.counterDate = {
+          start: newSlot.laborStart,
+          end: newSlot.laborEnd,
+          durationMinutes: Math.round(
+            (newSlot.laborEnd.getTime() - newSlot.laborStart.getTime()) /
+              (60 * 1000)
+          ),
+        };
+        eligibilityResult.eligible = false;
+        eligibilityResult.counterOffer = counterOffer;
+        eligibilityResult.reason = "COUNTER_DATES";
+      } else if (newSlot.action === "APPLY" && !eligibilityResult.eligible) {
+        logger.info(
+          `New scheduler override: found APPLY slot ${newSlot.laborStart.toLocaleTimeString()} on ${newSlot.day.toDateString()} (was: ${eligibilityResult.reason})`,
+          normalizedData.platform,
+          normalizedData.id
+        );
+        eligibilityResult.eligible = true;
+        eligibilityResult.counterOffer = null;
+        eligibilityResult.reason = "ELIGIBLE";
+      } else if (
+        newSlot.action === "REJECT" &&
+        (eligibilityResult.reason === "COUNTER_DATES" ||
+          eligibilityResult.eligible)
+      ) {
+        logger.info(
+          `New scheduler override: REJECT overrides old ${eligibilityResult.reason} — no viable slot with travel`,
+          normalizedData.platform,
+          normalizedData.id
+        );
+        eligibilityResult.eligible = false;
+        eligibilityResult.counterOffer = null;
+        eligibilityResult.reason = "SLOT_UNAVAILABLE";
+      }
+    }
+    // ── END OVERRIDE ──
+
     // Process the order based on eligibility
     if (eligibilityResult.eligible) {
       logger.info(
@@ -1029,7 +1123,12 @@ async function processOrder(orderLink) {
     ) {
       // Handle counter-offer with alternative time slot
       const slot = eligibilityResult.counterOffer.counterDate;
-      const slotTimeRange = `${slot.start.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} - ${slot.end.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} (${slot.durationMinutes}min)`;
+      const slotTimeRange = slot.end
+        ? `${slot.start.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} - ${slot.end.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} (${slot.durationMinutes}min)`
+        : slot.start.toLocaleTimeString([], {
+            hour: "2-digit",
+            minute: "2-digit",
+          });
       const counterDateLabel = `📆 ${slot.start.toLocaleDateString([], { weekday: "short", month: "short", day: "numeric" })} — ${slotTimeRange}`;
       const isRealWorkMarketSubmission =
         normalizedData.platform === "WorkMarket" && !CONFIG.TEST_MODE;

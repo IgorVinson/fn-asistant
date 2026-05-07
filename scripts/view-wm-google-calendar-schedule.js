@@ -35,24 +35,17 @@ function formatDate(date) {
   return date.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric" });
 }
 
-// Estimate end time for a WorkMarket assignment
-function estimateEndTime(startDate, payStr) {
-  const DEFAULT_HOURS = CONFIG.TIME?.DEFAULT_LABOR_HOURS ?? 4;
-  let hours = DEFAULT_HOURS;
-
-  // Try to estimate from pay string
-  if (payStr) {
-    const payNum = parseFloat(payStr.replace(/[$,]/g, ""));
-    if (payNum > 0) {
-      const baseRate = CONFIG.RATES?.BASE_HOURLY_RATE ?? 65;
-      const estimatedHours = Math.round(payNum / baseRate);
-      if (estimatedHours > 0 && estimatedHours <= 12) {
-        hours = estimatedHours;
-      }
-    }
+function estimateEndTime(startDate, assignment = {}) {
+  const defaultHours = CONFIG.TIME?.DEFAULT_LABOR_HOURS ?? 2;
+  if (
+    assignment.endDate instanceof Date &&
+    !isNaN(assignment.endDate.getTime()) &&
+    assignment.endDate.getTime() > startDate.getTime()
+  ) {
+    return assignment.endDate;
   }
 
-  return new Date(startDate.getTime() + hours * 60 * 60 * 1000);
+  return new Date(startDate.getTime() + defaultHours * 60 * 60 * 1000);
 }
 
 async function fetchGoogleCalEvents(timeMin, timeMax) {
@@ -200,6 +193,7 @@ async function main() {
           status: item.status || "",
           scheduledDate: item.scheduled_date || "",
           startDate,
+          endDate: item.scheduled_date_through_in_millis ? new Date(item.scheduled_date_through_in_millis) : null,
           pay: item.price || item.amount_earned || "",
           location: locationParts.join(", ") || item.address || "",
           href: `https://www.workmarket.com/assignments/details/${item.id}`,
@@ -239,7 +233,7 @@ async function main() {
       const dateKey = a.startDate.toISOString().split("T")[0];
       if (!wmBusyByDate[dateKey]) wmBusyByDate[dateKey] = [];
 
-      const endDate = estimateEndTime(a.startDate, a.pay);
+      const endDate = estimateEndTime(a.startDate, a);
       wmBusyByDate[dateKey].push({
         start: a.startDate,
         end: endDate,

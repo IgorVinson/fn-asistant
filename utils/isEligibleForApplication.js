@@ -804,6 +804,7 @@ async function isEligibleForApplication(workOrder) {
           eligible: false,
           counterOffer,
           reason: "COUNTER_DATES",
+          busyBlocks: calendarResult.busyBlocks,
         };
       }
 
@@ -816,6 +817,7 @@ async function isEligibleForApplication(workOrder) {
         eligible: false,
         counterOffer: null,
         reason: "OUTSIDE_WORKING_HOURS",
+        busyBlocks: calendarResult.busyBlocks,
       };
     }
 
@@ -847,6 +849,7 @@ async function isEligibleForApplication(workOrder) {
             eligible: false,
             counterOffer: counterOffer,
             reason: "COUNTER_DATES",
+            busyBlocks: calendarResult.busyBlocks,
           };
         }
       }
@@ -860,6 +863,7 @@ async function isEligibleForApplication(workOrder) {
         eligible: false,
         counterOffer: null,
         reason: "SLOT_UNAVAILABLE",
+        busyBlocks: calendarResult.busyBlocks,
       };
     }
 
@@ -870,6 +874,7 @@ async function isEligibleForApplication(workOrder) {
         eligible: true,
         counterOffer: null,
         reason: "ELIGIBLE",
+        busyBlocks: calendarResult.busyBlocks,
       };
     } else {
       // Payment or distance check failed 

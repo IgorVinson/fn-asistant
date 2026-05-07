@@ -32,20 +32,126 @@ function getCookies() {
   }
 }
 
-function estimateEndTime(startDate, payStr) {
-  const DEFAULT_HOURS = CONFIG.TIME?.DEFAULT_LABOR_HOURS ?? 4;
-  let hours = DEFAULT_HOURS;
-  if (payStr) {
-    const payNum = parseFloat(payStr.replace(/[$,]/g, ""));
-    if (payNum > 0) {
-      const baseRate = CONFIG.RATES?.BASE_HOURLY_RATE ?? 65;
-      const estimatedHours = Math.round(payNum / baseRate);
-      if (estimatedHours > 0 && estimatedHours <= 12) {
-        hours = estimatedHours;
+export function estimateAssignmentEnd(startDate, assignment = {}) {
+  const defaultHours = CONFIG.TIME?.DEFAULT_LABOR_HOURS ?? 2;
+  const explicitEnd = assignment.endDate;
+  const estimatedHours =
+    Number.isFinite(assignment.estimatedHours) && assignment.estimatedHours > 0
+      ? assignment.estimatedHours
+      : defaultHours;
+
+  if (
+    explicitEnd instanceof Date &&
+    !isNaN(explicitEnd.getTime()) &&
+    explicitEnd.getTime() > startDate.getTime()
+  ) {
+    return explicitEnd;
+  }
+
+  return new Date(startDate.getTime() + estimatedHours * 60 * 60 * 1000);
+}
+
+function extractBalancedObject(source, label) {
+  const labelIndex = source.indexOf(label);
+  if (labelIndex === -1) return null;
+
+  const start = source.indexOf("{", labelIndex);
+  if (start === -1) return null;
+
+  let depth = 0;
+  let inString = false;
+  let escaped = false;
+
+  for (let i = start; i < source.length; i++) {
+    const char = source[i];
+
+    if (inString) {
+      if (escaped) {
+        escaped = false;
+      } else if (char === "\\") {
+        escaped = true;
+      } else if (char === '"') {
+        inString = false;
+      }
+      continue;
+    }
+
+    if (char === '"') {
+      inString = true;
+    } else if (char === "{") {
+      depth++;
+    } else if (char === "}") {
+      depth--;
+      if (depth === 0) {
+        return source.slice(start, i + 1);
       }
     }
   }
-  return new Date(startDate.getTime() + hours * 60 * 60 * 1000);
+
+  return null;
+}
+
+export function parseAssignmentDetail(body) {
+  const workEncodedJson = extractBalancedObject(body, "workEncoded:");
+  if (!workEncodedJson) return {};
+
+  try {
+    const work = JSON.parse(workEncodedJson);
+    const scheduleFrom = Number(work.schedule?.from || 0);
+    const scheduleThrough = Number(work.schedule?.through || 0);
+    const maxNumberOfHours = Number(work.pricing?.maxNumberOfHours || 0);
+
+    return {
+      detailStartDate: scheduleFrom > 0 ? new Date(scheduleFrom) : null,
+      detailEndDate: scheduleThrough > 0 ? new Date(scheduleThrough) : null,
+      estimatedHours: maxNumberOfHours > 0 ? maxNumberOfHours : null,
+    };
+  } catch {
+    return {};
+  }
+}
+
+async function fetchAssignmentDetail(id, cookies) {
+  const response = await fetch(`https://www.workmarket.com/assignments/details/${id}`, {
+    headers: {
+      accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+      "accept-language": "en-US,en;q=0.9",
+      "cache-control": "no-cache",
+      pragma: "no-cache",
+      cookie: cookies,
+      "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36",
+    },
+    method: "GET",
+    redirect: "follow",
+  });
+
+  if (!response.ok) {
+    throw new Error(`HTTP ${response.status}`);
+  }
+
+  return parseAssignmentDetail(await response.text());
+}
+
+async function enrichAssignmentsWithDetails(assignments) {
+  const cookies = getCookies();
+  if (!cookies) return assignments;
+
+  return Promise.all(
+    assignments.map(async assignment => {
+      try {
+        const detail = await fetchAssignmentDetail(assignment.id, cookies);
+        return {
+          ...assignment,
+          startDate: detail.detailStartDate || assignment.startDate,
+          endDate: detail.detailEndDate || assignment.endDate,
+          estimatedHours: detail.estimatedHours || assignment.estimatedHours,
+        };
+      } catch (error) {
+        console.error(`fetchWMAssignments detail ${assignment.id}: ${error.message}`);
+        return assignment;
+      }
+    })
+  );
 }
 
 function extractAssignmentsFromHtml(html) {
@@ -66,6 +172,7 @@ function extractAssignmentsFromHtml(html) {
           company: item.owner_company_name || item.buyer || "",
           status: item.status || "",
           startDate: item.scheduled_date_from_in_millis ? new Date(item.scheduled_date_from_in_millis) : null,
+          endDate: item.scheduled_date_through_in_millis ? new Date(item.scheduled_date_through_in_millis) : null,
           pay: item.price || item.amount_earned || "",
           location: [item.location_name, item.city, item.state].filter(Boolean).join(", ") || item.address || "",
         });
@@ -90,6 +197,7 @@ function extractAssignmentsFromApi(data) {
       company: item.owner_company_name || item.buyer || "",
       status: item.status || "",
       startDate: item.scheduled_date_from_in_millis ? new Date(item.scheduled_date_from_in_millis) : null,
+      endDate: item.scheduled_date_through_in_millis ? new Date(item.scheduled_date_through_in_millis) : null,
       pay: item.price || item.amount_earned || "",
       location: [item.location_name, item.city, item.state].filter(Boolean).join(", ") || item.address || "",
     });
@@ -232,12 +340,14 @@ export async function fetchWMAssignments() {
     return [];
   }
 
+  assignments = await enrichAssignmentsWithDetails(assignments);
+
   const busyBlocks = assignments
     .map(a => {
       if (!a.startDate || !(a.startDate instanceof Date) || isNaN(a.startDate.getTime())) return null;
       return {
         start: a.startDate,
-        end: estimateEndTime(a.startDate, a.pay),
+        end: estimateAssignmentEnd(a.startDate, a),
         summary: `🔧 ${a.title || "WM Assignment"} (WM)`,
       };
     })
