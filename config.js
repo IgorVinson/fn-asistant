@@ -6,7 +6,7 @@ export const CONFIG = {
   APPLICATION_MODE: "granite_only", // "granite_only" | "all_companies" | "disabled"
   ALLOW_ALL_COMPANIES_ON_DATES: [], // YYYY-MM-DD dates where non-Granite jobs are allowed
   IS_COUNTER_DATES: true, // If true, counter-offer with free calendar slots when job time conflicts; if false, just reject on conflict
-  IS_COUNTER_RATES: true, // If true, counter-offer with free calendar slots when job time conflicts; if false, just reject on conflict
+  IS_COUNTER_RATES: false, // If true, counter-offer with free calendar slots when job time conflicts; if false, just reject on conflict
   ENFORCE_MIN_PAYMENT: true, // If true, reject jobs below platform minimum threshold
   // Payment and Rate Settings
   RATES: {
