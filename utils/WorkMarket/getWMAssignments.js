@@ -32,22 +32,6 @@ function getCookies() {
   }
 }
 
-function estimateEndTime(startDate, payStr) {
-  const DEFAULT_HOURS = CONFIG.TIME?.DEFAULT_LABOR_HOURS ?? 4;
-  let hours = DEFAULT_HOURS;
-  if (payStr) {
-    const payNum = parseFloat(payStr.replace(/[$,]/g, ""));
-    if (payNum > 0) {
-      const baseRate = CONFIG.RATES?.BASE_HOURLY_RATE ?? 65;
-      const estimatedHours = Math.round(payNum / baseRate);
-      if (estimatedHours > 0 && estimatedHours <= 12) {
-        hours = estimatedHours;
-      }
-    }
-  }
-  return new Date(startDate.getTime() + hours * 60 * 60 * 1000);
-}
-
 function extractAssignmentsFromHtml(html) {
   const assignments = [];
   const seenIds = new Set();
@@ -66,6 +50,7 @@ function extractAssignmentsFromHtml(html) {
           company: item.owner_company_name || item.buyer || "",
           status: item.status || "",
           startDate: item.scheduled_date_from_in_millis ? new Date(item.scheduled_date_from_in_millis) : null,
+          endDate: item.scheduled_date_through_in_millis ? new Date(item.scheduled_date_through_in_millis) : null,
           pay: item.price || item.amount_earned || "",
           location: [item.location_name, item.city, item.state].filter(Boolean).join(", ") || item.address || "",
         });
@@ -90,6 +75,7 @@ function extractAssignmentsFromApi(data) {
       company: item.owner_company_name || item.buyer || "",
       status: item.status || "",
       startDate: item.scheduled_date_from_in_millis ? new Date(item.scheduled_date_from_in_millis) : null,
+      endDate: item.scheduled_date_through_in_millis ? new Date(item.scheduled_date_through_in_millis) : null,
       pay: item.price || item.amount_earned || "",
       location: [item.location_name, item.city, item.state].filter(Boolean).join(", ") || item.address || "",
     });
@@ -100,7 +86,12 @@ function extractAssignmentsFromApi(data) {
 
 async function tryDirectFetch() {
   const cookies = getCookies();
-  if (!cookies) return null;
+  if (!cookies) {
+    console.error("[WM] tryDirectFetch: no cookies available — session may be expired or cookies file missing");
+    return null;
+  }
+
+  console.log("[WM] tryDirectFetch: cookies loaded, attempting API fetch…");
 
   if (cachedApiUrl) {
     try {
@@ -120,9 +111,17 @@ async function tryDirectFetch() {
       if (response.ok) {
         const data = await response.json();
         const assignments = extractAssignmentsFromApi(data);
-        if (assignments.length > 0) return assignments;
+        if (assignments.length > 0) {
+          console.log(`[WM] tryDirectFetch (cached API): found ${assignments.length} assignments`);
+          return assignments;
+        }
+        console.log(`[WM] tryDirectFetch (cached API): response ok but 0 assignments extracted — session may be expired`);
+      } else {
+        console.log(`[WM] tryDirectFetch (cached API): HTTP ${response.status} ${response.statusText} — cookies likely expired`);
       }
-    } catch {}
+    } catch (err) {
+      console.error(`[WM] tryDirectFetch (cached API): request failed — ${err.message}`);
+    }
   }
 
   try {
@@ -142,11 +141,94 @@ async function tryDirectFetch() {
     if (response.ok) {
       const html = await response.text();
       const assignments = extractAssignmentsFromHtml(html);
-      if (assignments.length > 0) return assignments;
+      if (assignments.length > 0) {
+        console.log(`[WM] tryDirectFetch (HTML): found ${assignments.length} assignments`);
+        return assignments;
+      }
+      console.log(`[WM] tryDirectFetch (HTML): page fetched but 0 assignments extracted — session may be expired or page is login redirect`);
+    } else {
+      console.log(`[WM] tryDirectFetch (HTML): HTTP ${response.status} ${response.statusText} — cookies likely expired`);
     }
-  } catch {}
+  } catch (err) {
+    console.error(`[WM] tryDirectFetch (HTML): request failed — ${err.message}`);
+  }
 
+  console.log("[WM] tryDirectFetch: all methods failed — cookies are likely expired, need relogin");
   return null;
+}
+
+async function fetchAssignmentHours(assignmentIds) {
+  const cookies = getCookies();
+  if (!cookies) return {};
+
+  const results = {};
+  const batchSize = 3;
+
+  for (let i = 0; i < assignmentIds.length; i += batchSize) {
+    const batch = assignmentIds.slice(i, i + batchSize);
+    const settled = await Promise.allSettled(
+      batch.map(async (id) => {
+        try {
+          const url = `https://www.workmarket.com/assignments/details/${id}`;
+          const response = await fetch(url, {
+            headers: {
+              accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+              "accept-language": "en-US,en;q=0.9",
+              "cache-control": "no-cache",
+              cookie: cookies,
+              "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+            },
+            method: "GET",
+            redirect: "follow",
+          });
+
+          if (!response.ok) return null;
+
+          const body = await response.text();
+
+          if (body.includes("login?redirectTo=") || body.includes("Please sign in")) {
+            return null;
+          }
+
+          let hoursOfWork = null;
+
+          const pricingMatch = body.match(/"pricing"\s*:\s*({[^}]+})/);
+          if (pricingMatch) {
+            try {
+              const pricingJSON = JSON.parse(pricingMatch[1]);
+              if (pricingJSON.maxNumberOfHours) {
+                hoursOfWork = pricingJSON.maxNumberOfHours;
+              }
+            } catch {}
+          }
+
+          if (hoursOfWork === null) {
+            const maxHoursMatch = body.match(/up to\s+(\d+)\s*hr/i);
+            if (maxHoursMatch) {
+              hoursOfWork = parseInt(maxHoursMatch[1], 10);
+            }
+          }
+
+          return { id: id, hoursOfWork: hoursOfWork };
+        } catch (err) {
+          console.error(`[WM] fetchAssignmentHours: failed for ${id} — ${err.message}`);
+          return null;
+        }
+      })
+    );
+
+    for (const result of settled) {
+      if (result.status === "fulfilled" && result.value) {
+        results[result.value.id] = result.value.hoursOfWork;
+      }
+    }
+
+    if (i + batchSize < assignmentIds.length) {
+      await new Promise(r => setTimeout(r, 500));
+    }
+  }
+
+  return results;
 }
 
 async function fetchViaPuppeteer() {
@@ -215,29 +297,55 @@ export async function fetchWMAssignments() {
   let assignments;
   try {
     assignments = await tryDirectFetch();
-  } catch {}
+  } catch (err) {
+    console.error(`[WM] fetchWMAssignments: tryDirectFetch threw — ${err.message}`);
+  }
 
   if (!assignments || assignments.length === 0) {
+    console.log("[WM] fetchWMAssignments: direct fetch empty, falling back to Puppeteer…");
     try {
       assignments = await fetchViaPuppeteer();
+      if (assignments && assignments.length > 0) {
+        console.log(`[WM] fetchWMAssignments: Puppeteer found ${assignments.length} assignments`);
+      } else {
+        console.log("[WM] fetchWMAssignments: Puppeteer also returned 0 assignments");
+      }
     } catch (error) {
-      console.error(`fetchWMAssignments (Puppeteer): ${error.message}`);
+      console.error(`[WM] fetchWMAssignments (Puppeteer): ${error.message}`);
     }
   }
 
   if (!assignments || assignments.length === 0) {
-    console.error("fetchWMAssignments: no assignments found from any source");
+    console.error("fetchWMAssignments: no assignments found from any source — cookies are likely expired, run relogin");
     cachedBusyBlocks = [];
     cacheTimestamp = Date.now();
     return [];
   }
 
+  console.log(`[WM] fetchWMAssignments: raw assignments received: ${JSON.stringify(assignments.map(a => ({ id: a.id, title: a.title, startDate: a.startDate, endDate: a.endDate, pay: a.pay })))}`);
+
+  const assignmentIds = assignments.map(a => a.id);
+  const hoursMap = await fetchAssignmentHours(assignmentIds);
+  const hoursWithCount = Object.values(hoursMap).filter(v => v !== null).length;
+  console.log(`[WM] fetchWMAssignments: fetched hoursOfWork for ${hoursWithCount}/${assignmentIds.length} assignments`);
+
   const busyBlocks = assignments
     .map(a => {
-      if (!a.startDate || !(a.startDate instanceof Date) || isNaN(a.startDate.getTime())) return null;
+      if (!a.startDate || !(a.startDate instanceof Date) || isNaN(a.startDate.getTime())) {
+        console.log(`[WM] fetchWMAssignments: skipping assignment "${a.title || a.id}" — missing or invalid startDate: ${a.startDate}`);
+        return null;
+      }
+      let end;
+      if (a.endDate && a.endDate instanceof Date && !isNaN(a.endDate.getTime())) {
+        end = a.endDate;
+      } else {
+        const hours = hoursMap[a.id] || CONFIG.TIME.DEFAULT_LABOR_HOURS;
+        end = new Date(a.startDate.getTime() + hours * 60 * 60 * 1000);
+      }
+      console.log(`[WM] fetchWMAssignments: mapping "${a.title || a.id}" start=${a.startDate.toISOString()} end=${end.toISOString()} (hours: ${hoursMap[a.id] ?? 'default'})`);
       return {
         start: a.startDate,
-        end: estimateEndTime(a.startDate, a.pay),
+        end: end,
         summary: `🔧 ${a.title || "WM Assignment"} (WM)`,
       };
     })

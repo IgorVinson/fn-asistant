@@ -31,9 +31,9 @@ export const CONFIG = {
   TIME: {
     DEFAULT_LABOR_HOURS: 2, // Default estimated labor hours if not specified
     MIN_HOURS_BETWEEN_JOBS: 1, // Minimum hours required between jobs
-    WORK_START_TIME: "9:30", // Earliest time to accept jobs
-    WORK_END_TIME: "17:30", // Latest time to accept jobs
-    BUFFER_MINUTES: 30, // Buffer time between jobs
+    WORK_START_TIME: "10:00", // Earliest time to accept jobs
+    WORK_END_TIME: "20:00", // Latest time to accept jobs
+    BUFFER_MINUTES: 0, // Buffer time between jobs
     PREFERRED_SLOTS: [
       { start: "10:00", end: "12:00", label: "Morning" },
       { start: "12:00", end: "14:00", label: "Early Afternoon" },

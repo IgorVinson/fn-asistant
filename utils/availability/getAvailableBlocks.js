@@ -118,7 +118,7 @@ function computeFreeBlocksForDay(dayStart, dayEnd, mergedBusy, bufferMs) {
   }
 
   const finalStart = cursor + (cursor === dayStart ? 0 : bufferMs);
-  if (finalStart < dayEnd) {
+  if (finalStart <= dayEnd) {
     freeBlocks.push({
       start: new Date(finalStart),
       end: new Date(dayEnd),
