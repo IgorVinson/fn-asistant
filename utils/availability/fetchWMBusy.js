@@ -1,6 +1,10 @@
 import { fetchWMAssignments } from "../WorkMarket/getWMAssignments.js";
 import logger from "../logger.js";
 
+function roundToMinute(date) {
+  return new Date(Math.round(date.getTime() / (60 * 1000)) * 60 * 1000);
+}
+
 export async function fetchWMBusy() {
   try {
     const wmAssignments = await fetchWMAssignments();
@@ -12,13 +16,13 @@ export async function fetchWMBusy() {
 
     const busyBlocks = wmAssignments
       .filter(a => a.start instanceof Date && !isNaN(a.start.getTime()))
-      .map(a => ({
-        start: a.start,
-        end: a.end instanceof Date && !isNaN(a.end.getTime())
-          ? a.end
-          : new Date(a.start.getTime() + 4 * 60 * 60 * 1000),
-        summary: a.summary || "WM Assignment",
-      }));
+      .map(a => {
+        const start = roundToMinute(a.start);
+        const end = a.end instanceof Date && !isNaN(a.end.getTime())
+          ? roundToMinute(a.end)
+          : new Date(start.getTime() + 4 * 60 * 60 * 1000);
+        return { start, end, summary: a.summary || "WM Assignment" };
+      });
 
     logger.info(
       `fetchWMBusy: found ${busyBlocks.length} WM busy blocks`
