@@ -129,8 +129,13 @@ function computeFreeBlocksForDay(dayStart, dayEnd, mergedBusy, bufferMs) {
 }
 
 export async function getAvailableBlocks({ date, daysToCheck = 7 }) {
-  const startDate = new Date(date instanceof Date ? date : new Date(date));
-  startDate.setHours(0, 0, 0, 0);
+  let startDate;
+  if (date instanceof Date) {
+    startDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  } else {
+    const [y, m, d] = String(date).split("-").map(Number);
+    startDate = new Date(y, m - 1, d);
+  }
 
   const { startMinutes, endMinutes } = parseWorkHours();
   const bufferMs = CONFIG.TIME.BUFFER_MINUTES * 60 * 1000;
