@@ -1,6 +1,6 @@
 export function findFitBlock(availableBlocks, woTimeWindow, travelMinutes = 0) {
   if (!availableBlocks || availableBlocks.length === 0) {
-    return { fits: false, block: null };
+    return noFitResult();
   }
 
   const { earliestStart, latestStart, durationMs } = woTimeWindow;
@@ -22,11 +22,29 @@ export function findFitBlock(availableBlocks, woTimeWindow, travelMinutes = 0) {
     const withinLatestStart = candidateStart.getTime() <= latestStart.getTime();
 
     if (fitsInBlock && withinLatestStart) {
-      return { fits: true, block };
+      return {
+        fits: true,
+        block,
+        start: candidateStart,
+        end: candidateEnd,
+        effectiveDurationMinutes: Math.round(effectiveDurationMs / 60 / 1000),
+        isLastBlockOfDay,
+      };
     }
   }
 
-  return { fits: false, block: null };
+  return noFitResult();
+}
+
+function noFitResult() {
+  return {
+    fits: false,
+    block: null,
+    start: null,
+    end: null,
+    effectiveDurationMinutes: null,
+    isLastBlockOfDay: false,
+  };
 }
 
 function groupBlocksByDate(blocks) {
