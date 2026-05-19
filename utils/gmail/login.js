@@ -12,6 +12,8 @@ const SCOPES = [
 const TOKEN_PATH = path.join(process.cwd(), "config", "token.json");
 const CREDENTIALS_PATH = path.join(process.cwd(), "config", "credentials.json");
 
+let cachedAuthClientPromise = null;
+
 /**
  * Читання збережених раніше авторизованих облікових даних.
  *
@@ -37,13 +39,30 @@ async function saveCredentials(client) {
   const content = await fs.readFile(CREDENTIALS_PATH);
   const keys = JSON.parse(content);
   const key = keys.installed || keys.web;
+  const existingCredentials = await readSavedCredentials();
+  const refreshToken =
+    client.credentials.refresh_token || existingCredentials?.refresh_token;
+
+  if (!refreshToken) {
+    throw new Error("Cannot save Google credentials without a refresh token");
+  }
+
   const payload = JSON.stringify({
     type: "authorized_user",
     client_id: key.client_id,
     client_secret: key.client_secret,
-    refresh_token: client.credentials.refresh_token,
+    refresh_token: refreshToken,
   });
   await fs.writeFile(TOKEN_PATH, payload); // Зберігаємо токен у файлі
+}
+
+async function readSavedCredentials() {
+  try {
+    const content = await fs.readFile(TOKEN_PATH);
+    return JSON.parse(content);
+  } catch (err) {
+    return null;
+  }
 }
 
 /**
@@ -51,6 +70,19 @@ async function saveCredentials(client) {
  *
  */
 export async function authorize() {
+  if (cachedAuthClientPromise) {
+    return cachedAuthClientPromise;
+  }
+
+  cachedAuthClientPromise = authorizeUncached().catch(error => {
+    cachedAuthClientPromise = null;
+    throw error;
+  });
+
+  return cachedAuthClientPromise;
+}
+
+async function authorizeUncached() {
   let client = await loadSavedCredentialsIfExist();
 
   // Якщо є збережені облікові дані, перевіряємо їх дійсність
@@ -61,7 +93,7 @@ export async function authorize() {
       return client;
     } catch (error) {
       console.log(
-        "Токен не дійсний або прострочений, ініціюємо нову авторизацію."
+        `Токен не дійсний або прострочений, ініціюємо нову авторизацію: ${error.message}`
       );
     }
   }

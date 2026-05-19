@@ -1,6 +1,8 @@
 import { CONFIG } from "../config.js";
 import logger from "./logger.js";
-import { fetchWMAssignments } from "./WorkMarket/getWMAssignments.js";
+import { getAvailableBlocks } from "./availability/getAvailableBlocks.js";
+import { findFitBlock } from "./availability/findFitBlock.js";
+import { decideFitAction } from "./availability/decideFitAction.js";
 
 function getWorkOrderLocalDate(workOrder) {
   const startDate = new Date(workOrder.time.start);
@@ -190,249 +192,85 @@ function getJobDurationMs(workOrder) {
   return (workOrder.estLaborHours || CONFIG.TIME.DEFAULT_LABOR_HOURS) * 60 * 60 * 1000;
 }
 
-function getRequestedStartWindow(workOrder, targetDate = null) {
-  const requestedStart = new Date(workOrder.time.start);
-  const requestedLatestStart = workOrder.time.latestStart
+function calculateTravelMinutes(workOrder) {
+  const distance = workOrder.distance || 0;
+  if (distance <= 0) return 0;
+  const travelHours = distance / CONFIG.DISTANCE.AVERAGE_SPEED;
+  return Math.round(travelHours * 60);
+}
+
+function isSameDay(a, b) {
+  return a.getFullYear() === b.getFullYear() &&
+    a.getMonth() === b.getMonth() &&
+    a.getDate() === b.getDate();
+}
+
+async function checkAvailabilityNew(workOrder) {
+  const woDateString = getWorkOrderLocalDate(workOrder);
+  const availableBlocks = await getAvailableBlocks({ date: woDateString, daysToCheck: 4 });
+
+  const travelMin = calculateTravelMinutes(workOrder);
+  const durationMs = getJobDurationMs(workOrder);
+  const estHours = workOrder.estLaborHours || CONFIG.TIME.DEFAULT_LABOR_HOURS;
+
+  const woEarliestStart = new Date(workOrder.time.start);
+  const woLatestStart = workOrder.time.latestStart
     ? new Date(workOrder.time.latestStart)
     : new Date(workOrder.time.start);
 
-  if (!targetDate) {
-    return {
-      earliestStart: requestedStart,
-      latestStart: requestedLatestStart,
-    };
+  const [lcsH, lcsM] = CONFIG.TIME.LATEST_COUNTER_START_TIME.split(":").map(Number);
+  const latestCounterStart = new Date(
+    woEarliestStart.getFullYear(),
+    woEarliestStart.getMonth(),
+    woEarliestStart.getDate(),
+    lcsH, lcsM
+  );
+
+  const sameDayBlocks = availableBlocks.filter(b => isSameDay(b.start, woEarliestStart));
+  const nextDayBlocks = availableBlocks.filter(b => !isSameDay(b.start, woEarliestStart));
+
+  const fitResult = findFitBlock(sameDayBlocks, {
+    earliestStart: woEarliestStart,
+    latestStart: woLatestStart,
+    durationMs,
+  }, travelMin);
+
+  const shiftedSameDay = findFitBlock(sameDayBlocks, {
+    earliestStart: woEarliestStart,
+    latestStart: latestCounterStart,
+    durationMs,
+  }, travelMin);
+
+  let shiftedResult = shiftedSameDay;
+  if (!shiftedSameDay.fits && CONFIG.IS_COUNTER_DAYS && nextDayBlocks.length > 0) {
+    shiftedResult = findFitBlock(nextDayBlocks, {
+      earliestStart: new Date(0),
+      latestStart: new Date(2099, 0, 1),
+      durationMs,
+    }, travelMin);
   }
 
-  const sameRequestedDay =
-    requestedStart.getFullYear() === targetDate.getFullYear() &&
-    requestedStart.getMonth() === targetDate.getMonth() &&
-    requestedStart.getDate() === targetDate.getDate();
+  const shiftedBlock = shiftedResult.block;
+  const shiftedIsLast = shiftedResult.isLastBlockOfDay;
+  const shiftedEffDurationMin = shiftedResult.effectiveDurationMinutes;
+  const fitDecision = decideFitAction({
+    exactFit: fitResult,
+    shiftedFit: shiftedResult,
+  });
 
-  if (sameRequestedDay) {
-    return {
-      earliestStart: requestedStart,
-      latestStart: requestedLatestStart,
-    };
-  }
+  console.log(`\n=== Availability Fit Check ===`);
+  console.log(`WO Date: ${woDateString}`);
+  console.log(`WO Window: ${woEarliestStart.toLocaleString()} — ${woLatestStart.toLocaleString()}`);
+  console.log(`Duration: ${estHours}h, Distance: ${workOrder.distance}mi, Travel: ${travelMin}min one-way`);
+  console.log(`Latest same-day counter start: ${latestCounterStart.toLocaleTimeString()}, IS_COUNTER_DAYS: ${CONFIG.IS_COUNTER_DAYS}`);
+  console.log(`Available Blocks (${availableBlocks.length}): ${sameDayBlocks.length} today, ${nextDayBlocks.length} future`);
+  availableBlocks.forEach((b, i) => console.log(`  ${i + 1}. ${b.start.toLocaleString()} — ${b.end.toLocaleString()}`));
+  console.log(`Exact Fit: ${fitResult.fits}${fitResult.block ? ` → ${fitResult.block.start.toLocaleString()} — ${fitResult.block.end.toLocaleString()}` : " — NO FIT"}`);
+  console.log(`Shifted Fit: ${shiftedResult.fits}${shiftedBlock ? ` → ${shiftedBlock.start.toLocaleString()} — ${shiftedBlock.end.toLocaleString()} (eff. ${shiftedEffDurationMin}min${shiftedIsLast ? ", last block — no return" : ", round-trip"})` : " — NO FIT"}`);
+  console.log(`Fit Decision: ${fitDecision.action}${fitDecision.counterDate ? ` → ${fitDecision.counterDate.start.toLocaleString()} — ${fitDecision.counterDate.end.toLocaleString()} (${fitDecision.counterDate.durationMinutes}min start interval)` : ""}`);
+  console.log(`================================\n`);
 
-  const [wsH, wsM] = CONFIG.TIME.WORK_START_TIME.split(":").map(Number);
-  const [weH, weM] = CONFIG.TIME.WORK_END_TIME.split(":").map(Number);
-
-  return {
-    earliestStart: new Date(
-      targetDate.getFullYear(),
-      targetDate.getMonth(),
-      targetDate.getDate(),
-      wsH,
-      wsM
-    ),
-    latestStart: new Date(
-      targetDate.getFullYear(),
-      targetDate.getMonth(),
-      targetDate.getDate(),
-      weH,
-      weM
-    ),
-  };
-}
-
-// New function using Google Calendar for availability checking
-async function isSlotAvailableCalendar(workOrder, externalBusyBlocks = []) {
-  const MIN_BUFFER_MINUTES = CONFIG.TIME.BUFFER_MINUTES;
-  const { start: startTime, end: endTime } = workOrder.time;
-
-  try {
-    // Use the same simple approach as showAllCalendarsEvents.js
-    const { authorize } = await import("./gmail/login.js");
-    const { google } = await import("googleapis");
-
-    const auth = await authorize();
-    const calendar = google.calendar({ version: "v3", auth });
-
-    // Get work order time details with proper date handling
-    const workOrderStart = new Date(startTime);
-    const workOrderEnd = new Date(endTime);
-
-    // Get the work order date in local time zone
-    const workOrderDate = new Date(
-      workOrderStart.getFullYear(),
-      workOrderStart.getMonth(),
-      workOrderStart.getDate()
-    );
-
-    // Get all calendars
-    const calendarList = await calendar.calendarList.list();
-    const allCalendars = calendarList.data.items || [];
-
-    logger.info(
-      `Multi-Calendar Check: Found ${allCalendars.length} calendars to check for conflicts`,
-      workOrder.platform,
-      workOrder.id
-    );
-
-    let totalEvents = 0;
-    let totalConflicts = 0;
-    const conflicts = [];
-    const allBusyBlocks = [];
-
-    // Get the date range for the work order day (start of day to end of day)
-    const timeMin = new Date(workOrderDate).toISOString();
-    const timeMax = new Date(
-      workOrderDate.getFullYear(),
-      workOrderDate.getMonth(),
-      workOrderDate.getDate() + 1
-    ).toISOString();
-
-    // Check each calendar for conflicts
-    for (const cal of allCalendars) {
-      try {
-        const events = await calendar.events.list({
-          calendarId: cal.id,
-          timeMin: timeMin,
-          timeMax: timeMax,
-          singleEvents: true,
-          orderBy: "startTime",
-        });
-
-        const todayEvents = events.data.items || [];
-        totalEvents += todayEvents.length;
-
-        // Check each event for conflicts
-        for (const event of todayEvents) {
-          // Skip cancelled or transparent (free) events
-          if (
-            event.status === "cancelled" ||
-            event.transparency === "transparent"
-          ) {
-            continue;
-          }
-
-          // Handle both dateTime and date formats properly
-          let eventStart, eventEnd;
-
-          if (event.start.dateTime) {
-            eventStart = new Date(event.start.dateTime);
-          } else if (event.start.date) {
-            // All-day events - use the full day
-            eventStart = new Date(event.start.date + "T00:00:00");
-          } else {
-            continue; // Skip invalid events
-          }
-
-          if (event.end.dateTime) {
-            eventEnd = new Date(event.end.dateTime);
-          } else if (event.end.date) {
-            // All-day events - end at start of next day
-            eventEnd = new Date(event.end.date + "T00:00:00");
-          } else {
-            continue; // Skip invalid events
-          }
-
-          // Collect busy block for free slot calculation
-          allBusyBlocks.push({ start: eventStart, end: eventEnd, summary: event.summary || "Busy" });
-
-          // Add buffer time to work order times
-          const bufferedWorkStart = new Date(
-            workOrderStart.getTime() - MIN_BUFFER_MINUTES * 60 * 1000
-          );
-          const bufferedWorkEnd = new Date(
-            workOrderEnd.getTime() + MIN_BUFFER_MINUTES * 60 * 1000
-          );
-
-          // Check for overlap
-          if (bufferedWorkStart < eventEnd && bufferedWorkEnd > eventStart) {
-            conflicts.push({
-              eventSummary: event.summary || "No title",
-              calendarName: cal.summary,
-              eventStart: eventStart.toLocaleString(),
-              eventEnd: eventEnd.toLocaleString(),
-              workOrderStart: workOrderStart.toLocaleString(),
-              workOrderEnd: workOrderEnd.toLocaleString(),
-            });
-            totalConflicts++;
-          }
-        }
-      } catch (error) {
-        logger.info(
-          `Could not check calendar "${cal.summary}": ${error.message}`,
-          workOrder.platform,
-          workOrder.id
-        );
-      }
-    }
-
-    // Merge external busy blocks (e.g. existing WM assignments)
-    for (const block of externalBusyBlocks) {
-      allBusyBlocks.push({
-        start: block.start,
-        end: block.end,
-        summary: block.summary || "Busy (external)",
-      });
-    }
-
-    const requestedSlot = findFeasibleSlot(workOrderDate, allBusyBlocks, workOrder, {
-      allowShift: false,
-    });
-    const counterSlot = findFeasibleSlot(workOrderDate, allBusyBlocks, workOrder, {
-      allowShift: true,
-    });
-    const isAvailable = Boolean(requestedSlot);
-
-    logger.info(
-      `Calendar Availability Check:
-      - Work Order Date: ${workOrderDate.toDateString()}
-      - Work Order Time: ${workOrderStart.toLocaleTimeString()} - ${workOrderEnd.toLocaleTimeString()}
-      - Buffer: ${MIN_BUFFER_MINUTES} minutes
-      - Calendars Checked: ${allCalendars.length}
-      - Total Events Found: ${totalEvents}
-      - Conflicts Found: ${totalConflicts}
-      - Requested Slot Available: ${requestedSlot ? `${requestedSlot.start.toLocaleTimeString()} - ${requestedSlot.end.toLocaleTimeString()}` : "NO"}
-      - Counter Slot Available: ${counterSlot ? `${counterSlot.start.toLocaleTimeString()} - ${counterSlot.end.toLocaleTimeString()}` : "NO"}
-      - Decision: ${isAvailable ? "AVAILABLE" : "CONFLICT"}`,
-      workOrder.platform,
-      workOrder.id
-    );
-
-    if (!isAvailable && conflicts.length > 0) {
-      logger.info(
-        `Calendar conflicts details:
-        ${conflicts
-          .map(
-            (conflict, index) =>
-              `  ${index + 1}. "${conflict.eventSummary}" [${
-                conflict.calendarName
-              }]
-              Event: ${conflict.eventStart} - ${conflict.eventEnd}
-              Work Order: ${conflict.workOrderStart} - ${conflict.workOrderEnd}`
-          )
-          .join("\n        ")}`,
-        workOrder.platform,
-        workOrder.id
-      );
-    }
-
-    return {
-      isAvailable,
-      busyBlocks: allBusyBlocks,
-      workOrderDate,
-      requestedSlot,
-      counterSlot,
-    };
-  } catch (error) {
-    logger.error(
-      `Error checking calendar availability: ${error.message}. Falling back to static schedule.`,
-      workOrder.platform,
-      workOrder.id
-    );
-
-    return {
-      isAvailable: false,
-      busyBlocks: [],
-      workOrderDate: null,
-      requestedSlot: null,
-      counterSlot: null,
-    };
-  }
+  return { fitResult, shiftedResult, fitDecision };
 }
 
 // Find free time slots on a given day based on busy blocks
@@ -496,143 +334,6 @@ function findFreeSlots(workOrderDate, busyBlocks, minDurationMinutes = 60) {
   );
 
   return freeSlots;
-}
-
-function findFeasibleSlot(workOrderDate, busyBlocks, workOrder, options = {}) {
-  const durationMs = getJobDurationMs(workOrder);
-  const durationMinutes = Math.round(durationMs / (60 * 1000));
-  const freeSlots = findFreeSlots(workOrderDate, busyBlocks, durationMinutes);
-
-  if (freeSlots.length === 0) {
-    return null;
-  }
-
-  const { allowShift = false } = options;
-  const requestedWindow = getRequestedStartWindow(workOrder, workOrderDate);
-  const earliestAllowedMs = requestedWindow.earliestStart.getTime();
-  const latestAllowedMs = allowShift
-    ? Number.POSITIVE_INFINITY
-    : requestedWindow.latestStart.getTime();
-
-  for (const slot of freeSlots) {
-    const candidateStartMs = Math.max(slot.start.getTime(), earliestAllowedMs);
-    const latestSlotStartMs = slot.end.getTime() - durationMs;
-    const effectiveLatestStartMs = Math.min(latestSlotStartMs, latestAllowedMs);
-
-    if (candidateStartMs <= effectiveLatestStartMs) {
-      return {
-        start: new Date(candidateStartMs),
-        end: new Date(candidateStartMs + durationMs),
-        durationMinutes,
-      };
-    }
-  }
-
-  return null;
-}
-
-// Search upcoming days (up to maxDays) for a free slot via Google Calendar
-async function findNextAvailableDay(workOrder, maxDays = 7, externalBusyBlocks = []) {
-  try {
-    const { authorize } = await import("./gmail/login.js");
-    const { google } = await import("googleapis");
-    const auth = await authorize();
-    const calendar = google.calendar({ version: "v3", auth });
-
-    const calendarList = await calendar.calendarList.list();
-    const allCalendars = calendarList.data.items || [];
-
-    const startDate = new Date(workOrder.time.start);
-
-    for (let dayOffset = 1; dayOffset <= maxDays; dayOffset++) {
-      const checkDate = new Date(
-        startDate.getFullYear(), startDate.getMonth(), startDate.getDate() + dayOffset
-      );
-
-      // Skip weekends
-      const dow = checkDate.getDay();
-      if (dow === 0 || dow === 6) continue;
-
-      const timeMin = new Date(checkDate).toISOString();
-      const timeMax = new Date(
-        checkDate.getFullYear(), checkDate.getMonth(), checkDate.getDate() + 1
-      ).toISOString();
-
-      const busyBlocks = [];
-
-      for (const cal of allCalendars) {
-        try {
-          const events = await calendar.events.list({
-            calendarId: cal.id,
-            timeMin,
-            timeMax,
-            singleEvents: true,
-            orderBy: "startTime",
-          });
-
-          for (const event of (events.data.items || [])) {
-            if (event.status === "cancelled" || event.transparency === "transparent") continue;
-
-            let eventStart, eventEnd;
-            if (event.start.dateTime) {
-              eventStart = new Date(event.start.dateTime);
-            } else if (event.start.date) {
-              eventStart = new Date(event.start.date + "T00:00:00");
-            } else continue;
-
-            if (event.end.dateTime) {
-              eventEnd = new Date(event.end.dateTime);
-            } else if (event.end.date) {
-              eventEnd = new Date(event.end.date + "T00:00:00");
-            } else continue;
-
-            busyBlocks.push({ start: eventStart, end: eventEnd, summary: event.summary || "Busy" });
-          }
-        } catch (e) {
-          // skip calendar errors
-        }
-      }
-
-      // Merge external busy blocks (e.g. existing WM assignments) for this day
-      for (const block of externalBusyBlocks) {
-        const blockDate = new Date(block.start);
-        if (
-          blockDate.getFullYear() === checkDate.getFullYear() &&
-          blockDate.getMonth() === checkDate.getMonth() &&
-          blockDate.getDate() === checkDate.getDate()
-        ) {
-          busyBlocks.push({ start: block.start, end: block.end, summary: block.summary || "Busy (external)" });
-        }
-      }
-
-      const bestSlot = findFeasibleSlot(checkDate, busyBlocks, workOrder, {
-        allowShift: true,
-      });
-
-      if (bestSlot) {
-        logger.info(
-          `Next available day: ${checkDate.toDateString()} with slot ${bestSlot.start.toLocaleTimeString()} - ${bestSlot.end.toLocaleTimeString()}`,
-          workOrder.platform,
-          workOrder.id
-        );
-        return { date: checkDate, bestSlot };
-      }
-    }
-
-    logger.info(
-      `No available day found in the next ${maxDays} weekdays`,
-      workOrder.platform,
-      workOrder.id
-    );
-    return null;
-  } catch (error) {
-    logger.error(
-      `Error searching for next available day: ${error.message}`,
-      workOrder.platform,
-      workOrder.id
-    );
-    return null;
-  }
 }
 
 function calculateCounterOffer(workOrder) {
@@ -757,7 +458,7 @@ async function isEligibleForApplication(workOrder) {
     // STEP 1: Check payment eligibility FIRST to catch BELOW_MINIMUM auto-rejects
     const paymentCheck = isPaymentEligible(workOrder);
     
-    // Auto-reject garbage pay jobs, even if we have free calendar slots
+    // Auto-reject garbage pay jobs, even if we have free availability blocks.
     if (!paymentCheck.isAcceptable && paymentCheck.issue === "BELOW_MINIMUM") {
       logger.info(
         `Job rejected: Payment below minimum threshold - ${paymentCheck.details}. Rejecting without counter.`,
@@ -772,34 +473,31 @@ async function isEligibleForApplication(workOrder) {
       };
     }
 
-    // STEP 2: Fetch existing WorkMarket assignments as busy blocks
-    const wmBusyBlocks = await fetchWMAssignments();
+    // STEP 2: Check availability via available blocks + findFitBlock
+    let availabilityFitResult;
+    try {
+      availabilityFitResult = await checkAvailabilityNew(workOrder);
+    } catch (err) {
+      logger.info(`Availability fit check failed: ${err.message}`, workOrder.platform, workOrder.id);
+      return {
+        eligible: false,
+        counterOffer: null,
+        reason: "SLOT_UNAVAILABLE",
+        rejectDetails: err.message,
+      };
+    }
 
-    // STEP 3: Check calendar availability (merged with WM busy blocks)
-    const calendarResult = await isSlotAvailableCalendar(workOrder, wmBusyBlocks);
-    const slotAvailable = calendarResult.isAvailable;
+    const availabilityFitDecision = availabilityFitResult.fitDecision;
 
-    if (!isInWorkingHours) {
-      let bestSlot = calendarResult.counterSlot;
-
-      if (!bestSlot) {
+    if (availabilityFitDecision.action === "COUNTER_DATES") {
+      if (CONFIG.IS_COUNTER_DATES) {
         logger.info(
-          `No same-day in-hours slots found, searching upcoming days for outside-hours job...`,
-          workOrder.platform,
-          workOrder.id
-        );
-        const nextDay = await findNextAvailableDay(workOrder, 7, wmBusyBlocks);
-        bestSlot = nextDay?.bestSlot || null;
-      }
-
-      if (bestSlot) {
-        logger.info(
-          `Outside-hours job will counter with slot ${bestSlot.start.toLocaleTimeString()} - ${bestSlot.end.toLocaleTimeString()}`,
+          `Shifted fit found - countering with start interval: ${availabilityFitDecision.counterDate.start.toLocaleTimeString()} - ${availabilityFitDecision.counterDate.end.toLocaleTimeString()}`,
           workOrder.platform,
           workOrder.id
         );
         const counterOffer = calculateCounterOffer(workOrder);
-        counterOffer.counterDate = bestSlot;
+        counterOffer.counterDate = availabilityFitDecision.counterDate;
         return {
           eligible: false,
           counterOffer,
@@ -808,64 +506,33 @@ async function isEligibleForApplication(workOrder) {
       }
 
       logger.info(
-        `Job rejected: Outside working hours and no alternate slots found`,
+        `Job rejected: Shifted fit found but counter dates are disabled`,
         workOrder.platform,
         workOrder.id
       );
       return {
         eligible: false,
         counterOffer: null,
-        reason: "OUTSIDE_WORKING_HOURS",
+        reason: isInWorkingHours ? "SLOT_UNAVAILABLE" : "OUTSIDE_WORKING_HOURS",
       };
     }
 
-    if (!slotAvailable) {
-      // IS_COUNTER_DATES: instead of rejecting, find free slots and counter-offer with them
-      if (CONFIG.IS_COUNTER_DATES && calendarResult.workOrderDate) {
-        let bestSlot = calendarResult.counterSlot;
-
-        // If no slots on same day, search upcoming days
-        if (!bestSlot) {
-          logger.info(
-            `No free slots on requested day, searching upcoming days...`,
-            workOrder.platform,
-            workOrder.id
-          );
-          const nextDay = await findNextAvailableDay(workOrder, 7, wmBusyBlocks);
-          bestSlot = nextDay?.bestSlot || null;
-        }
-
-        if (bestSlot) {
-          logger.info(
-            `IS_COUNTER_DATES enabled - countering with earliest slot: ${bestSlot.start.toLocaleTimeString()} - ${bestSlot.end.toLocaleTimeString()} (${bestSlot.durationMinutes}min for ${workOrder.estLaborHours || CONFIG.TIME.DEFAULT_LABOR_HOURS}hr job)`,
-            workOrder.platform,
-            workOrder.id
-          );
-          const counterOffer = calculateCounterOffer(workOrder);
-          counterOffer.counterDate = bestSlot;
-          return {
-            eligible: false,
-            counterOffer: counterOffer,
-            reason: "COUNTER_DATES",
-          };
-        }
-      }
-
+    if (availabilityFitDecision.action === "NO_FIT") {
       logger.info(
-        `Job rejected: Calendar conflict detected`,
+        `Job rejected: No exact or shifted availability fit found`,
         workOrder.platform,
         workOrder.id
       );
       return {
         eligible: false,
         counterOffer: null,
-        reason: "SLOT_UNAVAILABLE",
+        reason: isInWorkingHours ? "SLOT_UNAVAILABLE" : "OUTSIDE_WORKING_HOURS",
       };
     }
 
-    // STEP 3: Check remaining payment rules ONLY if calendar is available
+    // STEP 3: Check remaining payment rules ONLY if exact availability fits
     if (paymentCheck.isAcceptable) {
-      // Both calendar and payment are good - apply directly
+      // Both exact availability and payment are good - apply directly.
       return {
         eligible: true,
         counterOffer: null,
