@@ -82,30 +82,53 @@ export async function authorize() {
   return cachedAuthClientPromise;
 }
 
+const ACCESS_TOKEN_TIMEOUT_MS = 30_000;
+const INTERACTIVE_AUTH_ALLOWED =
+  process.env.GMAIL_ALLOW_INTERACTIVE_AUTH === "1";
+
+function withTimeout(promise, ms, label) {
+  return Promise.race([
+    promise,
+    new Promise((_, reject) =>
+      setTimeout(
+        () => reject(new Error(`Gmail auth timeout after ${ms}ms (${label})`)),
+        ms
+      )
+    ),
+  ]);
+}
+
 async function authorizeUncached() {
   let client = await loadSavedCredentialsIfExist();
 
-  // Якщо є збережені облікові дані, перевіряємо їх дійсність
   if (client) {
     try {
-      // Викликаємо getAccessToken для перевірки чи токен ще дійсний
-      await client.getAccessToken();
+      await withTimeout(
+        client.getAccessToken(),
+        ACCESS_TOKEN_TIMEOUT_MS,
+        "getAccessToken"
+      );
       return client;
     } catch (error) {
       console.log(
-        `Токен не дійсний або прострочений, ініціюємо нову авторизацію: ${error.message}`
+        `Токен не дійсний або прострочений: ${error.message}`
       );
     }
   }
 
-  // Якщо немає збережених даних або вони прострочені, авторизуємось знову
+  if (!INTERACTIVE_AUTH_ALLOWED) {
+    throw new Error(
+      "Gmail refresh token is invalid or missing. Re-auth required: run `GMAIL_ALLOW_INTERACTIVE_AUTH=1 node utils/gmail/script.js` interactively to refresh config/token.json."
+    );
+  }
+
   client = await authenticate({
     scopes: SCOPES,
     keyfilePath: CREDENTIALS_PATH,
   });
 
   if (client.credentials) {
-    await saveCredentials(client); // Зберігаємо новий refresh token
+    await saveCredentials(client);
   }
 
   return client;

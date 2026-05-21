@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm test *)",
+      "Bash(awk -F'\"action\"' '{print $2}' /Users/ihorvinson/Agents/dev-projects/fn-asistant-ai/jobs-replay.json)"
+    ]
+  }
+}

@@ -125,11 +125,16 @@ function isWithinWorkingHours(startTime, timeWindow = {}) {
   return isWithinHours;
 }
 
+function getBaseHourlyRate(platform) {
+  const platformRate = platform === "FieldNation"
+    ? CONFIG.RATES.BASE_HOURLY_RATE_FIELDNATION
+    : CONFIG.RATES.BASE_HOURLY_RATE_WORKMARKET;
+  return platformRate || CONFIG.RATES.BASE_HOURLY_RATE;
+}
+
 function isPaymentEligible(workOrder) {
   const isFieldNation = workOrder.platform === "FieldNation";
-  const MIN_HOURLY_RATE = isFieldNation 
-    ? (CONFIG.RATES.BASE_HOURLY_RATE_FIELDNATION || CONFIG.RATES.BASE_HOURLY_RATE)
-    : (CONFIG.RATES.BASE_HOURLY_RATE_WORKMARKET || CONFIG.RATES.BASE_HOURLY_RATE);
+  const MIN_HOURLY_RATE = getBaseHourlyRate(workOrder.platform);
   const estHours = workOrder.estLaborHours || CONFIG.TIME.DEFAULT_LABOR_HOURS;
   const platformMinTotal = isFieldNation
     ? CONFIG.RATES.MIN_PAY_THRESHOLD_FIELDNATION
@@ -337,11 +342,7 @@ function findFreeSlots(workOrderDate, busyBlocks, minDurationMinutes = 60) {
 }
 
 function calculateCounterOffer(workOrder) {
-  const isFieldNation = workOrder.platform === "FieldNation";
-  const MIN_HOURLY_RATE = isFieldNation 
-    ? (CONFIG.RATES.BASE_HOURLY_RATE_FIELDNATION || CONFIG.RATES.BASE_HOURLY_RATE)
-    : (CONFIG.RATES.BASE_HOURLY_RATE_WORKMARKET || CONFIG.RATES.BASE_HOURLY_RATE);
-    
+  const MIN_HOURLY_RATE = getBaseHourlyRate(workOrder.platform);
   const estHours = workOrder.estLaborHours || CONFIG.TIME.DEFAULT_LABOR_HOURS;
 
   // Travel rules:
@@ -400,6 +401,18 @@ async function isEligibleForApplication(workOrder) {
     workOrder.id
   );
 
+  const woStartMs = new Date(workOrder.time.start).getTime();
+  if (Number.isFinite(woStartMs) && woStartMs < Date.now()) {
+    const details = `Requested start ${new Date(woStartMs).toLocaleString()} is in the past`;
+    logger.info(`Job skipped: ${details}`, workOrder.platform, workOrder.id);
+    return {
+      eligible: false,
+      counterOffer: null,
+      reason: "WO_IN_PAST",
+      rejectDetails: details,
+    };
+  }
+
   const policyCheck = evaluateApplicationPolicy(workOrder);
   logger.info(
     `Application Policy Check:
@@ -428,7 +441,6 @@ async function isEligibleForApplication(workOrder) {
     };
   }
 
-  // First check if the job is within working hours
   const isInWorkingHours = isWithinWorkingHours(
     workOrder.time.start,
     workOrder.time
@@ -450,15 +462,13 @@ async function isEligibleForApplication(workOrder) {
     }
   }
 
-  // Check eligibility for both FieldNation and WorkMarket
   if (
     workOrder.platform === "FieldNation" ||
     workOrder.platform === "WorkMarket"
   ) {
-    // STEP 1: Check payment eligibility FIRST to catch BELOW_MINIMUM auto-rejects
+    // STEP 1: Payment first — BELOW_MINIMUM auto-rejects regardless of availability.
     const paymentCheck = isPaymentEligible(workOrder);
-    
-    // Auto-reject garbage pay jobs, even if we have free availability blocks.
+
     if (!paymentCheck.isAcceptable && paymentCheck.issue === "BELOW_MINIMUM") {
       logger.info(
         `Job rejected: Payment below minimum threshold - ${paymentCheck.details}. Rejecting without counter.`,
@@ -473,7 +483,7 @@ async function isEligibleForApplication(workOrder) {
       };
     }
 
-    // STEP 2: Check availability via available blocks + findFitBlock
+    // STEP 2: Availability fit (exact, then shifted same-day, then next-day if enabled).
     let availabilityFitResult;
     try {
       availabilityFitResult = await checkAvailabilityNew(workOrder);
@@ -513,7 +523,7 @@ async function isEligibleForApplication(workOrder) {
       return {
         eligible: false,
         counterOffer: null,
-        reason: isInWorkingHours ? "SLOT_UNAVAILABLE" : "OUTSIDE_WORKING_HOURS",
+        reason: "SLOT_UNAVAILABLE",
       };
     }
 
@@ -530,55 +540,41 @@ async function isEligibleForApplication(workOrder) {
       };
     }
 
-    // STEP 3: Check remaining payment rules ONLY if exact availability fits
     if (paymentCheck.isAcceptable) {
-      // Both exact availability and payment are good - apply directly.
       return {
         eligible: true,
         counterOffer: null,
         reason: "ELIGIBLE",
       };
-    } else {
-      // Payment or distance check failed 
-      if (paymentCheck.issue === "LOW_RATE") {
-        if (CONFIG.IS_COUNTER_RATES) {
-          logger.info(
-            `Job rejected: Rate too low - ${paymentCheck.details}. Generating counter offer.`,
-            workOrder.platform,
-            workOrder.id
-          );
-          return {
-            eligible: false,
-            counterOffer: calculateCounterOffer(workOrder),
-            reason: "PAYMENT_INSUFFICIENT", // Triggers counter flow in index.js
-            rejectDetails: paymentCheck.details,
-          };
-        } else {
-          logger.info(
-            `Job rejected: Rate too low - ${paymentCheck.details}. IS_COUNTER_RATES is false, rejecting without counter.`,
-            workOrder.platform,
-            workOrder.id
-          );
-          return {
-            eligible: false,
-            counterOffer: null,
-            reason: "PAYMENT_INSUFFICIENT",
-            rejectDetails: paymentCheck.details,
-          };
-        }
-      } else if (paymentCheck.issue === "TRAVEL") {
-        logger.info(
-          `Job rejected: Travel required - ${paymentCheck.details}. Generating counter offer with travel.`,
-          workOrder.platform,
-          workOrder.id
-        );
-        return {
-          eligible: false,
-          counterOffer: calculateCounterOffer(workOrder),
-          reason: "TRAVEL_REQUIRED",
-          rejectDetails: paymentCheck.details,
-        };
-      }
+    }
+
+    if (paymentCheck.issue === "LOW_RATE") {
+      const willCounter = CONFIG.IS_COUNTER_RATES;
+      logger.info(
+        `Job rejected: Rate too low - ${paymentCheck.details}. ${willCounter ? "Generating counter offer." : "IS_COUNTER_RATES is false, rejecting without counter."}`,
+        workOrder.platform,
+        workOrder.id
+      );
+      return {
+        eligible: false,
+        counterOffer: willCounter ? calculateCounterOffer(workOrder) : null,
+        reason: "PAYMENT_INSUFFICIENT",
+        rejectDetails: paymentCheck.details,
+      };
+    }
+
+    if (paymentCheck.issue === "TRAVEL") {
+      logger.info(
+        `Job rejected: Travel required - ${paymentCheck.details}. Generating counter offer with travel.`,
+        workOrder.platform,
+        workOrder.id
+      );
+      return {
+        eligible: false,
+        counterOffer: calculateCounterOffer(workOrder),
+        reason: "TRAVEL_REQUIRED",
+        rejectDetails: paymentCheck.details,
+      };
     }
   }
 

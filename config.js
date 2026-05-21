@@ -19,11 +19,11 @@ export const CONFIG = {
     TRAVEL_RATE: 30, // Rate per hour of travel
   },
 
-  // Distance and Travel Settings
+  // Distance and Travel Sesttings
   DISTANCE: {
     TRAVEL_THRESHOLD_MILES: 20, // Miles before charging travel expenses
     TRAVEL_RATE_PER_MILE: 1.25, // Amount to charge per mile over threshold
-    FREE_TRAVEL_LIMIT: 50 / 60, // Free travel time in hours (50 minutes)
+    FREE_TRAVEL_LIMIT: 30 / 60, // Free travel time in hours (30 minutes)
     AVERAGE_SPEED: 50, // Average travel speed in miles per hour
   },
   FLAT_TRAVEL: 0, // Flat travel fee added to all counter offers

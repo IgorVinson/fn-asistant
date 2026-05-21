@@ -345,8 +345,42 @@ function scheduleRelogin() {
   );
 }
 
-// Initialize Puppeteer and log in to FieldNation and WorkMarket
+const SAVE_COOKIES_TIMEOUT_MS = 4 * 60 * 1000;
+
+// Initialize Puppeteer and log in to FieldNation and WorkMarket.
+// Wrapped in a hard timeout so a hung Puppeteer/Gmail step can never wedge
+// callers (notably the cookie-refresh path that holds isRefreshingCookies).
 async function saveCookies() {
+  let timeoutHandle;
+  try {
+    await Promise.race([
+      saveCookiesImpl(),
+      new Promise((_, reject) => {
+        timeoutHandle = setTimeout(
+          () =>
+            reject(
+              new Error(
+                `saveCookies timed out after ${SAVE_COOKIES_TIMEOUT_MS}ms`
+              )
+            ),
+          SAVE_COOKIES_TIMEOUT_MS
+        );
+      }),
+    ]);
+  } catch (error) {
+    console.error("❌ saveCookies failed:", error.message);
+    if (browser) {
+      try {
+        await browser.close();
+      } catch (_) {}
+      browser = null;
+    }
+  } finally {
+    if (timeoutHandle) clearTimeout(timeoutHandle);
+  }
+}
+
+async function saveCookiesImpl() {
   try {
     console.log("🚀 Starting automated login process...");
 
@@ -1165,6 +1199,11 @@ ${normalizedData.platform === "WorkMarket" && !isRealWorkMarketSubmission ? "\n\
           rejectReason =
             eligibilityResult.rejectDetails ||
             "Rejected by company/date application policy";
+          break;
+        case "WO_IN_PAST":
+          rejectReason =
+            eligibilityResult.rejectDetails ||
+            "Work order requested time is in the past";
           break;
         default:
           rejectReason = eligibilityResult.reason;
