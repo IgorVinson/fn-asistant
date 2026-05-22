@@ -335,16 +335,18 @@ export async function fetchWMAssignments() {
         console.log(`[WM] fetchWMAssignments: skipping assignment "${a.title || a.id}" — missing or invalid startDate: ${a.startDate}`);
         return null;
       }
-      let end;
-      if (a.endDate && a.endDate instanceof Date && !isNaN(a.endDate.getTime())) {
-        end = a.endDate;
-      } else {
-        const hours = hoursMap[a.id] || CONFIG.TIME.DEFAULT_LABOR_HOURS;
-        end = new Date(a.startDate.getTime() + hours * 60 * 60 * 1000);
-      }
-      console.log(`[WM] fetchWMAssignments: mapping "${a.title || a.id}" start=${a.startDate.toISOString()} end=${end.toISOString()} (hours: ${hoursMap[a.id] ?? 'default'})`);
+      // WM's scheduled_date_from/through is a START window (earliest start - latest start),
+      // not the work duration. Actual commitment runs from earliestStart to latestStart + hoursOfWork.
+      const earliestStart = a.startDate;
+      const latestStart =
+        a.endDate instanceof Date && !isNaN(a.endDate.getTime())
+          ? a.endDate
+          : earliestStart;
+      const hours = hoursMap[a.id] || CONFIG.TIME.DEFAULT_LABOR_HOURS;
+      const end = new Date(latestStart.getTime() + hours * 60 * 60 * 1000);
+      console.log(`[WM] fetchWMAssignments: mapping "${a.title || a.id}" earliestStart=${earliestStart.toISOString()} latestStart=${latestStart.toISOString()} end=${end.toISOString()} (hours: ${hoursMap[a.id] ?? 'default'})`);
       return {
-        start: a.startDate,
+        start: earliestStart,
         end: end,
         summary: `🔧 ${a.title || "WM Assignment"} (WM)`,
       };

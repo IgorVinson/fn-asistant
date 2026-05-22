@@ -1,8 +1,14 @@
-import { getAvailableBlocks } from "./getAvailableBlocks.js";
-import { fetchWMBusy } from "./fetchWMBusy.js";
-import { fetchCalendarBusy } from "./fetchCalendarBusy.js";
+import path from "path";
+import { fileURLToPath } from "url";
 
-const date = "2026-05-19";
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+process.chdir(path.resolve(__dirname, "../.."));
+
+const { getAvailableBlocks } = await import("./getAvailableBlocks.js");
+const { fetchWMBusy } = await import("./fetchWMBusy.js");
+const { fetchCalendarBusy } = await import("./fetchCalendarBusy.js");
+
+const date = "2026-05-28";
 
 const wmBusyBlocks = await fetchWMBusy();
 const calendarBusyBlocks = await fetchCalendarBusy(date, 3);
