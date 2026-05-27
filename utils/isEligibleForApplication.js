@@ -153,9 +153,12 @@ function isPaymentEligible(workOrder) {
     theirRate = theirTotal / (estHours || 1);
   }
 
+  const effectiveDistance = (workOrder.distance || 0) + CONFIG.DISTANCE.DISTANCE_PADDING_MILES;
   const TRAVEL_THRESHOLD = CONFIG.DISTANCE.TRAVEL_THRESHOLD_MILES;
-  const needsTravelCounter = workOrder.distance > TRAVEL_THRESHOLD;
-  const travelDetails = needsTravelCounter ? `Travel required (${workOrder.distance}mi > ${TRAVEL_THRESHOLD}mi)` : null;
+  const needsTravelCounter = effectiveDistance > TRAVEL_THRESHOLD;
+  const travelDetails = needsTravelCounter
+    ? `Travel required (${workOrder.distance}mi reported + ${CONFIG.DISTANCE.DISTANCE_PADDING_MILES}mi padding = ${effectiveDistance}mi > ${TRAVEL_THRESHOLD}mi)`
+    : null;
 
   // RULE 1: If total pay is less than platform minimum -> ALWAYS REJECT (no counter)
   if (CONFIG.ENFORCE_MIN_PAYMENT && theirTotal < platformMinTotal) {
@@ -348,15 +351,21 @@ function calculateCounterOffer(workOrder) {
   // Travel rules:
   // - When FLAT_TRAVEL > 0, it is a universal minimum floor.
   // - When FLAT_TRAVEL <= 0, travel only applies after crossing the threshold.
+  const effectiveDistance = (workOrder.distance || 0) + CONFIG.DISTANCE.DISTANCE_PADDING_MILES;
   let travelExpense = 0;
   const mileageTravel = Math.round(
-    workOrder.distance * CONFIG.DISTANCE.TRAVEL_RATE_PER_MILE
+    effectiveDistance * CONFIG.DISTANCE.TRAVEL_RATE_PER_MILE
   );
 
   if (CONFIG.FLAT_TRAVEL > 0) {
     travelExpense = Math.max(mileageTravel, CONFIG.FLAT_TRAVEL);
-  } else if (workOrder.distance > CONFIG.DISTANCE.TRAVEL_THRESHOLD_MILES) {
+  } else if (effectiveDistance > CONFIG.DISTANCE.TRAVEL_THRESHOLD_MILES) {
     travelExpense = mileageTravel;
+  }
+
+  const roundTo = CONFIG.DISTANCE.TRAVEL_ROUND_TO || 1;
+  if (travelExpense > 0 && roundTo > 1) {
+    travelExpense = Math.ceil(travelExpense / roundTo) * roundTo;
   }
 
   // Determine pay type from order data
@@ -379,7 +388,7 @@ function calculateCounterOffer(workOrder) {
   let payType = isHourly ? "hourly" : "fixed";
 
   logger.info(
-    `Counter offer generated: Rate: $${counterRate}/hr × ${estHours}hrs = $${counterTotal} + Travel: $${travelExpense}`,
+    `Counter offer generated: Rate: $${counterRate}/hr × ${estHours}hrs = $${counterTotal} + Travel: $${travelExpense} (distance ${workOrder.distance}mi, effective ${effectiveDistance}mi)`,
     workOrder.platform,
     workOrder.id
   );

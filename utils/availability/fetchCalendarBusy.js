@@ -40,7 +40,8 @@ export async function fetchCalendarBusy(date, daysToCheck) {
       });
 
       for (const event of events.data.items || []) {
-        if (event.status === "cancelled" || event.transparency === "transparent") {
+        const isAllDay = !!event.start.date && !event.start.dateTime;
+        if (event.status === "cancelled" || (event.transparency === "transparent" && !isAllDay)) {
           continue;
         }
 

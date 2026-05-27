@@ -8,7 +8,7 @@ const { getAvailableBlocks } = await import("./getAvailableBlocks.js");
 const { fetchWMBusy } = await import("./fetchWMBusy.js");
 const { fetchCalendarBusy } = await import("./fetchCalendarBusy.js");
 
-const date = "2026-05-28";
+const date = "2026-06-01";
 
 const wmBusyBlocks = await fetchWMBusy();
 const calendarBusyBlocks = await fetchCalendarBusy(date, 3);
