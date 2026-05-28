@@ -11,6 +11,13 @@ let cachedBusyBlocks = [];
 let cacheTimestamp = 0;
 let cachedApiUrl = null;
 
+export class WMAuthError extends Error {
+  constructor(message) {
+    super(message);
+    this.name = "WMAuthError";
+  }
+}
+
 function getCookies() {
   try {
     if (!fs.existsSync(cookiesFilePath)) {
@@ -317,9 +324,7 @@ export async function fetchWMAssignments() {
 
   if (!assignments || assignments.length === 0) {
     console.error("fetchWMAssignments: no assignments found from any source — cookies are likely expired, run relogin");
-    cachedBusyBlocks = [];
-    cacheTimestamp = Date.now();
-    return [];
+    throw new WMAuthError("WM assignments fetch returned empty from all sources — cookies likely expired");
   }
 
   console.log(`[WM] fetchWMAssignments: raw assignments received: ${JSON.stringify(assignments.map(a => ({ id: a.id, title: a.title, startDate: a.startDate, endDate: a.endDate, pay: a.pay })))}`);

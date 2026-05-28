@@ -967,9 +967,9 @@ async function processOrder(orderLink) {
               co.baseAmount,
               co.travelExpense,
               co.payType,
-              co.payType === "hourly" ? 0 : co.estHours,
+              co.payType === "hourly" ? co.estHours : 0,
               0,
-              co.counterRate
+              0
             );
           }
 
@@ -1269,11 +1269,24 @@ app.listen(port, async () => {
   // Initialize logs.json with current eventHistory
   await writeEventsToFile(eventHistory);
 
+  // Refresh cookies on startup so we never run with a stale session
+  console.log("🔑 Refreshing platform cookies on startup...");
+  try {
+    await saveCookies();
+    console.log("✅ Startup cookie refresh complete");
+  } catch (err) {
+    console.error("❌ Startup cookie refresh failed:", err.message);
+    telegramBot.sendMessage(
+      `❌ Startup cookie refresh failed: ${err.message}\nMonitoring will start but availability checks may fail until cookies are refreshed.`
+    );
+  }
+
   // Auto-start monitoring on server launch
   startMonitoring();
 
-  // No scheduled refresh - cookies are refreshed on-demand when they expire
+  // Start the 4-hour rotation timer after the initial refresh
+  scheduleRelogin();
   console.log(
-    "⏰ On-demand cookie refresh enabled (refresh only when expired)"
+    "⏰ Cookie refresh: startup + every 4 hours, with on-demand fallback"
   );
 });

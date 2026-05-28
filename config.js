@@ -1,6 +1,6 @@
 export const CONFIG = {
   // Platform configuration
-  TEST_MODE: true, // If true, agent will not perform destructive/real actions
+  TEST_MODE: false, // If true, agent will not perform destructive/real actions
   FIELDNATION_ENABLED: true, // Set to false to disable FieldNation applications
   WORKMARKET_ENABLED: true, // Set to false to disable WorkMarket applications
   APPLICATION_MODE: "all_companies", // "granite_only" | "all_companies" | "disabled"
@@ -22,7 +22,7 @@ export const CONFIG = {
   // Distance and Travel Sesttings
   DISTANCE: {
     TRAVEL_THRESHOLD_MILES: 10, // Miles before charging travel expenses (applied to padded distance)
-    TRAVEL_RATE_PER_MILE: 1.3, // Amount to charge per mile over threshold
+    TRAVEL_RATE_PER_MILE: 1.25, // Amount to charge per mile over threshold
     FREE_TRAVEL_LIMIT: 30 / 60, // Free travel time in hours (30 minutes)
     AVERAGE_SPEED: 50, // Average travel speed in miles per hour
     DISTANCE_PADDING_MILES: 10, // Padding added to reported distance for pricing + standalone-travel trigger (city-traffic offset; not used for scheduling)

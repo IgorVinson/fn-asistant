@@ -1,4 +1,4 @@
-import { fetchWMAssignments } from "../WorkMarket/getWMAssignments.js";
+import { fetchWMAssignments, WMAuthError } from "../WorkMarket/getWMAssignments.js";
 import logger from "../logger.js";
 
 function roundToMinute(date) {
@@ -30,6 +30,10 @@ export async function fetchWMBusy() {
 
     return busyBlocks;
   } catch (error) {
+    if (error instanceof WMAuthError) {
+      logger.error(`fetchWMBusy: WM auth failure — cannot verify WM busy state. Propagating to caller. ${error.message}`);
+      throw error;
+    }
     logger.error(`fetchWMBusy: error fetching WM assignments: ${error.message}`);
     return [];
   }
