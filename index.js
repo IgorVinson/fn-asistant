@@ -964,7 +964,7 @@ async function processOrder(orderLink) {
           if (!CONFIG.TEST_MODE) {
             await postFNCounterOffer(
               normalizedData.id,
-              co.baseAmount,
+              co.payType === "hourly" ? co.counterRate : co.baseAmount,
               co.travelExpense,
               co.payType,
               co.payType === "hourly" ? co.estHours : 0,
@@ -1168,6 +1168,52 @@ ${normalizedData.platform === "WorkMarket" && !isRealWorkMarketSubmission ? "\n\
           );
           telegramBot.sendMessage(
             `❌ Failed to send WorkMarket counter date: ${error.message}`
+          );
+          playSound("error");
+          return;
+        }
+      }
+
+      if (!CONFIG.TEST_MODE && normalizedData.platform === "FieldNation") {
+        try {
+          const co = eligibilityResult.counterOffer;
+          await postFNCounterOffer(
+            normalizedData.id,
+            co.payType === "hourly" ? co.counterRate : co.baseAmount,
+            co.travelExpense,
+            co.payType,
+            co.payType === "hourly" ? co.estHours : 0,
+            0,
+            0,
+            slot
+          );
+          pushEvent({
+            platform: normalizedData.platform,
+            id: normalizedData.id,
+            title: normalizedData.title,
+            status: "success",
+            message: `FN counter dates submitted: ${counterDateLabel}`,
+          });
+          logger.info(
+            `Result: FN counter date submitted successfully`,
+            normalizedData.platform,
+            normalizedData.id
+          );
+        } catch (error) {
+          pushEvent({
+            platform: normalizedData.platform,
+            id: normalizedData.id,
+            title: normalizedData.title,
+            status: "error",
+            message: `FN counter dates failed: ${error.message}`,
+          });
+          logger.error(
+            `Result: Failed to send FN counter date - ${error.message}`,
+            normalizedData.platform,
+            normalizedData.id
+          );
+          telegramBot.sendMessage(
+            `❌ Failed to send FieldNation counter date: ${error.message}`
           );
           playSound("error");
           return;

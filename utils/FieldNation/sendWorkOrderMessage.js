@@ -20,14 +20,7 @@ export async function sendWorkOrderMessage(url = 'https://app.fieldnation.com/wo
         const cookies = getCookies();
         const workOrderId = url.split('?')[0].split('/').pop();
 
-        const message = 'Hello,\n' +
-            'I’m new to Field Nation but bring extensive experience in networking, POS, data centers, and related fields. \n' +
-            'If you entrust me with this project, I am committed to exceeding your expectations. I have worked with companies such as Lululemon, Trader Joe’s, Home Depot, and many others.\n' +
-            '\n' +
-            'Here is photo of my last projects:\n' +
-            "https://drive.google.com/drive/folders/1p_7aGla27KgB4GVIPRjf6wb7t7RN6AE7?usp=sharing:\n" +
-            '\n' +
-            'Thank you for considering my application. I look forward to the opportunity!';
+        const message = "Hey! I'm a low-voltage and networking specialist based in NC, working with Granite Telecommunications — one of the largest telecom providers in the US. Most of my work comes through WorkMarket, where I've completed 500+ field service projects covering structured cabling, network infrastructure, and security systems. My FieldNation profile is lighter since I mainly operate on WorkMarket, but the experience and quality are the same. On-time, clean install, no callbacks. Looking forward to working together!";
 
         // Виконуємо запит
         await fetch(`https://app.fieldnation.com/v2/workorders/${workOrderId}/messages`, {

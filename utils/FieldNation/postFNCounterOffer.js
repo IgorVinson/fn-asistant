@@ -18,7 +18,8 @@ export async function postFNCounterOffer(
   payType,
   baseHours,
   additionalHours,
-  additionalAmount
+  additionalAmount,
+  counterDate = null
 ) {
   try {
     const cookies = getCookies();
@@ -32,14 +33,18 @@ export async function postFNCounterOffer(
       additionalAmount,
     });
 
+    const intro = "Hey! I'm a low-voltage and networking specialist based in NC, working with Granite Telecommunications — one of the largest telecom providers in the US. Most of my work comes through WorkMarket, where I've completed 500+ field service projects covering structured cabling, network infrastructure, and security systems. My FieldNation profile is lighter since I mainly operate on WorkMarket, but the experience and quality are the same. On-time, clean install, no callbacks. Looking forward to working together!";
+    const notes = counterDate?.start instanceof Date
+      ? `${intro} I have a scheduling conflict with the requested time — would ${counterDate.start.toLocaleString()} work instead?`
+      : `${intro} Looking forward to working on this!`;
+
     const requestBody = {
       technician: { id: CONFIG.PLATFORMS.FIELD_NATION.USER_ID },
       counter: true,
       active: true,
       expiryTime: 0,
       expenses: [],
-      notes:
-        "Hi there! I hope you're doing well. I was wondering if it would be possible to add travel expenses and provide the total payment amount. Thank you so much!",
+      notes,
       pay: {
         type: payType,
         base: {
@@ -52,6 +57,17 @@ export async function postFNCounterOffer(
         },
       },
     };
+
+    if (counterDate?.start instanceof Date) {
+      requestBody.eta = {
+        start: {
+          local: counterDate.start.toISOString(),
+        },
+        hour_estimate: counterDate.durationMinutes
+          ? counterDate.durationMinutes / 60
+          : baseHours,
+      };
+    }
 
     if (travelExpense > 0) {
       requestBody.expenses.push({
