@@ -61,8 +61,11 @@ export async function getFNorderData(url) {
 
         // Calculate pay range properly based on pay type
         let payRange = { min: 0, max: 0 };
-        let payType = "fixed"; // fixed or hourly
+        let payType = "fixed"; // fixed | hourly | blended
         let hourlyRate = 0;
+        // Preserves the raw blended (base + additional) shape so counter offers
+        // can mirror the order's pay exactly instead of flattening to "fixed".
+        let payStructure = null;
         const pay = workOrder.pay;
 
         if (pay.type === 'hourly' || (pay.rate && pay.rate.pay)) {
@@ -74,8 +77,26 @@ export async function getFNorderData(url) {
                 min: Math.round(hourlyRate * 1),
                 max: Math.round(hourlyRate * estHours),
             };
+        } else if (pay.type === 'blended' && pay.base && pay.additional) {
+            // Blended ("combined"): fixed base for N hours + hourly for extra.
+            payType = "blended";
+            payStructure = {
+                type: "blended",
+                base: { units: pay.base.units, amount: pay.base.amount },
+                additional: {
+                    units: pay.additional.units,
+                    amount: pay.additional.amount,
+                },
+            };
+            payRange = pay.range && pay.range.max > 0
+                ? pay.range
+                : {
+                    min: pay.base.amount || 0,
+                    max: (pay.base.amount || 0) +
+                        (pay.additional.units || 0) * (pay.additional.amount || 0),
+                };
         } else if (pay.range && pay.range.min > 0 && pay.range.max > 0) {
-            // Fixed/blended with valid range
+            // Fixed with valid range
             payType = "fixed";
             payRange = pay.range;
         } else if (pay.range) {
@@ -98,6 +119,7 @@ export async function getFNorderData(url) {
             },
             payRange: payRange,
             payType: payType,
+            payStructure: payStructure,
             hourlyRate: hourlyRate,
             estLaborHours: workOrder.schedule.est_labor_hours,
             distance: Math.floor(Number(workOrder.coords.distance)),

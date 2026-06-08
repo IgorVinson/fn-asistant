@@ -107,6 +107,7 @@ export default function normalizeDateFromWO(data) {
       max: data.payRange?.max || parseFloat(data.totalPayment || 0) || (parseFloat(data.hourlyRate || 0) * parseFloat(data.hoursOfWork || data.estLaborHours || 2)),
     },
     payType: data.payType || (data.hourlyRate ? "hourly" : "fixed"),
+    payStructure: data.payStructure || null,
     hourlyRate: data.hourlyRate ? parseFloat(data.hourlyRate) : 0,
     estLaborHours: data.estLaborHours || parseFloat(data.hoursOfWork || 0) || 3, // Default to 3 hours if not specified
     distance: distanceValue,

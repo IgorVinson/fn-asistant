@@ -941,7 +941,9 @@ async function processOrder(orderLink) {
           const counterDetails =
             co.payType === "hourly"
               ? `Rate: $${co.counterRate}/hr × ${co.estHours}hrs = $${co.baseAmount}\nTravel: $${co.travelExpense}`
-              : `Fixed: $${co.baseAmount}\nTravel: $${co.travelExpense}`;
+              : co.payType === "blended" && co.payStructure
+                ? `Combined: $${co.payStructure.base.amount} base + $${co.payStructure.additional.amount}/hr × ${co.payStructure.additional.units}hr\nTravel: $${co.travelExpense}`
+                : `Fixed: $${co.baseAmount}\nTravel: $${co.travelExpense}`;
           telegramBot.sendOrderNotification(
             normalizedData,
             "💰 COUNTER OFFER",
@@ -962,15 +964,17 @@ async function processOrder(orderLink) {
           });
 
           if (!CONFIG.TEST_MODE) {
-            await postFNCounterOffer(
-              normalizedData.id,
-              co.payType === "hourly" ? co.counterRate : co.baseAmount,
-              co.travelExpense,
-              co.payType,
-              co.payType === "hourly" ? co.estHours : 0,
-              0,
-              0
-            );
+            await postFNCounterOffer(normalizedData.id, {
+              payType: co.payType,
+              baseAmount:
+                co.payType === "hourly" ? co.counterRate : co.baseAmount,
+              baseHours: co.payType === "hourly" ? co.estHours : 0,
+              additionalHours: 0,
+              additionalAmount: 0,
+              travelExpense: co.travelExpense,
+              estLaborHours: co.estHours,
+              payStructure: co.payStructure,
+            });
           }
 
           playSound("applied");
@@ -1095,7 +1099,7 @@ async function processOrder(orderLink) {
 <b>✅ Counter Slot:</b> ${counterDateLabel}
 ${normalizedData.platform === "WorkMarket" && !isRealWorkMarketSubmission ? "\n\n<i>WorkMarket alternate date submission will be simulated in TEST mode only.</i>" : ""}
 
-<b>Counter Offer:</b> ${eligibilityResult.counterOffer.payType === "hourly" ? `$${eligibilityResult.counterOffer.counterRate}/hr × ${eligibilityResult.counterOffer.estHours}hrs = $${eligibilityResult.counterOffer.baseAmount}` : `$${eligibilityResult.counterOffer.baseAmount} (fixed)`} + $${eligibilityResult.counterOffer.travelExpense} travel`;
+<b>Counter Offer:</b> ${eligibilityResult.counterOffer.payType === "hourly" ? `$${eligibilityResult.counterOffer.counterRate}/hr × ${eligibilityResult.counterOffer.estHours}hrs = $${eligibilityResult.counterOffer.baseAmount}` : eligibilityResult.counterOffer.payType === "blended" && eligibilityResult.counterOffer.payStructure ? `$${eligibilityResult.counterOffer.payStructure.base.amount} base + $${eligibilityResult.counterOffer.payStructure.additional.amount}/hr × ${eligibilityResult.counterOffer.payStructure.additional.units}hr (combined)` : `$${eligibilityResult.counterOffer.baseAmount} (fixed)`} + $${eligibilityResult.counterOffer.travelExpense} travel`;
 
       telegramBot.bot
         .sendMessage(telegramBot.chatId, telegramMsg, {
@@ -1177,16 +1181,17 @@ ${normalizedData.platform === "WorkMarket" && !isRealWorkMarketSubmission ? "\n\
       if (!CONFIG.TEST_MODE && normalizedData.platform === "FieldNation") {
         try {
           const co = eligibilityResult.counterOffer;
-          await postFNCounterOffer(
-            normalizedData.id,
-            co.payType === "hourly" ? co.counterRate : co.baseAmount,
-            co.travelExpense,
-            co.payType,
-            co.payType === "hourly" ? co.estHours : 0,
-            0,
-            0,
-            slot
-          );
+          await postFNCounterOffer(normalizedData.id, {
+            payType: co.payType,
+            baseAmount: co.payType === "hourly" ? co.counterRate : co.baseAmount,
+            baseHours: co.payType === "hourly" ? co.estHours : 0,
+            additionalHours: 0,
+            additionalAmount: 0,
+            travelExpense: co.travelExpense,
+            estLaborHours: co.estHours,
+            payStructure: co.payStructure,
+            counterDate: slot,
+          });
           pushEvent({
             platform: normalizedData.platform,
             id: normalizedData.id,

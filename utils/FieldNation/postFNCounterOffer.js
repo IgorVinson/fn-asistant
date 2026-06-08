@@ -11,75 +11,117 @@ function getCookies() {
   return cookiesJson.map(cookie => `${cookie.name}=${cookie.value}`).join('; ');
 }
 
-export async function postFNCounterOffer(
-  workOrderId,
-  baseAmount,
-  travelExpense,
+// FieldNation counter offers carry the proposed time in
+// `schedule.service_window.start.local` as separate { date, time } wall-clock
+// fields in the work order's timezone — NOT an `eta` ISO string, and NOT UTC.
+// The availability engine builds slot Dates in local time, so we serialize the
+// local components directly (matches the payload FN's own UI sends).
+function toLocalDateTimeParts(date) {
+  const pad = n => String(n).padStart(2, '0');
+  return {
+    date: `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`,
+    time: `${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`,
+  };
+}
+
+const COUNTER_INTRO =
+  "Hey! I'm a low-voltage and networking specialist based in NC, working with Granite Telecommunications — one of the largest telecom providers in the US. Most of my work comes through WorkMarket, where I've completed 500+ field service projects covering structured cabling, network infrastructure, and security systems. My FieldNation profile is lighter since I mainly operate on WorkMarket, but the experience and quality are the same. On-time, clean install, no callbacks. Looking forward to working together!";
+
+// Pure builder for the FieldNation counter-offer request body. Kept separate
+// from the network call so it can be unit-tested (mirrors the WorkMarket side).
+export function buildFNCounterOfferRequestBody({
   payType,
+  baseAmount,
+  travelExpense = 0,
   baseHours,
-  additionalHours,
-  additionalAmount,
-  counterDate = null
-) {
+  additionalHours = 0,
+  additionalAmount = 0,
+  counterDate = null,
+  estLaborHours = null,
+  payStructure = null,
+  notes = null,
+}) {
+  let pay;
+  // Blended ("combined") orders must be mirrored exactly so the counter keeps
+  // the same pay shape the buyer posted (base + additional), per requirements.
+  if (payType === 'blended' && payStructure?.base && payStructure?.additional) {
+    pay = {
+      type: 'blended',
+      base: {
+        units: parseInt(payStructure.base.units),
+        amount: parseFloat(payStructure.base.amount),
+      },
+      additional: {
+        units: parseInt(payStructure.additional.units),
+        amount: parseFloat(payStructure.additional.amount),
+      },
+    };
+  } else {
+    pay = {
+      type: payType,
+      base: {
+        units: parseInt(baseHours) || 0,
+        amount: parseFloat(baseAmount),
+      },
+      additional: {
+        units: parseInt(additionalHours) || 0,
+        amount: parseFloat(additionalAmount) || 0,
+      },
+    };
+  }
+
+  const resolvedNotes =
+    notes ||
+    (counterDate?.start instanceof Date
+      ? `${COUNTER_INTRO} I have a scheduling conflict with the requested time — would ${counterDate.start.toLocaleString()} work instead?`
+      : `${COUNTER_INTRO} Looking forward to working on this!`);
+
+  const requestBody = {
+    technician: { id: CONFIG.PLATFORMS.FIELD_NATION.USER_ID },
+    counter: true,
+    active: true,
+    expiryTime: 0,
+    expenses: [],
+    notes: resolvedNotes,
+    pay,
+  };
+
+  if (counterDate?.start instanceof Date) {
+    const { date, time } = toLocalDateTimeParts(counterDate.start);
+    requestBody.schedule = {
+      service_window: {
+        mode: 'exact',
+        start: {
+          local: { date, time },
+        },
+      },
+    };
+  }
+
+  if (travelExpense > 0) {
+    requestBody.expenses.push({
+      description: 'travel',
+      amount: parseFloat(travelExpense),
+      quantity: 1,
+      category: {
+        uid: 2,
+        id: 2,
+      },
+    });
+  }
+
+  return requestBody;
+}
+
+export async function postFNCounterOffer(workOrderId, options = {}) {
   try {
     const cookies = getCookies();
     console.log('Starting counter offer with params:', {
       workOrderId,
-      baseAmount,
-      travelExpense,
-      payType,
-      baseHours,
-      additionalHours,
-      additionalAmount,
+      ...options,
     });
 
-    const intro = "Hey! I'm a low-voltage and networking specialist based in NC, working with Granite Telecommunications — one of the largest telecom providers in the US. Most of my work comes through WorkMarket, where I've completed 500+ field service projects covering structured cabling, network infrastructure, and security systems. My FieldNation profile is lighter since I mainly operate on WorkMarket, but the experience and quality are the same. On-time, clean install, no callbacks. Looking forward to working together!";
-    const notes = counterDate?.start instanceof Date
-      ? `${intro} I have a scheduling conflict with the requested time — would ${counterDate.start.toLocaleString()} work instead?`
-      : `${intro} Looking forward to working on this!`;
-
-    const requestBody = {
-      technician: { id: CONFIG.PLATFORMS.FIELD_NATION.USER_ID },
-      counter: true,
-      active: true,
-      expiryTime: 0,
-      expenses: [],
-      notes,
-      pay: {
-        type: payType,
-        base: {
-          units: parseInt(baseHours),
-          amount: parseFloat(baseAmount),
-        },
-        additional: {
-          units: parseInt(additionalHours),
-          amount: parseFloat(additionalAmount),
-        },
-      },
-    };
-
-    if (counterDate?.start instanceof Date) {
-      requestBody.eta = {
-        start: {
-          local: counterDate.start.toISOString(),
-        },
-        hour_estimate: counterDate.durationMinutes
-          ? counterDate.durationMinutes / 60
-          : baseHours,
-      };
-    }
-
-    if (travelExpense > 0) {
-      requestBody.expenses.push({
-        description: 'travel',
-        amount: parseFloat(travelExpense),
-        quantity: 1,
-        category: {
-          uid: 2,
-          id: 2,
-        },
-      });
-    }
+    const requestBody = buildFNCounterOfferRequestBody(options);
 
     console.log(
       'Counter offer request body:',

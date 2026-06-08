@@ -369,26 +369,52 @@ function calculateCounterOffer(workOrder) {
   }
 
   // Determine pay type from order data
-  const isHourly = workOrder.payType === "hourly" || workOrder.hourlyRate > 0;
+  const isBlended =
+    workOrder.payType === "blended" &&
+    workOrder.payStructure?.base &&
+    workOrder.payStructure?.additional;
+  const isHourly =
+    !isBlended &&
+    (workOrder.payType === "hourly" || workOrder.hourlyRate > 0);
 
   let counterRate;
   let counterTotal;
+  let payType;
 
-  if (isHourly) {
+  let counterPayStructure = null;
+  if (isBlended) {
+    // Keep the buyer's blended SHAPE (type + base/additional units), but apply
+    // our rate to the amounts. base.amount is a total for base.units hours;
+    // additional.amount is a per-hour rate.
+    payType = "blended";
+    const { base, additional } = workOrder.payStructure;
+    const baseUnits = parseInt(base.units) || 0;
+    const addUnits = parseInt(additional.units) || 0;
+    const theirBaseRate = baseUnits ? base.amount / baseUnits : 0;
+    const theirAddRate = parseFloat(additional.amount) || 0;
+    const theirRate = Math.max(theirBaseRate, theirAddRate);
+    counterRate = Math.max(theirRate, MIN_HOURLY_RATE);
+    counterPayStructure = {
+      type: "blended",
+      base: { units: baseUnits, amount: Math.round(counterRate * baseUnits) },
+      additional: { units: addUnits, amount: counterRate },
+    };
+    counterTotal = counterPayStructure.base.amount + addUnits * counterRate;
+  } else if (isHourly) {
+    payType = "hourly";
     const theirRate = workOrder.hourlyRate || workOrder.payRange.min || 0;
     counterRate = Math.max(theirRate, MIN_HOURLY_RATE);
     counterTotal = Math.round(counterRate * estHours);
   } else {
+    payType = "fixed";
     const theirAmount = workOrder.payRange.max || 0;
     const minTotal = MIN_HOURLY_RATE * estHours;
     counterTotal = Math.max(theirAmount, minTotal);
     counterRate = Math.round(counterTotal / estHours);
   }
 
-  let payType = isHourly ? "hourly" : "fixed";
-
   logger.info(
-    `Counter offer generated: Rate: $${counterRate}/hr × ${estHours}hrs = $${counterTotal} + Travel: $${travelExpense} (distance ${workOrder.distance}mi, effective ${effectiveDistance}mi)`,
+    `Counter offer generated: Type: ${payType}, Rate: $${counterRate}/hr × ${estHours}hrs = $${counterTotal} + Travel: $${travelExpense} (distance ${workOrder.distance}mi, effective ${effectiveDistance}mi)`,
     workOrder.platform,
     workOrder.id
   );
@@ -400,6 +426,8 @@ function calculateCounterOffer(workOrder) {
     baseAmount: counterTotal,
     estHours: estHours,
     travelExpense: travelExpense,
+    // Rate-adjusted blended shape the FieldNation poster mirrors into pay.
+    payStructure: counterPayStructure,
   };
 }
 
