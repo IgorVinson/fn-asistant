@@ -569,7 +569,7 @@ async function applyForJob(orderLink, startDateAndTime, estLaborHours, id) {
     console.log(
       `🧪 TEST_MODE: Application for ${platform} order ${id} suppressed.`
     );
-    return;
+    return { ok: true, applied: false, testMode: true };
   }
 
   try {
@@ -583,6 +583,7 @@ async function applyForJob(orderLink, startDateAndTime, estLaborHours, id) {
         platform,
         id
       );
+      return { ok: true, applied: true };
     } else if (platform === "FieldNation" && !CONFIG.FIELDNATION_ENABLED) {
       console.log("⏭️ FieldNation application skipped (platform disabled)");
       logger.info(
@@ -590,6 +591,7 @@ async function applyForJob(orderLink, startDateAndTime, estLaborHours, id) {
         platform,
         id
       );
+      return { ok: true, applied: false, skipped: true };
     }
 
     if (platform === "WorkMarket" && CONFIG.WORKMARKET_ENABLED) {
@@ -606,6 +608,7 @@ async function applyForJob(orderLink, startDateAndTime, estLaborHours, id) {
         platform,
         id
       );
+      return { ok: true, applied: true };
     } else if (platform === "WorkMarket" && !CONFIG.WORKMARKET_ENABLED) {
       console.log("⏭️ WorkMarket application skipped (platform disabled)");
       logger.info(
@@ -613,11 +616,15 @@ async function applyForJob(orderLink, startDateAndTime, estLaborHours, id) {
         platform,
         id
       );
+      return { ok: true, applied: false, skipped: true };
     }
+
+    return { ok: true, applied: false, skipped: true };
   } catch (error) {
     console.error("Error applying for the job:", error);
     // Play error sound on failure
     playSound("error");
+    return { ok: false, applied: false, error };
   }
 }
 
@@ -853,31 +860,67 @@ async function processOrder(orderLink) {
         normalizedData.id
       );
 
-      telegramBot.sendOrderNotification(
-        normalizedData,
-        "✅ APPLIED",
-        "Order meets all criteria",
-        orderLink
-      );
-
-      const appStatus = CONFIG.TEST_MODE ? "info" : "success";
-      const appMsg = CONFIG.TEST_MODE
-        ? "TEST: Matches criteria (not applied)"
-        : "Applied for job (Criteria Met)";
-      pushEvent({
-        platform: normalizedData.platform,
-        id: normalizedData.id,
-        title: normalizedData.title,
-        status: appStatus,
-        message: appMsg,
-      });
-
-      await applyForJob(
+      // Submit the application FIRST, then notify based on the real outcome.
+      // Notifying before the request (or while swallowing its errors) is what
+      // produced false "✅ APPLIED" messages when the apply never went through.
+      const applyResult = await applyForJob(
         orderLink,
         normalizedData.time,
         normalizedData.estLaborHours,
         normalizedData.id
       );
+
+      if (applyResult?.testMode) {
+        telegramBot.sendOrderNotification(
+          normalizedData,
+          "🧪 TEST",
+          "Matches criteria (not applied)",
+          orderLink
+        );
+        pushEvent({
+          platform: normalizedData.platform,
+          id: normalizedData.id,
+          title: normalizedData.title,
+          status: "info",
+          message: "TEST: Matches criteria (not applied)",
+        });
+      } else if (applyResult?.applied) {
+        telegramBot.sendOrderNotification(
+          normalizedData,
+          "✅ APPLIED",
+          "Order meets all criteria",
+          orderLink
+        );
+        pushEvent({
+          platform: normalizedData.platform,
+          id: normalizedData.id,
+          title: normalizedData.title,
+          status: "success",
+          message: "Applied for job (Criteria Met)",
+        });
+      } else {
+        const failReason = applyResult?.skipped
+          ? "Application skipped (platform disabled)"
+          : `Application failed: ${applyResult?.error?.message || "unknown error"}`;
+        logger.error(
+          `Action: Direct Application FAILED - ${failReason}`,
+          normalizedData.platform,
+          normalizedData.id
+        );
+        telegramBot.sendOrderNotification(
+          normalizedData,
+          "⚠️ APPLY FAILED",
+          failReason,
+          orderLink
+        );
+        pushEvent({
+          platform: normalizedData.platform,
+          id: normalizedData.id,
+          title: normalizedData.title,
+          status: applyResult?.skipped ? "info" : "error",
+          message: failReason,
+        });
+      }
     } else if (eligibilityResult.reason === "OUTSIDE_WORKING_HOURS") {
       // Do not send counter-offer for jobs outside working hours
       logger.info(

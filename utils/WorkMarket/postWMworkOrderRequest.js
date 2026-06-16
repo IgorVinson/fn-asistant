@@ -1,14 +1,26 @@
 import fs from "fs";
 import path from "path";
+import { fileURLToPath } from "url";
 
-const cookiesFilePath = path.resolve("utils", "WorkMarket", "cookies.json");
+// Get the directory name properly in ES modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Mirror the counter-offer cookie resolution: prefer fresh auto-login cookies,
+// fall back to manually saved cookies.
+const cookiesFilePaths = [
+  path.join(__dirname, "autoCookies.json"),
+  path.join(__dirname, "cookies.json"),
+];
 
 // Function to get cookies
 function getCookies() {
   try {
-    if (!fs.existsSync(cookiesFilePath)) {
-      throw new Error("Cookies file not found!");
-    }
+    const cookiesFilePath = cookiesFilePaths.find(filePath =>
+      fs.existsSync(filePath)
+    );
+
+    if (!cookiesFilePath) throw new Error("Cookies file not found!");
 
     const cookiesJson = JSON.parse(fs.readFileSync(cookiesFilePath, "utf-8"));
     if (!Array.isArray(cookiesJson)) {
@@ -85,19 +97,53 @@ export async function postWMworkOrderRequest(url, date, hours, workOrderId) {
         },
         body: `_tk=${CSRFToken}&note=&tieredPricingAccepted=false&isform=true`,
         method: "POST",
+        // A successful apply responds with a 302 redirect to the assignment
+        // details page. Without manual redirect handling, fetch silently
+        // follows the redirect to a 200 page and we can never tell whether
+        // the apply actually went through.
+        redirect: "manual",
       }
     );
 
-    // Check response
-    if (!response.ok) {
-      const errorText = await response.text();
+    const responseText = await response.text();
+    const responseLocation = response.headers.get("location");
+
+    // Anything that is not a 302 redirect means WorkMarket re-rendered the
+    // apply form / login page (HTTP 200) instead of accepting the application.
+    if (response.status !== 302) {
       throw new Error(
-        `Request failed with status ${response.status}: ${errorText}`
+        `Apply request failed with status ${response.status}: ${responseText.slice(
+          0,
+          500
+        )}`
       );
     }
 
-    console.log("Work order request sent successfully");
+    const location = responseLocation || "";
+    const errorCode = location.match(/error=(\d+)/)?.[1] ?? null;
+    const redirectedToDetails = location.includes(
+      `/assignments/details/${workOrderId}`
+    );
+
+    // A 302 that carries an error code, or that redirects somewhere other than
+    // the assignment details page (e.g. /login), is not a real application.
+    if (errorCode || !redirectedToDetails) {
+      throw new Error(
+        `Apply POST returned 302 but WorkMarket did not confirm the application ` +
+          `(location=${location || "(none)"}${errorCode ? `, error=${errorCode}` : ""})`
+      );
+    }
+
+    console.log(
+      `Work order request sent successfully for work order ${workOrderId} (redirect: ${location})`
+    );
+    return {
+      ok: true,
+      status: response.status,
+      location: responseLocation,
+    };
   } catch (error) {
     console.error("Error sending work order request:", error.message);
+    throw error;
   }
 }
