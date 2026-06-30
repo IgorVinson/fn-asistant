@@ -302,9 +302,19 @@ async function checkAvailabilityNew(workOrder) {
   const shiftedBlock = shiftedResult.block;
   const shiftedIsLast = shiftedResult.isLastBlockOfDay;
   const shiftedEffDurationMin = shiftedResult.effectiveDurationMinutes;
+
+  // The requested window length (only meaningful when the WO is a true window).
+  const requestedWindowMs = workOrder.isRequestedWindow
+    ? Math.max(0, woLatestStart.getTime() - woEarliestStart.getTime()) ||
+      Math.max(0, new Date(workOrder.time.end).getTime() - woEarliestStart.getTime())
+    : 0;
+
   const fitDecision = decideFitAction({
     exactFit: fitResult,
     shiftedFit: shiftedResult,
+    requestedStart: woEarliestStart,
+    isRequestedWindow: Boolean(workOrder.isRequestedWindow),
+    requestedWindowMs,
   });
 
   console.log(`\n=== Availability Fit Check ===`);

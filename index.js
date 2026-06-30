@@ -1112,7 +1112,13 @@ async function processOrder(orderLink) {
     ) {
       // Handle counter-offer with alternative time slot
       const slot = eligibilityResult.counterOffer.counterDate;
-      const slotTimeRange = `${slot.start.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} - ${slot.end.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} (${slot.durationMinutes}min)`;
+      const isSlotWindow =
+        slot.durationMinutes > 0 &&
+        slot.end instanceof Date &&
+        slot.end.getTime() > slot.start.getTime();
+      const slotTimeRange = isSlotWindow
+        ? `${slot.start.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} - ${slot.end.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} (${slot.durationMinutes}min)`
+        : `${slot.start.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`;
       const counterDateLabel = `📆 ${slot.start.toLocaleDateString([], { weekday: "short", month: "short", day: "numeric" })} — ${slotTimeRange}`;
       const isRealWorkMarketSubmission =
         normalizedData.platform === "WorkMarket" && !CONFIG.TEST_MODE;
@@ -1185,8 +1191,10 @@ ${normalizedData.platform === "WorkMarket" && !isRealWorkMarketSubmission ? "\n\
               payType: co.payType,
               baseAmount: co.baseAmount,
               travelExpense: co.travelExpense,
-              rescheduleOption: slot?.end ? "window" : "time",
-              isRequestedWindow: true,
+              rescheduleOption: normalizedData.isRequestedWindow
+                ? "window"
+                : "time",
+              isRequestedWindow: Boolean(normalizedData.isRequestedWindow),
               note: "",
             }
           );

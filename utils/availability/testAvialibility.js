@@ -12,7 +12,7 @@ const { fetchCalendarBusy } = await import("./fetchCalendarBusy.js");
 const { default: logger } = await import("../logger.js");
 logger.log = () => {};
 
-const date = "2026-06-22";
+const date = "2026-06-30";
 const daysToCheck = 5;
 
 // ── helpers ─────────────────────────────────────────────────────────────
