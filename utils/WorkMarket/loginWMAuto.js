@@ -52,12 +52,18 @@ export async function loginWMAuto(
 
     // Step 2: Enter email
     console.log("👤 Entering email...");
-    await page.waitForSelector("#login-email", { visible: true, timeout: 10000 });
+    await page.waitForSelector("#login-email", {
+      visible: true,
+      timeout: 10000,
+    });
     await page.type("#login-email", email, { delay: Math.random() * 100 });
 
     // Step 3: Enter password
     console.log("🔐 Entering password...");
-    await page.waitForSelector("#login-password", { visible: true, timeout: 10000 });
+    await page.waitForSelector("#login-password", {
+      visible: true,
+      timeout: 10000,
+    });
     await page.type("#login-password", password, {
       delay: Math.random() * 100,
     });
@@ -117,19 +123,6 @@ export async function loginWMAuto(
         })),
       };
     });
-
-    console.log(
-      "🔍 Found sdf-input elements:",
-      JSON.stringify(pageElements.sdfInputs, null, 2)
-    );
-    console.log(
-      "🔍 Found input elements:",
-      JSON.stringify(pageElements.inputs, null, 2)
-    );
-    console.log(
-      "🔍 Found button elements:",
-      JSON.stringify(pageElements.buttons, null, 2)
-    );
 
     const codeInputSelectors = [
       'sdf-input[name="tfaToken"]',
@@ -415,7 +408,10 @@ export async function loginWMAuto(
         await saveCookiesCustom(page, "WorkMarket", "fallback-cookies.json");
         console.log("✅ Cookies saved to fallback location");
       } catch (fallbackError) {
-        console.error("❌ Failed to save cookies to fallback location:", fallbackError.message);
+        console.error(
+          "❌ Failed to save cookies to fallback location:",
+          fallbackError.message
+        );
       }
     }
 
@@ -434,7 +430,10 @@ export async function loginWMAuto(
         console.log("✅ Cookies saved from error state");
       }
     } catch (cookieError) {
-      console.error("❌ Could not save cookies during error:", cookieError.message);
+      console.error(
+        "❌ Could not save cookies during error:",
+        cookieError.message
+      );
     }
 
     // Take screenshot on error for debugging
@@ -442,7 +441,10 @@ export async function loginWMAuto(
       await page.screenshot({ path: "debug-error.png", fullPage: true });
       console.log("📸 Error screenshot saved as debug-error.png");
     } catch (screenshotError) {
-      console.log("⚠️ Could not take error screenshot:", screenshotError.message);
+      console.log(
+        "⚠️ Could not take error screenshot:",
+        screenshotError.message
+      );
     }
 
     return {

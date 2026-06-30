@@ -214,19 +214,6 @@ export async function waitForWMcode(
           // Get email content
           const body = getMessageBody(msg.data.payload);
 
-          console.log(`📧 Checking email ID: ${message.id}`);
-          console.log(
-            `📧 Email subject: ${
-              msg.data.payload.headers?.find(h => h.name === "Subject")
-                ?.value || "No subject"
-            }`
-          );
-          console.log(
-            `📧 Email content preview: ${
-              body?.substring(0, 200) || "No content"
-            }...`
-          );
-
           if (body) {
             // Extract the verification code using regex
             const code = extractVerificationCode(body);

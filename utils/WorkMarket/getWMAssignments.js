@@ -2,6 +2,7 @@ import fs from "fs";
 import path from "path";
 import puppeteer from "puppeteer";
 import { CONFIG } from "../../config.js";
+import logger from "../logger.js";
 
 const cookiesFilePath = path.resolve("utils", "WorkMarket", "autoCookies.json");
 const ASSIGNMENTS_URL = "https://www.workmarket.com/assignments#status/active/managing";
@@ -34,7 +35,7 @@ function getCookies() {
     if (!cookies) throw new Error("No valid cookies found in the file");
     return cookies;
   } catch (error) {
-    console.error(`Error reading cookies: ${error.message}`);
+    logger.error(`Error reading cookies: ${error.message}`, "WorkMarket");
     return null;
   }
 }
@@ -94,11 +95,11 @@ function extractAssignmentsFromApi(data) {
 async function tryDirectFetch() {
   const cookies = getCookies();
   if (!cookies) {
-    console.error("[WM] tryDirectFetch: no cookies available — session may be expired or cookies file missing");
+    logger.error("tryDirectFetch: no cookies available — session may be expired or cookies file missing", "WorkMarket");
     return null;
   }
 
-  console.log("[WM] tryDirectFetch: cookies loaded, attempting API fetch…");
+  logger.debug("tryDirectFetch: cookies loaded, attempting API fetch…", "WorkMarket");
 
   if (cachedApiUrl) {
     try {
@@ -119,15 +120,15 @@ async function tryDirectFetch() {
         const data = await response.json();
         const assignments = extractAssignmentsFromApi(data);
         if (assignments.length > 0) {
-          console.log(`[WM] tryDirectFetch (cached API): found ${assignments.length} assignments`);
+          logger.debug(`tryDirectFetch (cached API): found ${assignments.length} assignments`, "WorkMarket");
           return assignments;
         }
-        console.log(`[WM] tryDirectFetch (cached API): response ok but 0 assignments extracted — session may be expired`);
+        logger.debug(`tryDirectFetch (cached API): response ok but 0 assignments extracted — session may be expired`, "WorkMarket");
       } else {
-        console.log(`[WM] tryDirectFetch (cached API): HTTP ${response.status} ${response.statusText} — cookies likely expired`);
+        logger.debug(`tryDirectFetch (cached API): HTTP ${response.status} ${response.statusText} — cookies likely expired`, "WorkMarket");
       }
     } catch (err) {
-      console.error(`[WM] tryDirectFetch (cached API): request failed — ${err.message}`);
+      logger.error(`tryDirectFetch (cached API): request failed — ${err.message}`, "WorkMarket");
     }
   }
 
@@ -149,18 +150,18 @@ async function tryDirectFetch() {
       const html = await response.text();
       const assignments = extractAssignmentsFromHtml(html);
       if (assignments.length > 0) {
-        console.log(`[WM] tryDirectFetch (HTML): found ${assignments.length} assignments`);
+        logger.debug(`tryDirectFetch (HTML): found ${assignments.length} assignments`, "WorkMarket");
         return assignments;
       }
-      console.log(`[WM] tryDirectFetch (HTML): page fetched but 0 assignments extracted — session may be expired or page is login redirect`);
+      logger.debug(`tryDirectFetch (HTML): page fetched but 0 assignments extracted — session may be expired or page is login redirect`, "WorkMarket");
     } else {
-      console.log(`[WM] tryDirectFetch (HTML): HTTP ${response.status} ${response.statusText} — cookies likely expired`);
+      logger.debug(`tryDirectFetch (HTML): HTTP ${response.status} ${response.statusText} — cookies likely expired`, "WorkMarket");
     }
   } catch (err) {
-    console.error(`[WM] tryDirectFetch (HTML): request failed — ${err.message}`);
+    logger.error(`tryDirectFetch (HTML): request failed — ${err.message}`, "WorkMarket");
   }
 
-  console.log("[WM] tryDirectFetch: all methods failed — cookies are likely expired, need relogin");
+  logger.debug("tryDirectFetch: all methods failed — cookies are likely expired, need relogin", "WorkMarket");
   return null;
 }
 
@@ -218,7 +219,7 @@ async function fetchAssignmentHours(assignmentIds) {
 
           return { id: id, hoursOfWork: hoursOfWork };
         } catch (err) {
-          console.error(`[WM] fetchAssignmentHours: failed for ${id} — ${err.message}`);
+          logger.error(`fetchAssignmentHours: failed for ${id} — ${err.message}`, "WorkMarket");
           return null;
         }
       })
@@ -305,39 +306,39 @@ export async function fetchWMAssignments() {
   try {
     assignments = await tryDirectFetch();
   } catch (err) {
-    console.error(`[WM] fetchWMAssignments: tryDirectFetch threw — ${err.message}`);
+    logger.error(`fetchWMAssignments: tryDirectFetch threw — ${err.message}`, "WorkMarket");
   }
 
   if (!assignments || assignments.length === 0) {
-    console.log("[WM] fetchWMAssignments: direct fetch empty, falling back to Puppeteer…");
+    logger.debug("fetchWMAssignments: direct fetch empty, falling back to Puppeteer…", "WorkMarket");
     try {
       assignments = await fetchViaPuppeteer();
       if (assignments && assignments.length > 0) {
-        console.log(`[WM] fetchWMAssignments: Puppeteer found ${assignments.length} assignments`);
+        logger.debug(`fetchWMAssignments: Puppeteer found ${assignments.length} assignments`, "WorkMarket");
       } else {
-        console.log("[WM] fetchWMAssignments: Puppeteer also returned 0 assignments");
+        logger.debug("fetchWMAssignments: Puppeteer also returned 0 assignments", "WorkMarket");
       }
     } catch (error) {
-      console.error(`[WM] fetchWMAssignments (Puppeteer): ${error.message}`);
+      logger.error(`fetchWMAssignments (Puppeteer): ${error.message}`, "WorkMarket");
     }
   }
 
   if (!assignments || assignments.length === 0) {
-    console.error("fetchWMAssignments: no assignments found from any source — cookies are likely expired, run relogin");
+    logger.error("fetchWMAssignments: no assignments found from any source — cookies are likely expired, run relogin", "WorkMarket");
     throw new WMAuthError("WM assignments fetch returned empty from all sources — cookies likely expired");
   }
 
-  console.log(`[WM] fetchWMAssignments: raw assignments received: ${JSON.stringify(assignments.map(a => ({ id: a.id, title: a.title, startDate: a.startDate, endDate: a.endDate, pay: a.pay })))}`);
+  logger.debug(`fetchWMAssignments: raw assignments received: ${JSON.stringify(assignments.map(a => ({ id: a.id, title: a.title, startDate: a.startDate, endDate: a.endDate, pay: a.pay })))}`, "WorkMarket");
 
   const assignmentIds = assignments.map(a => a.id);
   const hoursMap = await fetchAssignmentHours(assignmentIds);
   const hoursWithCount = Object.values(hoursMap).filter(v => v !== null).length;
-  console.log(`[WM] fetchWMAssignments: fetched hoursOfWork for ${hoursWithCount}/${assignmentIds.length} assignments`);
+  logger.debug(`fetchWMAssignments: fetched hoursOfWork for ${hoursWithCount}/${assignmentIds.length} assignments`, "WorkMarket");
 
   const busyBlocks = assignments
     .map(a => {
       if (!a.startDate || !(a.startDate instanceof Date) || isNaN(a.startDate.getTime())) {
-        console.log(`[WM] fetchWMAssignments: skipping assignment "${a.title || a.id}" — missing or invalid startDate: ${a.startDate}`);
+        logger.debug(`fetchWMAssignments: skipping assignment "${a.title || a.id}" — missing or invalid startDate: ${a.startDate}`, "WorkMarket");
         return null;
       }
       // WM's scheduled_date_from/through is a START window (earliest start - latest start),
@@ -349,7 +350,7 @@ export async function fetchWMAssignments() {
           : earliestStart;
       const hours = hoursMap[a.id] || CONFIG.TIME.DEFAULT_LABOR_HOURS;
       const end = new Date(latestStart.getTime() + hours * 60 * 60 * 1000);
-      console.log(`[WM] fetchWMAssignments: mapping "${a.title || a.id}" earliestStart=${earliestStart.toISOString()} latestStart=${latestStart.toISOString()} end=${end.toISOString()} (hours: ${hoursMap[a.id] ?? 'default'})`);
+      logger.debug(`fetchWMAssignments: mapping "${a.title || a.id}" earliestStart=${earliestStart.toISOString()} latestStart=${latestStart.toISOString()} end=${end.toISOString()} (hours: ${hoursMap[a.id] ?? 'default'})`, "WorkMarket");
       return {
         start: earliestStart,
         end: end,

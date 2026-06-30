@@ -1,6 +1,6 @@
 export const CONFIG = {
   // Platform configuration
-  TEST_MODE: false, // If true, agent will not perform destructive/real actions
+  TEST_MODE: true, // If true, agent will not perform destructive/real actions
   FIELDNATION_ENABLED: true, // Set to false to disable FieldNation applications
   WORKMARKET_ENABLED: true, // Set to false to disable WorkMarket applications
   APPLICATION_MODE: "all_companies", // "granite_only" | "all_companies" | "disabled"
@@ -13,7 +13,7 @@ export const CONFIG = {
   RATES: {
     BASE_HOURLY_RATE: 50, // Minimum desired hourly rate
     BASE_HOURLY_RATE_WORKMARKET: 50, // Minimum desired hourly rate
-    BASE_HOURLY_RATE_FIELDNATION: 55, // Minimum desired hourly rate
+    BASE_HOURLY_RATE_FIELDNATION: 50, // Minimum desired hourly rate
     MIN_PAY_THRESHOLD_WORKMARKET: 150, // Minimum total pay for WorkMarket jobs
     MIN_PAY_THRESHOLD_FIELDNATION: 150, // Minimum total pay for FieldNation jobs
     TRAVEL_RATE: 30, // Rate per hour of travel
@@ -34,7 +34,7 @@ export const CONFIG = {
   TIME: {
     DEFAULT_LABOR_HOURS: 2, // Default estimated labor hours if not specified
     MIN_HOURS_BETWEEN_JOBS: 0, // Minimum hours required between jobs
-    WORK_START_TIME: "10:00", // Earliest time to accept jobs
+    WORK_START_TIME: "9:00", // Earliest time to accept jobs
     WORK_END_TIME: "20:00", // Latest time to accept jobs
     BUFFER_MINUTES: 0, // Buffer time between jobs
     LATEST_COUNTER_START_TIME: "14:00", // Latest same-day counter slot start time
@@ -80,3 +80,10 @@ export const CONFIG = {
     PLATFORM_NAME: "Unknown",
   },
 };
+
+// Logging: controls how much is printed to the CONSOLE.
+// "error" | "warn" | "info" | "debug" — anything at or above the level prints.
+// The log FILE always receives every level regardless of this setting.
+// Set to "debug" to see the verbose scraping/session chatter; "info" (default)
+// keeps the console focused on order decisions; "warn" for near-silent.
+LOG_LEVEL: process.env.LOG_LEVEL || "info";

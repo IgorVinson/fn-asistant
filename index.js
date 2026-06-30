@@ -19,6 +19,8 @@ import logger from "./utils/logger.js";
 import normalizeDateFromWO from "./utils/normalizedDateFromWO.js";
 import playSound from "./utils/playSound.js";
 import { saveReplay } from "./utils/saveReplay.js";
+import { getAvailableBlocks } from "./utils/availability/getAvailableBlocks.js";
+import { getWorkOrderLocalDate } from "./utils/isEligibleForApplication.js";
 import telegramBot from "./utils/telegram/telegramBot.js";
 import { getWMorderData } from "./utils/WorkMarket/getWMorderData.js";
 import { loginWMAuto } from "./utils/WorkMarket/loginWMAuto.js";
@@ -503,10 +505,10 @@ async function periodicCheck() {
     try {
       const lastEmailBody = await getLastUnreadEmail(auth, gmail);
       if (lastEmailBody) {
-        console.log("Email body received.");
+        logger.debug("Email body received.");
         const orderLink = extractOrderLink(lastEmailBody);
         if (orderLink) {
-          console.log("Order link extracted:", orderLink);
+          logger.debug(`Order link extracted: ${orderLink}`);
           await processOrder(orderLink);
 
           // Add a delay to ensure sounds can finish playing
@@ -1325,7 +1327,40 @@ ${normalizedData.platform === "WorkMarket" && !isRealWorkMarketSubmission ? "\n\
       });
       playSound("error");
     }
-    await saveReplay(normalizedData, eligibilityResult);
+    let availableBlocks = [];
+    let busyBlocks = [];
+    const snapshot = eligibilityResult._availabilitySnapshot;
+    if (snapshot) {
+      // Eligibility already checked availability — reuse those blocks, no refetch.
+      availableBlocks = snapshot.availableBlocks;
+      busyBlocks = snapshot.busyBlocks;
+      delete eligibilityResult._availabilitySnapshot;
+    } else {
+      // Eligibility short-circuited before the availability check (e.g. WO in
+      // past, payment below min, policy). Fetch once so replay still logs them.
+      try {
+        const woDateString = getWorkOrderLocalDate(normalizedData);
+        const blocks = await getAvailableBlocks({
+          date: woDateString,
+          daysToCheck: 4,
+          withBusy: true,
+        });
+        availableBlocks = blocks.free;
+        busyBlocks = blocks.busy;
+      } catch (blocksError) {
+        logger.error(
+          `Failed to compute available blocks for replay: ${blocksError.message}`,
+          normalizedData.platform,
+          normalizedData.id
+        );
+      }
+    }
+    await saveReplay(
+      normalizedData,
+      eligibilityResult,
+      availableBlocks,
+      busyBlocks
+    );
     return normalizedData;
   } catch (error) {
     console.error("Error processing order:", error);

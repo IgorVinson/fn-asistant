@@ -1,5 +1,6 @@
 import fs from "fs";
 import path from "path";
+import logger from "../logger.js";
 
 const cookiesFilePath = path.resolve("utils", "WorkMarket", "autoCookies.json");
 
@@ -32,7 +33,7 @@ function getCookies() {
 
     return cookies;
   } catch (error) {
-    console.error(`Error reading cookies: ${error.message}`);
+    logger.error(`Error reading cookies: ${error.message}`, "WorkMarket");
     return null; // Return null if any error occurs
   }
 }
@@ -71,7 +72,7 @@ export async function getWMorderData(url) {
   try {
     let cookies = await getCookies();
     if (!cookies) {
-      console.log("No cookies found, requesting new session via invalid data indicator...");
+      logger.debug("No cookies found, requesting new session via invalid data indicator...", "WorkMarket");
       return getInvalidDataSkeleton();
     }
 
@@ -87,7 +88,7 @@ export async function getWMorderData(url) {
 
     // Get the final URL after redirects
     const redirectUrl = initialResponse.url;
-    console.log("Redirected to:", redirectUrl);
+    logger.debug(`Redirected to: ${redirectUrl}`, "WorkMarket");
 
     // Extract work order ID from the redirect URL
     const workOrderIdMatch =
@@ -100,7 +101,7 @@ export async function getWMorderData(url) {
 
     const workOrderId = workOrderIdMatch[1];
     const workMarketUrl = `https://www.workmarket.com/assignments/details/${workOrderId}`;
-    console.log("Fetching from:", workMarketUrl);
+    logger.debug(`Fetching from: ${workMarketUrl}`, "WorkMarket");
 
     // Now fetch the actual WorkMarket page with proper headers
     let response = await fetch(workMarketUrl, {
@@ -131,13 +132,13 @@ export async function getWMorderData(url) {
 
     // If redirected to login, session has expired. Return dummy data to trigger refresh.
     if (body.includes("login?redirectTo=") || body.includes("Please sign in")) {
-      console.log("Session expired, requesting new session via invalid data indicator...");
+      logger.debug("Session expired, requesting new session via invalid data indicator...", "WorkMarket");
       return getInvalidDataSkeleton(workOrderId);
     }
 
     // Save response for debugging
     fs.writeFileSync("debug_response.html", body);
-    console.log("Response saved to debug_response.html");
+    logger.debug("Response saved to debug_response.html", "WorkMarket");
 
     // Extract title from page header
     const titleMatch =
@@ -244,7 +245,7 @@ export async function getWMorderData(url) {
           jsonTotalPayment = pricingJSON.flatPrice || pricingJSON.maxSpendLimit || 0;
         }
       } catch (e) {
-        console.error("Could not parse pricing JSON:", e.message);
+        logger.error(`Could not parse pricing JSON: ${e.message}`, "WorkMarket");
       }
     }
 
@@ -293,10 +294,10 @@ export async function getWMorderData(url) {
         : 0,
     };
 
-    console.log("Extracted data:", data);
+    logger.debug(`Extracted data: ${JSON.stringify(data)}`, "WorkMarket");
     return data;
   } catch (error) {
-    console.error("Error:", error.message);
+    logger.error(`Error extracting WM order data: ${error.message}`, "WorkMarket");
     return null;
   }
 }

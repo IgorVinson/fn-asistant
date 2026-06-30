@@ -17,7 +17,9 @@ function getWorkOrderLocalDate(workOrder) {
 }
 
 function isGraniteCompany(companyName) {
-  return (companyName || "").trim().toLowerCase() === "granite telecommunications";
+  return (
+    (companyName || "").trim().toLowerCase() === "granite telecommunications"
+  );
 }
 
 function getEtMinutes(dateLike) {
@@ -126,9 +128,10 @@ function isWithinWorkingHours(startTime, timeWindow = {}) {
 }
 
 function getBaseHourlyRate(platform) {
-  const platformRate = platform === "FieldNation"
-    ? CONFIG.RATES.BASE_HOURLY_RATE_FIELDNATION
-    : CONFIG.RATES.BASE_HOURLY_RATE_WORKMARKET;
+  const platformRate =
+    platform === "FieldNation"
+      ? CONFIG.RATES.BASE_HOURLY_RATE_FIELDNATION
+      : CONFIG.RATES.BASE_HOURLY_RATE_WORKMARKET;
   return platformRate || CONFIG.RATES.BASE_HOURLY_RATE;
 }
 
@@ -147,13 +150,14 @@ function isPaymentEligible(workOrder) {
   let theirRate = 0;
   if (isHourly) {
     theirRate = workOrder.hourlyRate || workOrder.payRange.min || 0;
-    theirTotal = workOrder.payRange.max || (theirRate * estHours);
+    theirTotal = workOrder.payRange.max || theirRate * estHours;
   } else {
     theirTotal = workOrder.payRange.max || 0;
     theirRate = theirTotal / (estHours || 1);
   }
 
-  const effectiveDistance = (workOrder.distance || 0) + CONFIG.DISTANCE.DISTANCE_PADDING_MILES;
+  const effectiveDistance =
+    (workOrder.distance || 0) + CONFIG.DISTANCE.DISTANCE_PADDING_MILES;
   const TRAVEL_THRESHOLD = CONFIG.DISTANCE.TRAVEL_THRESHOLD_MILES;
   const needsTravelCounter = effectiveDistance > TRAVEL_THRESHOLD;
   const travelDetails = needsTravelCounter
@@ -163,7 +167,11 @@ function isPaymentEligible(workOrder) {
   // RULE 1: If total pay is less than platform minimum -> ALWAYS REJECT (no counter)
   if (CONFIG.ENFORCE_MIN_PAYMENT && theirTotal < platformMinTotal) {
     const details = `Total pay $${theirTotal} is below platform minimum threshold $${platformMinTotal}`;
-    logger.info(`Payment Analysis: ${details} -> REJECT`, workOrder.platform, workOrder.id);
+    logger.info(
+      `Payment Analysis: ${details} -> REJECT`,
+      workOrder.platform,
+      workOrder.id
+    );
     return { isAcceptable: false, issue: "BELOW_MINIMUM", details };
   }
 
@@ -197,7 +205,12 @@ function isPaymentEligible(workOrder) {
 }
 
 function getJobDurationMs(workOrder) {
-  return (workOrder.estLaborHours || CONFIG.TIME.DEFAULT_LABOR_HOURS) * 60 * 60 * 1000;
+  return (
+    (workOrder.estLaborHours || CONFIG.TIME.DEFAULT_LABOR_HOURS) *
+    60 *
+    60 *
+    1000
+  );
 }
 
 function calculateTravelMinutes(workOrder) {
@@ -208,14 +221,20 @@ function calculateTravelMinutes(workOrder) {
 }
 
 function isSameDay(a, b) {
-  return a.getFullYear() === b.getFullYear() &&
+  return (
+    a.getFullYear() === b.getFullYear() &&
     a.getMonth() === b.getMonth() &&
-    a.getDate() === b.getDate();
+    a.getDate() === b.getDate()
+  );
 }
 
 async function checkAvailabilityNew(workOrder) {
   const woDateString = getWorkOrderLocalDate(workOrder);
-  const availableBlocks = await getAvailableBlocks({ date: woDateString, daysToCheck: 4 });
+  const { free: availableBlocks, busy: busyBlocks } = await getAvailableBlocks({
+    date: woDateString,
+    daysToCheck: 4,
+    withBusy: true,
+  });
 
   const travelMin = calculateTravelMinutes(workOrder);
   const durationMs = getJobDurationMs(workOrder);
@@ -226,36 +245,58 @@ async function checkAvailabilityNew(workOrder) {
     ? new Date(workOrder.time.latestStart)
     : new Date(workOrder.time.start);
 
-  const [lcsH, lcsM] = CONFIG.TIME.LATEST_COUNTER_START_TIME.split(":").map(Number);
+  const [lcsH, lcsM] =
+    CONFIG.TIME.LATEST_COUNTER_START_TIME.split(":").map(Number);
   const latestCounterStart = new Date(
     woEarliestStart.getFullYear(),
     woEarliestStart.getMonth(),
     woEarliestStart.getDate(),
-    lcsH, lcsM
+    lcsH,
+    lcsM
   );
 
-  const sameDayBlocks = availableBlocks.filter(b => isSameDay(b.start, woEarliestStart));
-  const nextDayBlocks = availableBlocks.filter(b => !isSameDay(b.start, woEarliestStart));
+  const sameDayBlocks = availableBlocks.filter(b =>
+    isSameDay(b.start, woEarliestStart)
+  );
+  const nextDayBlocks = availableBlocks.filter(
+    b => !isSameDay(b.start, woEarliestStart)
+  );
 
-  const fitResult = findFitBlock(sameDayBlocks, {
-    earliestStart: woEarliestStart,
-    latestStart: woLatestStart,
-    durationMs,
-  }, travelMin);
+  const fitResult = findFitBlock(
+    sameDayBlocks,
+    {
+      earliestStart: woEarliestStart,
+      latestStart: woLatestStart,
+      durationMs,
+    },
+    travelMin
+  );
 
-  const shiftedSameDay = findFitBlock(sameDayBlocks, {
-    earliestStart: woEarliestStart,
-    latestStart: latestCounterStart,
-    durationMs,
-  }, travelMin);
+  const shiftedSameDay = findFitBlock(
+    sameDayBlocks,
+    {
+      earliestStart: woEarliestStart,
+      latestStart: latestCounterStart,
+      durationMs,
+    },
+    travelMin
+  );
 
   let shiftedResult = shiftedSameDay;
-  if (!shiftedSameDay.fits && CONFIG.IS_COUNTER_DAYS && nextDayBlocks.length > 0) {
-    shiftedResult = findFitBlock(nextDayBlocks, {
-      earliestStart: new Date(0),
-      latestStart: new Date(2099, 0, 1),
-      durationMs,
-    }, travelMin);
+  if (
+    !shiftedSameDay.fits &&
+    CONFIG.IS_COUNTER_DAYS &&
+    nextDayBlocks.length > 0
+  ) {
+    shiftedResult = findFitBlock(
+      nextDayBlocks,
+      {
+        earliestStart: new Date(0),
+        latestStart: new Date(2099, 0, 1),
+        durationMs,
+      },
+      travelMin
+    );
   }
 
   const shiftedBlock = shiftedResult.block;
@@ -268,17 +309,35 @@ async function checkAvailabilityNew(workOrder) {
 
   console.log(`\n=== Availability Fit Check ===`);
   console.log(`WO Date: ${woDateString}`);
-  console.log(`WO Window: ${woEarliestStart.toLocaleString()} — ${woLatestStart.toLocaleString()}`);
-  console.log(`Duration: ${estHours}h, Distance: ${workOrder.distance}mi, Travel: ${travelMin}min one-way`);
-  console.log(`Latest same-day counter start: ${latestCounterStart.toLocaleTimeString()}, IS_COUNTER_DAYS: ${CONFIG.IS_COUNTER_DAYS}`);
-  console.log(`Available Blocks (${availableBlocks.length}): ${sameDayBlocks.length} today, ${nextDayBlocks.length} future`);
-  availableBlocks.forEach((b, i) => console.log(`  ${i + 1}. ${b.start.toLocaleString()} — ${b.end.toLocaleString()}`));
-  console.log(`Exact Fit: ${fitResult.fits}${fitResult.block ? ` → ${fitResult.block.start.toLocaleString()} — ${fitResult.block.end.toLocaleString()}` : " — NO FIT"}`);
-  console.log(`Shifted Fit: ${shiftedResult.fits}${shiftedBlock ? ` → ${shiftedBlock.start.toLocaleString()} — ${shiftedBlock.end.toLocaleString()} (eff. ${shiftedEffDurationMin}min${shiftedIsLast ? ", last block — no return" : ", round-trip"})` : " — NO FIT"}`);
-  console.log(`Fit Decision: ${fitDecision.action}${fitDecision.counterDate ? ` → ${fitDecision.counterDate.start.toLocaleString()} — ${fitDecision.counterDate.end.toLocaleString()} (${fitDecision.counterDate.durationMinutes}min start interval)` : ""}`);
+  console.log(
+    `WO Window: ${woEarliestStart.toLocaleString()} — ${woLatestStart.toLocaleString()}`
+  );
+  console.log(
+    `Duration: ${estHours}h, Distance: ${workOrder.distance}mi, Travel: ${travelMin}min one-way`
+  );
+  console.log(
+    `Latest same-day counter start: ${latestCounterStart.toLocaleTimeString()}, IS_COUNTER_DAYS: ${CONFIG.IS_COUNTER_DAYS}`
+  );
+  console.log(
+    `Available Blocks (${availableBlocks.length}): ${sameDayBlocks.length} today, ${nextDayBlocks.length} future`
+  );
+  availableBlocks.forEach((b, i) =>
+    console.log(
+      `  ${i + 1}. ${b.start.toLocaleString()} — ${b.end.toLocaleString()}`
+    )
+  );
+  console.log(
+    `Exact Fit: ${fitResult.fits}${fitResult.block ? ` → ${fitResult.block.start.toLocaleString()} — ${fitResult.block.end.toLocaleString()}` : " — NO FIT"}`
+  );
+  console.log(
+    `Shifted Fit: ${shiftedResult.fits}${shiftedBlock ? ` → ${shiftedBlock.start.toLocaleString()} — ${shiftedBlock.end.toLocaleString()} (eff. ${shiftedEffDurationMin}min${shiftedIsLast ? ", last block — no return" : ", round-trip"})` : " — NO FIT"}`
+  );
+  console.log(
+    `Fit Decision: ${fitDecision.action}${fitDecision.counterDate ? ` → ${fitDecision.counterDate.start.toLocaleString()} — ${fitDecision.counterDate.end.toLocaleString()} (${fitDecision.counterDate.durationMinutes}min start interval)` : ""}`
+  );
   console.log(`================================\n`);
 
-  return { fitResult, shiftedResult, fitDecision };
+  return { fitResult, shiftedResult, fitDecision, availableBlocks, busyBlocks };
 }
 
 // Find free time slots on a given day based on busy blocks
@@ -288,10 +347,18 @@ function findFreeSlots(workOrderDate, busyBlocks, minDurationMinutes = 60) {
   const [weH, weM] = CONFIG.TIME.WORK_END_TIME.split(":").map(Number);
 
   const dayStart = new Date(
-    workOrderDate.getFullYear(), workOrderDate.getMonth(), workOrderDate.getDate(), wsH, wsM
+    workOrderDate.getFullYear(),
+    workOrderDate.getMonth(),
+    workOrderDate.getDate(),
+    wsH,
+    wsM
   ).getTime();
   const dayEnd = new Date(
-    workOrderDate.getFullYear(), workOrderDate.getMonth(), workOrderDate.getDate(), weH, weM
+    workOrderDate.getFullYear(),
+    workOrderDate.getMonth(),
+    workOrderDate.getDate(),
+    weH,
+    weM
   ).getTime();
 
   // Sort busy blocks by start time and merge overlapping ones
@@ -304,7 +371,10 @@ function findFreeSlots(workOrderDate, busyBlocks, minDurationMinutes = 60) {
     if (merged.length === 0 || block.start > merged[merged.length - 1].end) {
       merged.push({ ...block });
     } else {
-      merged[merged.length - 1].end = Math.max(merged[merged.length - 1].end, block.end);
+      merged[merged.length - 1].end = Math.max(
+        merged[merged.length - 1].end,
+        block.end
+      );
     }
   }
 
@@ -315,7 +385,10 @@ function findFreeSlots(workOrderDate, busyBlocks, minDurationMinutes = 60) {
   for (const block of merged) {
     const gapStart = cursor + BUFFER;
     const gapEnd = block.start - BUFFER;
-    if (gapEnd > gapStart && (gapEnd - gapStart) >= minDurationMinutes * 60 * 1000) {
+    if (
+      gapEnd > gapStart &&
+      gapEnd - gapStart >= minDurationMinutes * 60 * 1000
+    ) {
       freeSlots.push({
         start: new Date(gapStart),
         end: new Date(gapEnd),
@@ -327,7 +400,10 @@ function findFreeSlots(workOrderDate, busyBlocks, minDurationMinutes = 60) {
 
   // Check gap after last event until end of work day
   const finalGapStart = cursor + BUFFER;
-  if (finalGapStart < dayEnd && (dayEnd - finalGapStart) >= minDurationMinutes * 60 * 1000) {
+  if (
+    finalGapStart < dayEnd &&
+    dayEnd - finalGapStart >= minDurationMinutes * 60 * 1000
+  ) {
     freeSlots.push({
       start: new Date(finalGapStart),
       end: new Date(dayEnd),
@@ -351,7 +427,8 @@ function calculateCounterOffer(workOrder) {
   // Travel rules:
   // - When FLAT_TRAVEL > 0, it is a universal minimum floor.
   // - When FLAT_TRAVEL <= 0, travel only applies after crossing the threshold.
-  const effectiveDistance = (workOrder.distance || 0) + CONFIG.DISTANCE.DISTANCE_PADDING_MILES;
+  const effectiveDistance =
+    (workOrder.distance || 0) + CONFIG.DISTANCE.DISTANCE_PADDING_MILES;
   let travelExpense = 0;
   const mileageTravel = Math.round(
     effectiveDistance * CONFIG.DISTANCE.TRAVEL_RATE_PER_MILE
@@ -374,8 +451,7 @@ function calculateCounterOffer(workOrder) {
     workOrder.payStructure?.base &&
     workOrder.payStructure?.additional;
   const isHourly =
-    !isBlended &&
-    (workOrder.payType === "hourly" || workOrder.hourlyRate > 0);
+    !isBlended && (workOrder.payType === "hourly" || workOrder.hourlyRate > 0);
 
   let counterRate;
   let counterTotal;
@@ -431,7 +507,7 @@ function calculateCounterOffer(workOrder) {
   };
 }
 
-async function isEligibleForApplication(workOrder) {
+async function evaluateEligibilityInternal(workOrder, availabilityCtx) {
   logger.info(
     `Checking eligibility - Distance: ${workOrder.distance}mi, Est. Hours: ${workOrder.estLaborHours}`,
     workOrder.platform,
@@ -451,16 +527,6 @@ async function isEligibleForApplication(workOrder) {
   }
 
   const policyCheck = evaluateApplicationPolicy(workOrder);
-  logger.info(
-    `Application Policy Check:
-    - Mode: ${CONFIG.APPLICATION_MODE}
-    - Company: ${workOrder.company}
-    - Work Order Date: ${policyCheck.workOrderDate}
-    - Result: ${policyCheck.reason}
-    - Allowed: ${policyCheck.allowed}`,
-    workOrder.platform,
-    workOrder.id
-  );
 
   if (!policyCheck.allowed) {
     logger.info(
@@ -524,8 +590,17 @@ async function isEligibleForApplication(workOrder) {
     let availabilityFitResult;
     try {
       availabilityFitResult = await checkAvailabilityNew(workOrder);
+      if (availabilityCtx) {
+        availabilityCtx.computed = true;
+        availabilityCtx.availableBlocks = availabilityFitResult.availableBlocks;
+        availabilityCtx.busyBlocks = availabilityFitResult.busyBlocks;
+      }
     } catch (err) {
-      logger.info(`Availability fit check failed: ${err.message}`, workOrder.platform, workOrder.id);
+      logger.info(
+        `Availability fit check failed: ${err.message}`,
+        workOrder.platform,
+        workOrder.id
+      );
       return {
         eligible: false,
         counterOffer: null,
@@ -627,6 +702,22 @@ async function isEligibleForApplication(workOrder) {
     counterOffer: null,
     reason: "UNKNOWN_PLATFORM",
   };
+}
+
+// Public entry point. Wraps the core evaluation and, when the availability
+// check actually ran, attaches the computed free/busy blocks under
+// `_availabilitySnapshot` so callers (e.g. replay logging) can reuse them
+// instead of re-fetching the calendar.
+async function isEligibleForApplication(workOrder) {
+  const availabilityCtx = {};
+  const result = await evaluateEligibilityInternal(workOrder, availabilityCtx);
+  if (availabilityCtx.computed) {
+    result._availabilitySnapshot = {
+      availableBlocks: availabilityCtx.availableBlocks,
+      busyBlocks: availabilityCtx.busyBlocks,
+    };
+  }
+  return result;
 }
 
 export default isEligibleForApplication;

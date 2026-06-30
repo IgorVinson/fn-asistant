@@ -128,7 +128,7 @@ function computeFreeBlocksForDay(dayStart, dayEnd, mergedBusy, bufferMs) {
   return freeBlocks;
 }
 
-export async function getAvailableBlocks({ date, daysToCheck = 7 }) {
+export async function getAvailableBlocks({ date, daysToCheck = 7, withBusy = false }) {
   let startDate;
   if (date instanceof Date) {
     startDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
@@ -162,5 +162,8 @@ export async function getAvailableBlocks({ date, daysToCheck = 7 }) {
     `getAvailableBlocks: found ${allFreeBlocks.length} free blocks\n${allFreeBlocks.map((b, i) => `  ${i + 1}. ${b.start.toLocaleString()} - ${b.end.toLocaleString()}`).join("\n")}`
   );
 
+  if (withBusy) {
+    return { free: allFreeBlocks, busy: allBusyBlocks };
+  }
   return allFreeBlocks;
 }
