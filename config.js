@@ -15,7 +15,7 @@ export const CONFIG = {
     BASE_HOURLY_RATE_WORKMARKET: 50, // Minimum desired hourly rate
     BASE_HOURLY_RATE_FIELDNATION: 50, // Minimum desired hourly rate
     MIN_PAY_THRESHOLD_WORKMARKET: 150, // Minimum total pay for WorkMarket jobs
-    MIN_PAY_THRESHOLD_FIELDNATION: 150, // Minimum total pay for FieldNation jobs
+    MIN_PAY_THRESHOLD_FIELDNATION: 110, // Minimum total pay for FieldNation jobs
     TRAVEL_RATE: 30, // Rate per hour of travel
   },
 
