@@ -7,6 +7,7 @@ process.chdir(path.resolve(__dirname, "../.."));
 const { getAvailableBlocks } = await import("./getAvailableBlocks.js");
 const { fetchWMBusy } = await import("./fetchWMBusy.js");
 const { fetchCalendarBusy } = await import("./fetchCalendarBusy.js");
+const { fetchFNBusy } = await import("./fetchFNBusy.js");
 
 // Silence the app logger's console spam — it still writes to the log file.
 const { default: logger } = await import("../logger.js");
@@ -72,18 +73,20 @@ function printSection(title, blocks, mark) {
 
 // ── run ─────────────────────────────────────────────────────────────────
 console.log(`\n=== Availability check from ${date} (${daysToCheck} days) ===`);
-console.log("Fetching calendar + WorkMarket data…");
+console.log("Fetching calendar + WorkMarket + FieldNation data…");
 
 // Mute the noisy technical console output while fetching, then restore.
 const realLog = console.log;
 console.log = () => {};
 const calendarBusyBlocks = await fetchCalendarBusy(date, daysToCheck);
 const wmBusyBlocks = await fetchWMBusy();
+const fnBusyBlocks = await fetchFNBusy();
 const freeBlocks = await getAvailableBlocks({ date, daysToCheck });
 console.log = realLog;
 
 printSection("📅 BUSY — Calendar", calendarBusyBlocks, "✗");
 printSection("🔧 BUSY — WorkMarket", wmBusyBlocks, "✗");
+printSection("🛠️  BUSY — FieldNation", fnBusyBlocks, "✗");
 printSection("✅ AVAILABLE", freeBlocks, "✓");
 
 console.log("\n=== Done ===\n");

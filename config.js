@@ -1,6 +1,6 @@
 export const CONFIG = {
   // Platform configuration
-  TEST_MODE: true, // If true, agent will not perform destructive/real actions
+  TEST_MODE: false, // If true, agent will not perform destructive/real actions
   FIELDNATION_ENABLED: true, // Set to false to disable FieldNation applications
   WORKMARKET_ENABLED: true, // Set to false to disable WorkMarket applications
   APPLICATION_MODE: "all_companies", // "granite_only" | "all_companies" | "disabled"
@@ -13,9 +13,9 @@ export const CONFIG = {
   RATES: {
     BASE_HOURLY_RATE: 50, // Minimum desired hourly rate
     BASE_HOURLY_RATE_WORKMARKET: 50, // Minimum desired hourly rate
-    BASE_HOURLY_RATE_FIELDNATION: 50, // Minimum desired hourly rate
-    MIN_PAY_THRESHOLD_WORKMARKET: 150, // Minimum total pay for WorkMarket jobs
-    MIN_PAY_THRESHOLD_FIELDNATION: 110, // Minimum total pay for FieldNation jobs
+    BASE_HOURLY_RATE_FIELDNATION: 60, // Minimum desired hourly rate
+    MIN_PAY_THRESHOLD_WORKMARKET: 100, // Minimum total pay for WorkMarket jobs
+    MIN_PAY_THRESHOLD_FIELDNATION: 100, // Minimum total pay for FieldNation jobs
     TRAVEL_RATE: 30, // Rate per hour of travel
   },
 
@@ -49,6 +49,11 @@ export const CONFIG = {
   PLATFORMS: {
     FIELD_NATION: {
       USER_ID: process.env.FIELD_NATION_USER_ID || 983643, // Your Field Nation user ID
+      // Public iCal feed of accepted/assigned FN work orders. Used as a busy source for availability.
+      // webcal:// is auto-normalized to https://. The id encodes the FN user ID (base64 "FN_<id>_CAL").
+      CALENDAR_FEED_URL:
+        process.env.FIELD_NATION_CALENDAR_FEED_URL ||
+        "webcal://app.fieldnation.com/marketplace/calendar.php?id=Rk5fOTgzNjQzX0NBTA==",
       API_ENDPOINTS: {
         REQUESTS: "https://app.fieldnation.com/v2/workorders",
       },

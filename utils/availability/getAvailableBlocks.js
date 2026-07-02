@@ -2,6 +2,7 @@ import { CONFIG } from "../../config.js";
 import logger from "../logger.js";
 import { fetchCalendarBusy } from "./fetchCalendarBusy.js";
 import { fetchWMBusy } from "./fetchWMBusy.js";
+import { fetchFNBusy } from "./fetchFNBusy.js";
 
 export function computeFreeBlocks({
   startDate,
@@ -142,11 +143,12 @@ export async function getAvailableBlocks({ date, daysToCheck = 7, withBusy = fal
 
   const calendarBusyBlocks = await fetchCalendarBusy(startDate, daysToCheck);
   const wmBusyBlocks = await fetchWMBusy();
+  const fnBusyBlocks = await fetchFNBusy();
 
-  const allBusyBlocks = [...calendarBusyBlocks, ...wmBusyBlocks];
+  const allBusyBlocks = [...calendarBusyBlocks, ...wmBusyBlocks, ...fnBusyBlocks];
 
   logger.info(
-    `getAvailableBlocks: total ${allBusyBlocks.length} busy blocks (${calendarBusyBlocks.length} calendar + ${wmBusyBlocks.length} WM), scanning ${daysToCheck} days from ${startDate.toDateString()}`
+    `getAvailableBlocks: total ${allBusyBlocks.length} busy blocks (${calendarBusyBlocks.length} calendar + ${wmBusyBlocks.length} WM + ${fnBusyBlocks.length} FN), scanning ${daysToCheck} days from ${startDate.toDateString()}`
   );
 
   const allFreeBlocks = computeFreeBlocks({
