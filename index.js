@@ -305,6 +305,18 @@ async function gracefulShutdown(signal) {
   process.exit(0);
 }
 
+// Backstop: keep the agent alive on stray async rejections instead of crashing.
+process.on("unhandledRejection", reason => {
+  const detail =
+    reason instanceof Error ? reason.stack || reason.message : String(reason);
+  console.error("⚠️ Unhandled promise rejection (process kept alive):", detail);
+  try {
+    logger.error("Unhandled promise rejection", reason);
+  } catch {
+    // logger unavailable — console output above is enough
+  }
+});
+
 process.on("SIGINT", () => gracefulShutdown("SIGINT"));
 process.on("SIGTERM", () => gracefulShutdown("SIGTERM"));
 process.on("exit", async () => {
@@ -475,7 +487,21 @@ async function saveCookiesImpl() {
 
 // Periodically check for unread emails
 async function periodicCheck() {
-  const auth = await authorize();
+  let auth;
+  try {
+    auth = await authorize();
+  } catch (error) {
+    logger.error("Gmail authorization failed; monitoring not started", error);
+    console.error(
+      "❌ Gmail authorization failed; monitoring not started:",
+      error.message
+    );
+    telegramBot.sendMessage(
+      `❌ Gmail auth failed — monitoring not started.\n${error.message}`
+    );
+    telegramBot.isMonitoring = false;
+    return;
+  }
   const gmail = google.gmail({ version: "v1", auth });
 
   // Initial announcement sound
@@ -530,7 +556,10 @@ async function periodicCheck() {
 
 function startMonitoring() {
   if (!monitoringInterval) {
-    periodicCheck();
+    periodicCheck().catch(error => {
+      logger.error("periodicCheck failed to start", error);
+      console.error("❌ periodicCheck failed to start:", error.message);
+    });
   }
   telegramBot.isMonitoring = true;
 }
