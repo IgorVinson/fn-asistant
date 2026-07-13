@@ -1,6 +1,7 @@
 import TelegramBot from "node-telegram-bot-api";
 import { CONFIG } from "../../config.js";
 import logger from "../logger.js";
+import { describeStrategy } from "../strategy/leadTimeStrategy.js";
 
 class TelegramBotService {
   constructor() {
@@ -172,8 +173,11 @@ class TelegramBotService {
         this.clearWaitingState();
         const status = this.isMonitoring ? "🟢 Active" : "🔴 Stopped";
         const mode = CONFIG.TEST_MODE ? "🧪 TEST MODE (No applications)" : "🚀 REAL MODE (Live applications)";
+        const strategy = CONFIG.STRATEGY?.ENABLED
+          ? "🎯 Lead-time strategy ON"
+          : "🔧 Manual (single threshold)";
         this.sendMessage(
-          `Monitoring Status: ${status}\nMode: ${mode}\nApplication Policy: ${CONFIG.APPLICATION_MODE}\nOverride Dates: ${formatOverrideDates()}`
+          `Monitoring Status: ${status}\nMode: ${mode}\nStrategy: ${strategy}\nApplication Policy: ${CONFIG.APPLICATION_MODE}\nOverride Dates: ${formatOverrideDates()}`
         );
       }
     });
@@ -210,6 +214,13 @@ class TelegramBotService {
 
 🧪 *Test Mode:* ${CONFIG.TEST_MODE ? "ON" : "OFF"}
 🧭 *Application Mode:* ${CONFIG.APPLICATION_MODE}
+🎯 *Lead-time Strategy:* ${CONFIG.STRATEGY?.ENABLED ? "ON" : "OFF"}${
+          CONFIG.STRATEGY?.ENABLED
+            ? `\n   ↳ Tiers: ${CONFIG.STRATEGY.LEAD_TIME_TIERS.map(
+                t => `${t.maxLeadHours ? `≤${t.maxLeadHours}h` : "7d+"}=$${t.minPay}`
+              ).join(", ")}\n   ↳ Granite premium: ≥$${CONFIG.STRATEGY.GRANITE_PREMIUM_MIN_RATE}/hr or "${CONFIG.STRATEGY.GRANITE_PREMIUM_TITLE_RE}" · Techs: ${CONFIG.STRATEGY.TECHNICIAN_COUNT}`
+            : ""
+        }
 📅 *All-Company Override Dates:* ${formatOverrideDates()}
 
 💰 *Base Hourly Rate:* $${CONFIG.RATES.BASE_HOURLY_RATE}/hr
@@ -520,6 +531,7 @@ class TelegramBotService {
     if (CONFIG.APPLICATION_MODE === "disabled") modes.push("⛔ DISABLED");
     if (CONFIG.ALLOW_ALL_COMPANIES_ON_DATES.length > 0) modes.push("📆 DATE OVERRIDES");
     if (CONFIG.IS_COUNTER_DATES) modes.push("📅 COUNTER SLOTS");
+    if (CONFIG.STRATEGY?.ENABLED) modes.push("🎯 LEAD-TIME STRATEGY");
     return modes.length > 0 ? ` *[${modes.join(" | ")}]*` : "";
   }
 
@@ -531,6 +543,7 @@ class TelegramBotService {
     if (CONFIG.APPLICATION_MODE === "disabled") modes.push("⛔ DISABLED");
     if (CONFIG.ALLOW_ALL_COMPANIES_ON_DATES.length > 0) modes.push("📆 DATE OVERRIDES");
     if (CONFIG.IS_COUNTER_DATES) modes.push("📅 COUNTER SLOTS");
+    if (CONFIG.STRATEGY?.ENABLED) modes.push("🎯 LEAD-TIME STRATEGY");
     return modes.length > 0 ? ` <b>[${modes.join(" | ")}]</b>` : "";
   }
 
@@ -541,6 +554,7 @@ class TelegramBotService {
     };
 
     const modesLabel = this.getActiveModesMarkdown();
+    const strategyLine = describeStrategy(orderData);
 
     let orderIdText;
     if (orderLink) {
@@ -560,7 +574,7 @@ class TelegramBotService {
 *Pay:* $${orderData.payRange.min}-$${orderData.payRange.max}
 *Distance:* ${orderData.distance}mi
 *Time:* ${escapeMarkdown(new Date(orderData.time.start).toLocaleString())}
-
+${strategyLine ? `*Strategy:* ${escapeMarkdown(strategyLine)}\n` : ""}
 *Action:* ${action}
 ${details ? escapeMarkdown(details) : ""}
     `;
@@ -582,7 +596,7 @@ Title: ${orderData.title}
 Pay: $${orderData.payRange.min}-$${orderData.payRange.max}
 Distance: ${orderData.distance}mi
 Time: ${new Date(orderData.time.start).toLocaleString()}
-
+${strategyLine ? `Strategy: ${strategyLine}\n` : ""}
 Action: ${action}
 ${details}
       `;

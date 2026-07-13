@@ -3,6 +3,14 @@ import logger from "./logger.js";
 import { getAvailableBlocks } from "./availability/getAvailableBlocks.js";
 import { findFitBlock } from "./availability/findFitBlock.js";
 import { decideFitAction } from "./availability/decideFitAction.js";
+import {
+  isStrategyEnabled,
+  getMinPayThreshold,
+  getSameDaySmallEarliestStart,
+  getBookingCapacity,
+  shouldSkipAdvanceCounter,
+  getWorkOrderTotalPay,
+} from "./strategy/leadTimeStrategy.js";
 
 function getWorkOrderLocalDate(workOrder) {
   const startDate = new Date(workOrder.time.start);
@@ -143,6 +151,13 @@ function isPaymentEligible(workOrder) {
     ? CONFIG.RATES.MIN_PAY_THRESHOLD_FIELDNATION
     : CONFIG.RATES.MIN_PAY_THRESHOLD_WORKMARKET;
 
+  // Lead-time strategy: when enabled, the minimum acceptable total pay depends
+  // on how far out the job starts (and Granite-premium tickets are exempt).
+  // When disabled, fall back to the platform's single threshold (unchanged).
+  const minTotal = isStrategyEnabled()
+    ? getMinPayThreshold(workOrder)
+    : platformMinTotal;
+
   const isHourly = workOrder.payType === "hourly" || workOrder.hourlyRate > 0;
 
   // Calculate their offered total and hourly rate
@@ -164,9 +179,9 @@ function isPaymentEligible(workOrder) {
     ? `Travel required (${workOrder.distance}mi reported + ${CONFIG.DISTANCE.DISTANCE_PADDING_MILES}mi padding = ${effectiveDistance}mi > ${TRAVEL_THRESHOLD}mi)`
     : null;
 
-  // RULE 1: If total pay is less than platform minimum -> ALWAYS REJECT (no counter)
-  if (CONFIG.ENFORCE_MIN_PAYMENT && theirTotal < platformMinTotal) {
-    const details = `Total pay $${theirTotal} is below platform minimum threshold $${platformMinTotal}`;
+  // RULE 1: If total pay is less than minimum -> ALWAYS REJECT (no counter)
+  if (CONFIG.ENFORCE_MIN_PAYMENT && theirTotal < minTotal) {
+    const details = `Total pay $${theirTotal} is below minimum threshold $${minTotal}`;
     logger.info(
       `Payment Analysis: ${details} -> REJECT`,
       workOrder.platform,
@@ -234,16 +249,25 @@ async function checkAvailabilityNew(workOrder) {
     date: woDateString,
     daysToCheck: 4,
     withBusy: true,
+    capacity: getBookingCapacity(workOrder),
   });
 
   const travelMin = calculateTravelMinutes(workOrder);
   const durationMs = getJobDurationMs(workOrder);
   const estHours = workOrder.estLaborHours || CONFIG.TIME.DEFAULT_LABOR_HOURS;
 
-  const woEarliestStart = new Date(workOrder.time.start);
+  let woEarliestStart = new Date(workOrder.time.start);
   const woLatestStart = workOrder.time.latestStart
     ? new Date(workOrder.time.latestStart)
     : new Date(workOrder.time.start);
+
+  // Morning reserve (strategy Phase B): for small, non-premium, same-day jobs,
+  // push the earliest acceptable start to the configured time so mornings stay
+  // open for a potential big same-day ticket. No-op when the strategy is off.
+  const sameDaySmallEarliest = getSameDaySmallEarliestStart(workOrder);
+  if (sameDaySmallEarliest && sameDaySmallEarliest > woEarliestStart) {
+    woEarliestStart = sameDaySmallEarliest;
+  }
 
   const [lcsH, lcsM] =
     CONFIG.TIME.LATEST_COUNTER_START_TIME.split(":").map(Number);
@@ -623,6 +647,25 @@ async function evaluateEligibilityInternal(workOrder, availabilityCtx) {
 
     if (availabilityFitDecision.action === "COUNTER_DATES") {
       if (CONFIG.IS_COUNTER_DATES) {
+        // Strategy guard: don't slip a small job into a later-day (advance) slot
+        // it would never have cleared the pay bar for. Granite-premium exempt;
+        // no-op when the strategy is disabled or the slot is same-day.
+        const counterStart = availabilityFitDecision.counterDate?.start;
+        if (shouldSkipAdvanceCounter(workOrder, counterStart)) {
+          const details = `Counter slot ${counterStart.toLocaleDateString()} is a later day; pay $${Math.round(getWorkOrderTotalPay(workOrder))} does not clear the advance threshold`;
+          logger.info(
+            `Job rejected: ${details}`,
+            workOrder.platform,
+            workOrder.id
+          );
+          return {
+            eligible: false,
+            counterOffer: null,
+            reason: "PAYMENT_BELOW_MINIMUM",
+            rejectDetails: details,
+          };
+        }
+
         logger.info(
           `Shifted fit found - countering with start interval: ${availabilityFitDecision.counterDate.start.toLocaleTimeString()} - ${availabilityFitDecision.counterDate.end.toLocaleTimeString()}`,
           workOrder.platform,

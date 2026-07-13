@@ -1319,6 +1319,19 @@ ${normalizedData.platform === "WorkMarket" && !isRealWorkMarketSubmission ? "\n\
               : ""
           }`;
           break;
+        case "PAYMENT_BELOW_MINIMUM":
+          rejectReason = CONFIG.STRATEGY?.ENABLED
+            ? `💸 Below lead-time threshold — not worth booking at this horizon${
+                eligibilityResult.rejectDetails
+                  ? `\n${eligibilityResult.rejectDetails}`
+                  : ""
+              }`
+            : `Payment below minimum threshold${
+                eligibilityResult.rejectDetails
+                  ? `\nReason: ${eligibilityResult.rejectDetails}`
+                  : ""
+              }`;
+          break;
         case "SLOT_UNAVAILABLE":
           rejectReason = "Time slot unavailable";
           break;

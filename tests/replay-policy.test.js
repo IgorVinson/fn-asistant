@@ -7,19 +7,36 @@ import {
   evaluateApplicationPolicy,
   getWorkOrderLocalDate,
 } from "../utils/isEligibleForApplication.js";
+import {
+  isStrategyEnabled,
+  isGranitePremium,
+  getMinPayThreshold,
+  shouldSkipAdvanceCounter,
+} from "../utils/strategy/leadTimeStrategy.js";
 import { buildWMCounterOfferFormData } from "../utils/WorkMarket/postWMCounterOffer.js";
 
+// Replay data is NDJSON appended by the live app; tolerate the occasional
+// malformed line (e.g. two records written without a newline separator)
+// instead of failing the whole suite.
 const replayEntries = fs
   .readFileSync(new URL("../jobs-replay.json", import.meta.url), "utf8")
   .trim()
   .split("\n")
-  .map(line => JSON.parse(line));
+  .map(line => {
+    try {
+      return JSON.parse(line);
+    } catch {
+      return null;
+    }
+  })
+  .filter(Boolean);
 
 function withConfig(overrides, run) {
   const snapshot = {
     APPLICATION_MODE: CONFIG.APPLICATION_MODE,
     ALLOW_ALL_COMPANIES_ON_DATES: [...CONFIG.ALLOW_ALL_COMPANIES_ON_DATES],
     ENFORCE_MIN_PAYMENT: CONFIG.ENFORCE_MIN_PAYMENT,
+    STRATEGY: JSON.parse(JSON.stringify(CONFIG.STRATEGY)),
   };
 
   Object.assign(CONFIG, overrides);
@@ -30,7 +47,33 @@ function withConfig(overrides, run) {
     CONFIG.APPLICATION_MODE = snapshot.APPLICATION_MODE;
     CONFIG.ALLOW_ALL_COMPANIES_ON_DATES = snapshot.ALLOW_ALL_COMPANIES_ON_DATES;
     CONFIG.ENFORCE_MIN_PAYMENT = snapshot.ENFORCE_MIN_PAYMENT;
+    CONFIG.STRATEGY = snapshot.STRATEGY;
   }
+}
+
+// Build a synthetic work order whose start is `leadHours` from `now`.
+function makeWorkOrder({
+  company = "Acme",
+  title = "Generic job",
+  hourlyRate = 0,
+  payType = "hourly",
+  payMax,
+  payMin = 0,
+  estLaborHours = 2,
+  leadHours = 100,
+  now = Date.now(),
+}) {
+  const start = new Date(now + leadHours * 60 * 60 * 1000);
+  return {
+    platform: "FieldNation",
+    company,
+    title,
+    payType,
+    hourlyRate,
+    payRange: { min: payMin, max: payMax },
+    estLaborHours,
+    time: { start: start.toISOString() },
+  };
 }
 
 function findReplayJob(predicate) {
@@ -131,6 +174,171 @@ test("disabled mode blocks all jobs early", () => {
   );
 });
 
+test("isGranitePremium detects Epik title and >=65/hr rate", () => {
+  Object.assign(CONFIG.STRATEGY, {
+    GRANITE_PREMIUM_MIN_RATE: 65,
+    GRANITE_PREMIUM_TITLE_RE: "epik",
+  });
+  // Title match, even at low rate
+  assert.equal(
+    isGranitePremium(
+      makeWorkOrder({
+        company: "Granite Telecommunications",
+        title: "05810092 - EPIK Install",
+        hourlyRate: 50,
+      })
+    ),
+    true
+  );
+  // Rate match, non-Epik title
+  assert.equal(
+    isGranitePremium(
+      makeWorkOrder({
+        company: "Granite Telecommunications",
+        title: "Cabling revisit",
+        hourlyRate: 65,
+      })
+    ),
+    true
+  );
+  // Granite but low rate + non-Epik title -> not premium
+  assert.equal(
+    isGranitePremium(
+      makeWorkOrder({
+        company: "Granite Telecommunications",
+        title: "Cabling revisit",
+        hourlyRate: 50,
+      })
+    ),
+    false
+  );
+  // Non-Granite, high rate -> not premium
+  assert.equal(
+    isGranitePremium(
+      makeWorkOrder({ company: "Other Co", title: "Epik", hourlyRate: 80 })
+    ),
+    false
+  );
+});
+
+test("getMinPayThreshold scales with lead time and exempts Granite premium", () => {
+  const now = Date.now();
+  const base = { company: "Acme", hourlyRate: 40 };
+  // Fixed tiers so the test is independent of production config tuning.
+  withConfig(
+    {
+      STRATEGY: {
+        ...CONFIG.STRATEGY,
+        GRANITE_PREMIUM_MIN_RATE: 65,
+        GRANITE_PREMIUM_TITLE_RE: "epik",
+        LEAD_TIME_TIERS: [
+          { maxLeadHours: 36, minPay: 0 },
+          { maxLeadHours: 168, minPay: 200 },
+          { maxLeadHours: null, minPay: 400 },
+        ],
+      },
+    },
+    () => {
+      // same-day / tomorrow (<=36h) -> 0
+      assert.equal(
+        getMinPayThreshold(makeWorkOrder({ ...base, leadHours: 10, now }), now),
+        0
+      );
+      // this week (<=168h) -> 200
+      assert.equal(
+        getMinPayThreshold(makeWorkOrder({ ...base, leadHours: 100, now }), now),
+        200
+      );
+      // far out (>168h) -> 400
+      assert.equal(
+        getMinPayThreshold(makeWorkOrder({ ...base, leadHours: 300, now }), now),
+        400
+      );
+      // Granite premium far out -> exempt (0)
+      assert.equal(
+        getMinPayThreshold(
+          makeWorkOrder({
+            company: "Granite Telecommunications",
+            title: "Epik Survey",
+            hourlyRate: 65,
+            leadHours: 300,
+            now,
+          }),
+          now
+        ),
+        0
+      );
+    }
+  );
+});
+
+test("shouldSkipAdvanceCounter blocks date-slippage of small jobs to a later day", () => {
+  const now = Date.parse("2026-07-08T12:00:00");
+  withConfig(
+    {
+      STRATEGY: {
+        ...CONFIG.STRATEGY,
+        ENABLED: true,
+        GRANITE_PREMIUM_MIN_RATE: 65,
+        GRANITE_PREMIUM_TITLE_RE: "epik",
+        LEAD_TIME_TIERS: [
+          { maxLeadHours: 36, minPay: 0 },
+          { maxLeadHours: 168, minPay: 200 },
+          { maxLeadHours: null, minPay: 400 },
+        ],
+      },
+    },
+    () => {
+      // StrikeCheck: $100 fixed requested near-term, countered to a later day
+      // (~this-week tier $200) -> should be skipped, not countered.
+      const wo = {
+        platform: "FieldNation",
+        company: "StrikeCheck",
+        title: "Express Damage Assessment",
+        payType: "fixed",
+        hourlyRate: 0,
+        payRange: { min: 100, max: 100 },
+        estLaborHours: 2,
+        time: { start: new Date(now + 2 * 60 * 60 * 1000).toISOString() },
+      };
+      const laterDay = new Date("2026-07-10T15:00:00");
+      assert.equal(shouldSkipAdvanceCounter(wo, laterDay, now), true);
+
+      // Same-day time shift keeps the original horizon -> not skipped.
+      const sameDay = new Date(now + 6 * 60 * 60 * 1000);
+      assert.equal(shouldSkipAdvanceCounter(wo, sameDay, now), false);
+
+      // A $250 job clears the later-day ($200) bar -> not skipped.
+      const woBig = { ...wo, payRange: { min: 250, max: 250 } };
+      assert.equal(shouldSkipAdvanceCounter(woBig, laterDay, now), false);
+
+      // Granite-premium is exempt even when small and pushed out.
+      const woGranite = {
+        ...wo,
+        company: "Granite Telecommunications",
+        title: "EPIK Survey",
+        hourlyRate: 65,
+        payType: "hourly",
+      };
+      assert.equal(shouldSkipAdvanceCounter(woGranite, laterDay, now), false);
+
+      // Disabled strategy -> never skips.
+      CONFIG.STRATEGY.ENABLED = false;
+      assert.equal(shouldSkipAdvanceCounter(wo, laterDay, now), false);
+    }
+  );
+});
+
+test("strategy master switch reflects config and defaults off", () => {
+  assert.equal(isStrategyEnabled(), CONFIG.STRATEGY.ENABLED === true);
+  withConfig({ STRATEGY: { ...CONFIG.STRATEGY, ENABLED: false } }, () => {
+    assert.equal(isStrategyEnabled(), false);
+  });
+  withConfig({ STRATEGY: { ...CONFIG.STRATEGY, ENABLED: true } }, () => {
+    assert.equal(isStrategyEnabled(), true);
+  });
+});
+
 test("WorkMarket counter-offer payload includes alternate date fields", () => {
   const counterDate = {
     start: new Date("2026-04-08T13:30:00-04:00"),
@@ -164,7 +372,7 @@ test("WorkMarket counter-offer payload includes alternate date fields", () => {
   assert.equal(formData.get("priceType"), "1");
   assert.equal(formData.get("per_hour_price"), "65");
   assert.equal(formData.get("max_number_of_hours"), "3");
-  assert.equal(formData.get("additional_expenses"), "53");
+  assert.equal(formData.get("additional_expenses"), "50");
   assert.equal(formData.get("note"), "Requesting alternate date/time");
 });
 

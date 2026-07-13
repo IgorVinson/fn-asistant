@@ -1,6 +1,6 @@
 export const CONFIG = {
   // Platform configuration
-  TEST_MODE: false, // If true, agent will not perform destructive/real actions
+  TEST_MODE: true, // If true, agent will not perform destructive/real actions
   FIELDNATION_ENABLED: true, // Set to false to disable FieldNation applications
   WORKMARKET_ENABLED: true, // Set to false to disable WorkMarket applications
   APPLICATION_MODE: "all_companies", // "granite_only" | "all_companies" | "disabled"
@@ -9,6 +9,26 @@ export const CONFIG = {
   IS_COUNTER_DAYS: true, // If true, counter-offer with free calendar slots when job time conflicts; if false, just reject on conflict
   IS_COUNTER_RATES: true,
   ENFORCE_MIN_PAYMENT: true, // If true, reject jobs below platform minimum threshold
+
+  // Strategy configuration for lead-time booking and Granite premium logic
+  STRATEGY: {
+    ENABLED: true, // Master switch. false = current manual behavior.
+    // Minimum total pay by booking horizon, sorted ascending by maxLeadHours.
+    // Last entry (maxLeadHours: null) = "everything else / far in advance".
+    LEAD_TIME_TIERS: [
+      { maxLeadHours: 36, minPay: 0 }, // same-day + tomorrow: take (almost) all
+      { maxLeadHours: 168, minPay: 200 }, // this week (7 days): $200+
+      { maxLeadHours: null, minPay: 300 }, // 7+ days out: $300+
+    ],
+    BIG_TICKET_MIN: 210, // "big" ticket — used for same-day morning reserve
+    SAME_DAY_SMALL_EARLIEST_START: "12:00", // small same-day jobs only from this time
+    GRANITE_PREMIUM_MIN_RATE: 65, // Granite at/above this hourly rate = premium
+    GRANITE_PREMIUM_TITLE_RE: "epik", // ...or title contains this (case-insensitive)
+    TECHNICIAN_COUNT: 1, // >=2 → allow a parallel slot for Granite-Epik tickets
+  },
+
+  // Manual Override Settings
+
   // Payment and Rate Settings
   RATES: {
     BASE_HOURLY_RATE: 50, // Minimum desired hourly rate
@@ -29,6 +49,10 @@ export const CONFIG = {
     TRAVEL_ROUND_TO: 5, // Round final travel $ up to nearest multiple
   },
   FLAT_TRAVEL: 0, // Flat travel fee added to all counter offers
+
+  // Lead-time booking strategy (see utils/strategy/leadTimeStrategy.js).
+  // Master switch: when ENABLED is false the agent behaves exactly as before
+  // (single platform min threshold, no lead-time / Granite-premium logic).
 
   // Time and Schedule Settings
   TIME: {

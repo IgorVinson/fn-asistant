@@ -11,6 +11,7 @@ export function computeFreeBlocks({
   workStartMinutes,
   workEndMinutes,
   bufferMinutes,
+  capacity = 1,
 }) {
   const bufferMs = bufferMinutes * 60 * 1000;
   const allFreeBlocks = [];
@@ -49,7 +50,13 @@ export function computeFreeBlocks({
       return bs < dayEndTs && be > dayStartTs;
     });
 
-    const merged = mergeBusyBlocks(dayBusy);
+    // With capacity > 1 (Granite-Epik double-booking), a time is only "blocked"
+    // when at least `capacity` bookings overlap it, so a second tech can stack
+    // on top of one existing booking. capacity === 1 == the original union merge.
+    const merged =
+      capacity > 1
+        ? blockedByCapacity(dayBusy, capacity)
+        : mergeBusyBlocks(dayBusy);
     const freeBlocks = computeFreeBlocksForDay(
       dayStartMs,
       dayEndMs,
@@ -92,6 +99,34 @@ function mergeBusyBlocks(blocks) {
   return merged;
 }
 
+// Returns the intervals (ms) where at least `capacity` busy blocks overlap.
+// A sweep line: +1 at each start, -1 at each end; regions with count >= capacity
+// are blocked. At equal timestamps, ends are processed before starts so that
+// touching intervals do not count as overlapping.
+function blockedByCapacity(blocks, capacity) {
+  const events = [];
+  for (const b of blocks) {
+    events.push({ t: b.start.getTime(), d: 1 });
+    events.push({ t: b.end.getTime(), d: -1 });
+  }
+  events.sort((a, b) => a.t - b.t || a.d - b.d);
+
+  const result = [];
+  let count = 0;
+  let blockedStart = null;
+  for (const e of events) {
+    const prev = count;
+    count += e.d;
+    if (prev < capacity && count >= capacity) {
+      blockedStart = e.t;
+    } else if (prev >= capacity && count < capacity) {
+      result.push({ start: blockedStart, end: e.t });
+      blockedStart = null;
+    }
+  }
+  return result;
+}
+
 function isWeekend(date) {
   const day = date.getDay();
   return day === 0 || day === 6;
@@ -129,7 +164,12 @@ function computeFreeBlocksForDay(dayStart, dayEnd, mergedBusy, bufferMs) {
   return freeBlocks;
 }
 
-export async function getAvailableBlocks({ date, daysToCheck = 7, withBusy = false }) {
+export async function getAvailableBlocks({
+  date,
+  daysToCheck = 7,
+  withBusy = false,
+  capacity = 1,
+}) {
   let startDate;
   if (date instanceof Date) {
     startDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
@@ -158,6 +198,7 @@ export async function getAvailableBlocks({ date, daysToCheck = 7, withBusy = fal
     workStartMinutes: startMinutes,
     workEndMinutes: endMinutes,
     bufferMinutes: CONFIG.TIME.BUFFER_MINUTES,
+    capacity,
   });
 
   logger.info(
