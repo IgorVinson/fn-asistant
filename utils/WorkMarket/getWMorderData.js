@@ -38,7 +38,10 @@ function getCookies() {
   }
 }
 
-function getInvalidDataSkeleton(workOrderId = "unknown") {
+// authExpired: true marks a genuine auth wall (no cookies / login redirect).
+// Only these should trigger a cookie refresh + re-login. Any other invalid
+// data (e.g. an unavailable ticket) must NOT re-login, to avoid a 2FA loop.
+function getInvalidDataSkeleton(workOrderId = "unknown", authExpired = false) {
   return {
     id: workOrderId,
     platform: "WorkMarket",
@@ -52,6 +55,7 @@ function getInvalidDataSkeleton(workOrderId = "unknown") {
     date: new Date().toISOString().split("T")[0],
     time: "09:00 AM EST",
     distance: 0,
+    authExpired,
   };
 }
 
@@ -73,7 +77,7 @@ export async function getWMorderData(url) {
     let cookies = await getCookies();
     if (!cookies) {
       logger.debug("No cookies found, requesting new session via invalid data indicator...", "WorkMarket");
-      return getInvalidDataSkeleton();
+      return getInvalidDataSkeleton("unknown", true);
     }
 
     // First, follow the sendgrid link to get the actual WorkMarket URL
@@ -133,7 +137,21 @@ export async function getWMorderData(url) {
     // If redirected to login, session has expired. Return dummy data to trigger refresh.
     if (body.includes("login?redirectTo=") || body.includes("Please sign in")) {
       logger.debug("Session expired, requesting new session via invalid data indicator...", "WorkMarket");
-      return getInvalidDataSkeleton(workOrderId);
+      return getInvalidDataSkeleton(workOrderId, true);
+    }
+
+    // Ticket is no longer available (already assigned / cancelled / expired).
+    // This is NOT an auth problem — return invalid data WITHOUT authExpired so
+    // the caller skips it instead of triggering a pointless re-login loop.
+    if (
+      body.includes("no longer available") ||
+      body.includes("This assignment is not available") ||
+      body.includes("assignment-unavailable") ||
+      body.includes("Assignment Not Found") ||
+      body.includes("has been cancelled")
+    ) {
+      logger.info(`WorkMarket ticket ${workOrderId} is no longer available, skipping`, "WorkMarket");
+      return getInvalidDataSkeleton(workOrderId, false);
     }
 
     // Save response for debugging

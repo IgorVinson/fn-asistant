@@ -738,8 +738,23 @@ async function processOrder(orderLink) {
     } else if (platform === "WorkMarket") {
       data = await getWMorderData(orderLink);
 
-      // Check if data indicates expired cookies and retry with fresh cookies
-      if (isInvalidWorkMarketData(data)) {
+      // Invalid data that is NOT an auth wall (e.g. an unavailable/taken ticket)
+      // must be skipped WITHOUT re-login — otherwise every dead ticket triggers
+      // a full 2FA re-login loop.
+      if (isInvalidWorkMarketData(data) && !data?.authExpired) {
+        console.log(
+          "⏭️ WorkMarket ticket unavailable or unparseable (not an auth issue), skipping without re-login."
+        );
+        pushEvent({
+          platform: "WorkMarket",
+          status: "info",
+          message: "Order skipped: Ticket unavailable",
+        });
+        return null;
+      }
+
+      // Only a genuine auth wall (authExpired) triggers a cookie refresh + retry
+      if (data?.authExpired) {
         // Prevent concurrent refresh attempts
         if (isRefreshingCookies) {
           console.log("⏳ Cookie refresh already in progress, waiting...");
