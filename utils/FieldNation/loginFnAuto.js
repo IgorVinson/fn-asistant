@@ -13,8 +13,8 @@ import { saveCookiesCustom } from "../saveCookies.js";
  */
 export async function loginFnAuto(
   browser,
-  email = "igorvinson@gmail.com",
-  password = "N25z*D4eXiyuPM@",
+  email = process.env.FN_EMAIL || "igorvinson@gmail.com",
+  password = process.env.FN_PASSWORD || "N25z*D4eXiyuPM@",
   verificationCode = null,
   waitForCode = false,
   gmailAuth = null

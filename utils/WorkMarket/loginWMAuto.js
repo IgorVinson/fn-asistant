@@ -13,8 +13,8 @@ import { waitForWMcode } from "./getWMcode.js";
 
 export async function loginWMAuto(
   browser,
-  email = "igorvinson@gmail.com",
-  password = "Karusel123!",
+  email = process.env.WM_EMAIL || "igorvinson@gmail.com",
+  password = process.env.WM_PASSWORD || "Karusel123!",
   verificationCode = null,
   waitForCode = false,
   gmailAuth = null

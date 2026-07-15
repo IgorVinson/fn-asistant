@@ -15,6 +15,7 @@ import { getLastUnreadEmail } from "./utils/gmail/getLastUnreadEmail.js";
 import { getOrderLink } from "./utils/gmail/getOrderLink.js";
 import { authorize } from "./utils/gmail/login.js";
 import isEligibleForApplication from "./utils/isEligibleForApplication.js";
+import { isTransientNetworkError } from "./utils/isTransientNetworkError.js";
 import logger from "./utils/logger.js";
 import normalizeDateFromWO from "./utils/normalizedDateFromWO.js";
 import playSound from "./utils/playSound.js";
@@ -511,6 +512,16 @@ async function periodicCheck() {
 
   let isCheckingEmail = false;
 
+  // Backoff state for transient network outages (e.g. VPN/DNS stalls causing
+  // the Gmail OAuth token refresh to ETIMEDOUT). During an outage we skip
+  // cycles until `networkRetryAt`, log once on entry and once on recovery,
+  // instead of spamming a stack trace + Telegram message every second.
+  const NETWORK_BACKOFF_BASE_MS = 5000; // first retry after 5s
+  const NETWORK_BACKOFF_MAX_MS = 60000; // cap backoff at 60s
+  let networkOutage = false;
+  let networkRetryAt = 0;
+  let networkRetryDelay = NETWORK_BACKOFF_BASE_MS;
+
   monitoringInterval = setInterval(async () => {
     if (!telegramBot.isMonitoring) {
       return; // Skip if monitoring is disabled via Telegram
@@ -518,6 +529,11 @@ async function periodicCheck() {
 
     // Do not proceed with email check if cookies are being refreshed
     if (isRefreshingCookies) {
+      return;
+    }
+
+    // During a network outage, hold off until the backoff window elapses.
+    if (networkOutage && Date.now() < networkRetryAt) {
       return;
     }
 
@@ -530,6 +546,15 @@ async function periodicCheck() {
 
     try {
       const lastEmailBody = await getLastUnreadEmail(auth, gmail);
+
+      // Recovered from a prior network outage — reset backoff and announce once.
+      if (networkOutage) {
+        console.log("✅ Network recovered — resuming email monitoring.");
+        telegramBot.sendMessage("✅ Network recovered — monitoring resumed.");
+        networkOutage = false;
+        networkRetryDelay = NETWORK_BACKOFF_BASE_MS;
+      }
+
       if (lastEmailBody) {
         logger.debug("Email body received.");
         const orderLink = extractOrderLink(lastEmailBody);
@@ -546,8 +571,29 @@ async function periodicCheck() {
         console.log("No unread emails found.");
       }
     } catch (error) {
-      console.error("Error during email check:", error);
-      telegramBot.sendMessage(`❌ Error during monitoring: ${error.message}`);
+      if (isTransientNetworkError(error)) {
+        // Transient connectivity loss: back off with exponential delay and log
+        // only on the first failure of the outage, not once per cycle.
+        if (!networkOutage) {
+          networkOutage = true;
+          logger.error("Transient network error during email check", error);
+          console.warn(
+            `⚠️ Network error during email check (${error.code || error.message}); backing off and retrying.`
+          );
+          telegramBot.sendMessage(
+            "⚠️ Network issue — pausing monitoring, will retry automatically."
+          );
+        }
+        networkRetryAt = Date.now() + networkRetryDelay;
+        networkRetryDelay = Math.min(
+          networkRetryDelay * 2,
+          NETWORK_BACKOFF_MAX_MS
+        );
+      } else {
+        // Non-transient error: surface as before.
+        console.error("Error during email check:", error);
+        telegramBot.sendMessage(`❌ Error during monitoring: ${error.message}`);
+      }
     } finally {
       isCheckingEmail = false;
     }
