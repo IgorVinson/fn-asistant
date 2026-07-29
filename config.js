@@ -61,7 +61,7 @@ export const CONFIG = {
     WORK_START_TIME: "9:00", // Earliest time to accept jobs
     WORK_END_TIME: "20:00", // Latest time to accept jobs
     BUFFER_MINUTES: 0, // Buffer time between jobs
-    LATEST_COUNTER_START_TIME: "14:00", // Latest same-day counter slot start time
+    LATEST_COUNTER_START_TIME: "15:00", // Latest same-day counter slot start time
     PREFERRED_SLOTS: [
       { start: "10:00", end: "12:00", label: "Morning" },
       { start: "12:00", end: "14:00", label: "Early Afternoon" },
