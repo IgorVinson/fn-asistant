@@ -260,10 +260,11 @@ async function cleanupChromeProcesses() {
     console.log("🧹 Cleaning up Chrome processes...");
     const { execSync } = await import("child_process");
     try {
-      // Kill Chrome for Testing processes
+      // Kill Chrome for Testing processes (Puppeteer's own browser).
+      // Do NOT match "Google Chrome Helper" here — those are the interactive
+      // Chrome app's renderer/GPU processes and killing them crashes the
+      // user's open tabs instead of Puppeteer's instance.
       execSync('pkill -9 -f "Google Chrome for Testing" 2>/dev/null');
-      // Also try regular Chrome if spawned
-      execSync('pkill -9 -f "Google Chrome Helper" 2>/dev/null');
     } catch (e) {
       // Ignore errors if no processes found
     }

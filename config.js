@@ -9,6 +9,7 @@ export const CONFIG = {
   IS_COUNTER_DAYS: true, // If true, counter-offer with free calendar slots when job time conflicts; if false, just reject on conflict
   IS_COUNTER_RATES: true,
   ENFORCE_MIN_PAYMENT: true, // If true, reject jobs below platform minimum threshold
+  WORKMARKET_SCHEDULE_CHECK_ENABLED: false, // TEMP: WM schedule (fetchWMBusy) has issues; disabled so only Google Calendar busy blocks are used. Re-enable when fixed.
 
   // Strategy configuration for lead-time booking and Granite premium logic
   STRATEGY: {
@@ -17,8 +18,8 @@ export const CONFIG = {
     // Last entry (maxLeadHours: null) = "everything else / far in advance".
     LEAD_TIME_TIERS: [
       { maxLeadHours: 36, minPay: 120 }, // same-day + tomorrow: take (almost) all
-      { maxLeadHours: 168, minPay: 180 }, // this week (7 days): $200+
-      { maxLeadHours: null, minPay: 260 }, // 7+ days out: $260+
+      { maxLeadHours: 168, minPay: 120 }, // this week (7 days): $200+
+      { maxLeadHours: null, minPay: 120 }, // 7+ days out: $260+
     ],
     BIG_TICKET_MIN: 210, // "big" ticket — used for same-day morning reserve
     SAME_DAY_SMALL_EARLIEST_START: "12:00", // small same-day jobs only from this time

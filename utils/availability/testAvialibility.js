@@ -13,8 +13,8 @@ const { fetchFNBusy } = await import("./fetchFNBusy.js");
 const { default: logger } = await import("../logger.js");
 logger.log = () => {};
 
-const date = "2026-06-30";
-const daysToCheck = 5;
+const date = "2026-08-05";
+const daysToCheck = 25;
 
 // ── helpers ─────────────────────────────────────────────────────────────
 const fmtTime = d =>

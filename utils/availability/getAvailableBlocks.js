@@ -182,7 +182,9 @@ export async function getAvailableBlocks({
   const bufferMs = CONFIG.TIME.BUFFER_MINUTES * 60 * 1000;
 
   const calendarBusyBlocks = await fetchCalendarBusy(startDate, daysToCheck);
-  const wmBusyBlocks = await fetchWMBusy();
+  const wmBusyBlocks = CONFIG.WORKMARKET_SCHEDULE_CHECK_ENABLED
+    ? await fetchWMBusy()
+    : [];
   const fnBusyBlocks = await fetchFNBusy();
 
   const allBusyBlocks = [...calendarBusyBlocks, ...wmBusyBlocks, ...fnBusyBlocks];
