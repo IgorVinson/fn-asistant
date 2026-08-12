@@ -11,6 +11,15 @@ export const CONFIG = {
   ENFORCE_MIN_PAYMENT: true, // If true, reject jobs below platform minimum threshold
   WORKMARKET_SCHEDULE_CHECK_ENABLED: false, // TEMP: WM schedule (fetchWMBusy) has issues; disabled so only Google Calendar busy blocks are used. Re-enable when fixed.
 
+  // WorkMarket session handling.
+  // The WM session dies in roughly an hour, but scheduleRelogin() only rotates
+  // cookies every 4 hours — so the agent used to spend ~3 hours of every cycle
+  // logged out, silently dropping every order that arrived in that window.
+  // The probe closes that gap by noticing the expiry between orders instead of
+  // during one.
+  WM_SESSION_PROBE_MINUTES: 10, // 0 disables the probe
+  WM_DEBUG_DUMP_ALL: false, // true = keep every fetched WM page under logs/ (failures are always kept)
+
   // Strategy configuration for lead-time booking and Granite premium logic
   STRATEGY: {
     ENABLED: true, // Master switch. false = current manual behavior.
