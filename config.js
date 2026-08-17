@@ -27,8 +27,8 @@ export const CONFIG = {
     // Last entry (maxLeadHours: null) = "everything else / far in advance".
     LEAD_TIME_TIERS: [
       { maxLeadHours: 36, minPay: 120 }, // same-day + tomorrow: take (almost) all
-      { maxLeadHours: 168, minPay: 120 }, // this week (7 days): $200+
-      { maxLeadHours: null, minPay: 120 }, // 7+ days out: $260+
+      { maxLeadHours: 168, minPay: 200 }, // this week (7 days): $200+
+      { maxLeadHours: null, minPay: 260 }, // 7+ days out: $260+
     ],
     BIG_TICKET_MIN: 210, // "big" ticket — used for same-day morning reserve
     SAME_DAY_SMALL_EARLIEST_START: "12:00", // small same-day jobs only from this time

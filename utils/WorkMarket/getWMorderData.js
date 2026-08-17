@@ -1,6 +1,7 @@
 import fs from "fs";
 import path from "path";
 import logger from "../logger.js";
+import { inspectWMBody, dumpWMBody } from "./wmSession.js";
 
 const cookiesFilePath = path.resolve("utils", "WorkMarket", "autoCookies.json");
 
@@ -134,15 +135,11 @@ export async function getWMorderData(url) {
 
     let body = await response.text();
 
-    // If redirected to login, session has expired. Return dummy data to trigger refresh.
-    if (body.includes("login?redirectTo=") || body.includes("Please sign in")) {
-      logger.debug("Session expired, requesting new session via invalid data indicator...", "WorkMarket");
-      return getInvalidDataSkeleton(workOrderId, true);
-    }
-
     // Ticket is no longer available (already assigned / cancelled / expired).
     // This is NOT an auth problem — return invalid data WITHOUT authExpired so
     // the caller skips it instead of triggering a pointless re-login loop.
+    // Checked BEFORE the session check so a genuinely dead ticket can never
+    // be mistaken for an expired session.
     if (
       body.includes("no longer available") ||
       body.includes("This assignment is not available") ||
@@ -154,9 +151,22 @@ export async function getWMorderData(url) {
       return getInvalidDataSkeleton(workOrderId, false);
     }
 
-    // Save response for debugging
-    fs.writeFileSync("debug_response.html", body);
-    logger.debug("Response saved to debug_response.html", "WorkMarket");
+    // Session check. WorkMarket answers an expired session with a contentless
+    // SPA shell rather than a login page, so we require positive proof that
+    // real assignment content came back instead of matching login strings.
+    const session = inspectWMBody(body, workOrderId);
+    if (!session.ok) {
+      const dumped = dumpWMBody(body, workOrderId, session.reason);
+      logger.warn(
+        `WorkMarket session looks invalid (${session.reason}) — requesting re-login${dumped ? `; page saved to ${dumped}` : ""}`,
+        "WorkMarket",
+        workOrderId
+      );
+      return getInvalidDataSkeleton(workOrderId, true);
+    }
+
+    // Save response for debugging (only when WM_DEBUG_DUMP_ALL is on)
+    dumpWMBody(body, workOrderId, "ok");
 
     // Extract title from page header
     const titleMatch =

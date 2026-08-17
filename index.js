@@ -2,6 +2,7 @@ import cors from "cors";
 import "dotenv/config";
 import express from "express";
 import fs from "fs/promises";
+import fsSync from "fs";
 import { google } from "googleapis";
 import path from "path";
 import puppeteer from "puppeteer";
@@ -25,6 +26,7 @@ import { getWorkOrderLocalDate } from "./utils/isEligibleForApplication.js";
 import telegramBot from "./utils/telegram/telegramBot.js";
 import { getWMorderData } from "./utils/WorkMarket/getWMorderData.js";
 import { loginWMAuto } from "./utils/WorkMarket/loginWMAuto.js";
+import { probeWMSession } from "./utils/WorkMarket/wmSession.js";
 import { postWMCounterOffer } from "./utils/WorkMarket/postWMCounterOffer.js";
 import { postWMworkOrderRequest } from "./utils/WorkMarket/postWMworkOrderRequest.js";
 
@@ -163,6 +165,146 @@ let reloginTimeout; // Timeout for the relogin scheduler
 let monitoringInterval; // Store the monitoring interval
 let isRefreshingCookies = false; // Flag to prevent concurrent cookie refresh attempts
 const phoneAlertDedup = new Map();
+
+// --- WorkMarket session health -------------------------------------------
+// Correct session detection makes authExpired fire far more often than the old
+// (broken) string match did, so a re-login cooldown keeps a genuinely broken
+// login from turning into a 2FA storm.
+let sessionProbeTimeout; // Timeout for the WM session probe
+let lastReloginAt = 0; // Timestamp of the last cookie refresh attempt
+let consecutiveWmSessionFailures = 0; // Drives the Telegram alert
+const RELOGIN_COOLDOWN_MS = 5 * 60 * 1000;
+const WM_FAILURE_ALERT_THRESHOLD = 3;
+
+// Orders dropped because the session was dead. getLastUnreadEmail marks the
+// email read BEFORE the order is processed, so without this queue a dropped
+// order is gone for good.
+const wmRetryQueue = [];
+// Attempt counts live outside the queue so they survive a drain: an order that
+// fails again is re-queued as a fresh entry, and without this it would retry
+// forever.
+const wmRetryAttempts = new Map();
+const RETRY_MAX_ATTEMPTS = 2;
+const RETRY_TTL_MS = 30 * 60 * 1000;
+let isDrainingRetryQueue = false; // Reentrancy guard: draining calls processOrder
+let pendingRetryDrain = false; // Set when a refresh inside processOrder succeeds
+
+function canRelogin() {
+  return Date.now() - lastReloginAt >= RELOGIN_COOLDOWN_MS;
+}
+
+function reloginCooldownRemainingMs() {
+  return Math.max(0, RELOGIN_COOLDOWN_MS - (Date.now() - lastReloginAt));
+}
+
+// Append a dropped order to logs/unprocessed-orders.ndjson for post-mortem.
+function recordUnprocessedOrder(orderLink, reason, workOrderId = "unknown") {
+  try {
+    const logDir = path.join(process.cwd(), "logs");
+    fsSync.mkdirSync(logDir, { recursive: true });
+    fsSync.appendFileSync(
+      path.join(logDir, "unprocessed-orders.ndjson"),
+      `${JSON.stringify({
+        orderLink,
+        workOrderId,
+        reason,
+        ts: new Date().toISOString(),
+      })}\n`
+    );
+  } catch (error) {
+    logger.error(
+      `Failed to record unprocessed order: ${error.message}`,
+      "WorkMarket"
+    );
+  }
+}
+
+function queueOrderForRetry(orderLink, workOrderId = "unknown", reason = "") {
+  if (!orderLink) return;
+
+  const existing = wmRetryQueue.find(item => item.orderLink === orderLink);
+  if (existing) {
+    existing.ts = Date.now();
+    return;
+  }
+
+  wmRetryQueue.push({ orderLink, workOrderId, ts: Date.now(), attempts: 0 });
+  recordUnprocessedOrder(orderLink, reason, workOrderId);
+  logger.warn(
+    `Order queued for retry after session recovery (${reason})`,
+    "WorkMarket",
+    workOrderId
+  );
+}
+
+// Re-process orders that were dropped while the session was dead. Called after
+// any successful cookie refresh (scheduled rotation or probe-triggered).
+async function drainWmRetryQueue() {
+  pendingRetryDrain = false;
+  // drainWmRetryQueue -> processOrder -> (session failure) -> queueOrderForRetry
+  // is a live cycle; the guard keeps it from re-entering itself.
+  if (isDrainingRetryQueue || wmRetryQueue.length === 0) return;
+  isDrainingRetryQueue = true;
+
+  const now = Date.now();
+  // Drop stale entries — a hours-old work order is not worth applying to.
+  for (let i = wmRetryQueue.length - 1; i >= 0; i--) {
+    if (now - wmRetryQueue[i].ts > RETRY_TTL_MS) {
+      const [stale] = wmRetryQueue.splice(i, 1);
+      wmRetryAttempts.delete(stale.orderLink);
+      logger.info(
+        `Dropping expired retry entry (older than ${RETRY_TTL_MS / 60000} min)`,
+        "WorkMarket",
+        stale.workOrderId
+      );
+    }
+  }
+
+  try {
+    const batch = wmRetryQueue.splice(0, wmRetryQueue.length);
+    if (batch.length === 0) return;
+
+    logger.info(
+      `Retrying ${batch.length} order(s) after session recovery`,
+      "WorkMarket"
+    );
+    pushEvent({
+      platform: "WorkMarket",
+      status: "info",
+      message: `Retrying ${batch.length} order(s) after re-login`,
+    });
+
+    for (const item of batch) {
+      const attempts = (wmRetryAttempts.get(item.orderLink) || 0) + 1;
+      wmRetryAttempts.set(item.orderLink, attempts);
+
+      if (attempts > RETRY_MAX_ATTEMPTS) {
+        logger.warn(
+          `Giving up on order after ${RETRY_MAX_ATTEMPTS} retry attempts`,
+          "WorkMarket",
+          item.workOrderId
+        );
+        wmRetryAttempts.delete(item.orderLink);
+        continue;
+      }
+
+      try {
+        const result = await processOrder(item.orderLink);
+        // processOrder re-queues itself if the session is still dead, so a
+        // clean return means this entry is finished with.
+        if (result !== null) wmRetryAttempts.delete(item.orderLink);
+      } catch (error) {
+        logger.error(
+          `Retry failed: ${error.message}`,
+          "WorkMarket",
+          item.workOrderId
+        );
+      }
+    }
+  } finally {
+    isDrainingRetryQueue = false;
+  }
+}
 
 function buildPhoneAlertKey(alert) {
   return [
@@ -346,7 +488,12 @@ function scheduleRelogin() {
   // Schedule the next relogin
   reloginTimeout = setTimeout(async () => {
     console.log("⏰ Scheduled relogin triggered...");
+    logger.info("Scheduled relogin triggered", "WorkMarket");
+    lastReloginAt = Date.now();
     await saveCookies();
+    consecutiveWmSessionFailures = 0;
+    // Any orders dropped while the session was dead get another chance now.
+    await drainWmRetryQueue();
     // Schedule the next relogin after this one completes
     scheduleRelogin();
   }, nextReloginTime);
@@ -359,6 +506,94 @@ function scheduleRelogin() {
   console.log(
     `🔄 Next relogin scheduled in ${nextReloginHours} hours and ${nextReloginMinutes} minutes`
   );
+}
+
+// Periodically confirm the WorkMarket session is still alive. scheduleRelogin()
+// only rotates every 4 hours but the WM session dies in ~1-2 hours, so without
+// this probe the agent spends hours logged out, silently dropping every order
+// that arrives in the gap. The probe notices the expiry BETWEEN orders.
+function scheduleSessionProbe() {
+  if (sessionProbeTimeout) {
+    clearTimeout(sessionProbeTimeout);
+    sessionProbeTimeout = undefined;
+  }
+
+  const minutes = Number(CONFIG.WM_SESSION_PROBE_MINUTES) || 0;
+  if (minutes <= 0 || !CONFIG.WORKMARKET_ENABLED) {
+    logger.info("WorkMarket session probe disabled", "WorkMarket");
+    return;
+  }
+
+  sessionProbeTimeout = setTimeout(async () => {
+    try {
+      // Don't probe on top of an in-flight refresh — it would just read
+      // half-written cookies and force a redundant login.
+      if (!isRefreshingCookies) {
+        const result = await probeWMSession();
+
+        if (result.ok) {
+          consecutiveWmSessionFailures = 0;
+          logger.debug("WorkMarket session probe: alive", "WorkMarket");
+        } else if (!canRelogin()) {
+          logger.warn(
+            `WorkMarket session probe failed (${result.reason}) but re-login is on cooldown for ${Math.ceil(reloginCooldownRemainingMs() / 1000)}s`,
+            "WorkMarket"
+          );
+        } else {
+          logger.warn(
+            `WorkMarket session probe failed (${result.reason}) — refreshing cookies`,
+            "WorkMarket"
+          );
+          pushEvent({
+            platform: "WorkMarket",
+            status: "info",
+            message: "Session probe failed — re-logging in",
+          });
+
+          isRefreshingCookies = true;
+          lastReloginAt = Date.now();
+          try {
+            await saveCookies();
+          } finally {
+            isRefreshingCookies = false;
+          }
+
+          const verify = await probeWMSession();
+          if (verify.ok) {
+            consecutiveWmSessionFailures = 0;
+            logger.info(
+              "WorkMarket session restored by probe-triggered re-login",
+              "WorkMarket"
+            );
+            await drainWmRetryQueue();
+          } else {
+            noteWmSessionFailure(`probe re-login did not restore session (${verify.reason})`);
+          }
+        }
+      }
+    } catch (error) {
+      logger.error(`WorkMarket session probe errored: ${error.message}`, "WorkMarket");
+    } finally {
+      scheduleSessionProbe();
+    }
+  }, minutes * 60 * 1000);
+
+  logger.info(`WorkMarket session probe scheduled every ${minutes} min`, "WorkMarket");
+}
+
+// Escalate to Telegram once WM session trouble stops looking like a blip.
+function noteWmSessionFailure(reason) {
+  consecutiveWmSessionFailures += 1;
+  logger.error(
+    `WorkMarket session failure #${consecutiveWmSessionFailures}: ${reason}`,
+    "WorkMarket"
+  );
+
+  if (consecutiveWmSessionFailures === WM_FAILURE_ALERT_THRESHOLD) {
+    telegramBot.sendMessage(
+      `🔴 WorkMarket session is broken — ${consecutiveWmSessionFailures} consecutive failures.\nLast reason: ${reason}\nOrders are being queued for retry. Try /relogin.`
+    );
+  }
 }
 
 const SAVE_COOKIES_TIMEOUT_MS = 4 * 60 * 1000;
@@ -562,6 +797,11 @@ async function periodicCheck() {
         if (orderLink) {
           logger.debug(`Order link extracted: ${orderLink}`);
           await processOrder(orderLink);
+
+          // If processOrder recovered the session mid-flight, replay anything
+          // that was dropped while it was dead. Done here, outside
+          // processOrder, to keep the drain from re-entering it.
+          if (pendingRetryDrain) await drainWmRetryQueue();
 
           // Add a delay to ensure sounds can finish playing
           await new Promise(resolve => setTimeout(resolve, 3000));
@@ -792,6 +1032,13 @@ async function processOrder(orderLink) {
         console.log(
           "⏭️ WorkMarket ticket unavailable or unparseable (not an auth issue), skipping without re-login."
         );
+        // logger.warn (not console.log) so this lands in logs/app-*.log — this
+        // branch used to swallow orders with no trace in the log file at all.
+        logger.warn(
+          "Order skipped: ticket unavailable or unparseable (not an auth issue)",
+          platform,
+          data?.id || "unknown"
+        );
         pushEvent({
           platform: "WorkMarket",
           status: "info",
@@ -802,6 +1049,26 @@ async function processOrder(orderLink) {
 
       // Only a genuine auth wall (authExpired) triggers a cookie refresh + retry
       if (data?.authExpired) {
+        // Re-login is rate limited: with session detection now working, this
+        // path fires often, and an unrecoverable login must not become a 2FA
+        // storm. Queue the order instead so it is retried after the next
+        // successful refresh.
+        if (!isRefreshingCookies && !canRelogin()) {
+          const waitSec = Math.ceil(reloginCooldownRemainingMs() / 1000);
+          logger.warn(
+            `WorkMarket session invalid but re-login is on cooldown for ${waitSec}s — queuing order for retry`,
+            platform,
+            data?.id || "unknown"
+          );
+          queueOrderForRetry(orderLink, data?.id, "re-login cooldown");
+          pushEvent({
+            platform: "WorkMarket",
+            status: "info",
+            message: "Order queued: re-login on cooldown",
+          });
+          return null;
+        }
+
         // Prevent concurrent refresh attempts
         if (isRefreshingCookies) {
           console.log("⏳ Cookie refresh already in progress, waiting...");
@@ -822,6 +1089,8 @@ async function processOrder(orderLink) {
             console.error(
               "❌ Still invalid data after waiting for refresh. Skipping."
             );
+            noteWmSessionFailure("still invalid after waiting for refresh");
+            queueOrderForRetry(orderLink, data?.id, "invalid after refresh wait");
             pushEvent({
               platform: "WorkMarket",
               status: "error",
@@ -836,6 +1105,7 @@ async function processOrder(orderLink) {
         } else {
           // No refresh in progress, start one
           isRefreshingCookies = true;
+          lastReloginAt = Date.now();
           console.log(
             "🔄 Invalid WorkMarket data detected, refreshing cookies and retrying..."
           );
@@ -869,6 +1139,8 @@ async function processOrder(orderLink) {
               console.error(
                 "❌ Still receiving invalid data after cookie refresh. Skipping this order."
               );
+              noteWmSessionFailure("data still invalid after cookie refresh");
+              queueOrderForRetry(orderLink, data?.id, "invalid after refresh");
               pushEvent({
                 platform: "WorkMarket",
                 status: "error",
@@ -884,6 +1156,10 @@ async function processOrder(orderLink) {
                 platform,
                 data.id
               );
+              // Session is healthy again — give previously dropped orders
+              // another chance now rather than waiting for the next probe.
+              consecutiveWmSessionFailures = 0;
+              pendingRetryDrain = true;
             }
           } catch (refreshError) {
             console.error(
@@ -898,6 +1174,7 @@ async function processOrder(orderLink) {
             telegramBot.sendMessage(
               `❌ Failed to refresh WorkMarket cookies: ${refreshError.message}`
             );
+            queueOrderForRetry(orderLink, data?.id, "cookie refresh failed");
             pushEvent({
               platform: "WorkMarket",
               status: "error",
@@ -917,6 +1194,13 @@ async function processOrder(orderLink) {
 
     if (!data) {
       console.error("Failed to retrieve order data.");
+      // Another path that used to vanish from the log file entirely.
+      logger.warn("Order dropped: failed to retrieve order data", platform);
+      pushEvent({
+        platform,
+        status: "error",
+        message: "Order dropped: no data returned",
+      });
       return null;
     }
 
@@ -1485,7 +1769,14 @@ ${normalizedData.platform === "WorkMarket" && !isRealWorkMarketSubmission ? "\n\
 telegramBot.onStartMonitoring = startMonitoring;
 telegramBot.onStopMonitoring = stopMonitoring;
 telegramBot.onProcessOrder = processOrder;
-telegramBot.onRelogin = saveCookies;
+// Manual /relogin: refresh cookies, then replay anything dropped while the
+// session was dead, so a hand-triggered fix also recovers the lost orders.
+telegramBot.onRelogin = async () => {
+  lastReloginAt = Date.now();
+  await saveCookies();
+  consecutiveWmSessionFailures = 0;
+  await drainWmRetryQueue();
+};
 telegramBot.onPhoneAlert = handlePhoneAlert;
 
 // Periodic zombie Chrome cleanup (runs every 30 minutes)
@@ -1513,6 +1804,7 @@ app.listen(port, async () => {
   // Refresh cookies on startup so we never run with a stale session
   console.log("🔑 Refreshing platform cookies on startup...");
   try {
+    lastReloginAt = Date.now();
     await saveCookies();
     console.log("✅ Startup cookie refresh complete");
   } catch (err) {
@@ -1527,6 +1819,10 @@ app.listen(port, async () => {
 
   // Start the 4-hour rotation timer after the initial refresh
   scheduleRelogin();
+
+  // The WM session dies well before the 4-hour rotation; the probe closes that
+  // gap by noticing the expiry between orders instead of during one.
+  scheduleSessionProbe();
   console.log(
     "⏰ Cookie refresh: startup + every 4 hours, with on-demand fallback"
   );
