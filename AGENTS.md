@@ -41,5 +41,14 @@ This project is an autonomous bot built using Node.js and Puppeteer to monitor, 
    - ES Modules (`"type": "module"`). Remember to include the `.js` extension in all imports.
    - Keep asynchronous flows organized; utilize timeouts locally to wait for elements when using Puppeteer.
 
+6. **Git Workflow**:
+   - For every user task that requires repository changes, create a new, dedicated branch from `dev` before editing. Use a short descriptive branch name with the `codex/` prefix, and do not reuse the branch for unrelated work.
+   - Check the worktree before creating the branch. Preserve all existing user changes and never stage, commit, discard, or otherwise modify unrelated files.
+   - Test every change carefully and in proportion to its risk. Run the relevant automated tests, linting, or focused checks before presenting the work; use `CONFIG.TEST_MODE` whenever a test could submit data to FieldNation or WorkMarket. Report what was tested and any validation that could not be completed.
+   - Create a focused commit when the task has reached a coherent, validated state and a commit is useful. Stage only files belonging to the current task and use a descriptive commit message.
+   - Present the completed changes and test results for user review. Do not push the branch or create a pull request until the user explicitly approves the changes.
+   - After approval, push the task branch and create a pull request with `dev` as the base branch. Do not target another base branch unless the user explicitly requests it.
+   - Never merge branches locally and never merge a pull request. Stop after creating or updating the pull request and leave all merge decisions to the user.
+
 ## Commands
 *   **Run**: `npm start` or `npm run dev`
