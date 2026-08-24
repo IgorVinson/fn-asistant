@@ -36,7 +36,13 @@ export default function normalizeDateFromWO(data) {
     }
 
     // Convert MM/DD/YYYY to YYYY-MM-DD
-    const [month, day, year] = dateStr.split('/');
+    const dateParts = dateStr.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+    if (!dateParts) {
+      const error = new Error(`Invalid or missing work order date: ${dateStr}`);
+      error.code = "INVALID_WORK_ORDER_DATE";
+      throw error;
+    }
+    const [, month, day, year] = dateParts;
     return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
   }
 

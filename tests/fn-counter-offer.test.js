@@ -4,6 +4,7 @@ import assert from "node:assert/strict";
 import { buildFNCounterOfferRequestBody } from "../utils/FieldNation/postFNCounterOffer.js";
 import { parseFNWorkOrder } from "../utils/FieldNation/getFNorderData.js";
 import { calculateCounterOffer } from "../utils/isEligibleForApplication.js";
+import normalizeDateFromWO from "../utils/normalizedDateFromWO.js";
 import { CONFIG } from "../config.js";
 
 // Blended ("combined") work order — first 4 hrs for $160, up to 2 more hrs at $40/hr.
@@ -33,6 +34,19 @@ test("FieldNation orders with missing pay are safely normalized to zero pay", ()
   assert.equal(parsed.hourlyRate, 0);
   assert.equal(parsed.estLaborHours, 3);
   assert.equal(parsed.distance, 17);
+});
+
+test("normalization identifies unavailable orders with no schedule date", () => {
+  assert.throws(
+    () =>
+      normalizeDateFromWO({
+        id: 123,
+        platform: "WorkMarket",
+        company: "Unavailable Buyer",
+        title: "Unavailable order",
+      }),
+    error => error.code === "INVALID_WORK_ORDER_DATE"
+  );
 });
 
 test("blended counter mirrors the work order pay structure exactly", () => {

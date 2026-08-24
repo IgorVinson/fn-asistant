@@ -1264,7 +1264,26 @@ async function processOrderInternal(orderLink) {
       return null;
     }
 
-    const normalizedData = normalizeDateFromWO(data);
+    let normalizedData;
+    try {
+      normalizedData = normalizeDateFromWO(data);
+    } catch (error) {
+      if (error.code !== "INVALID_WORK_ORDER_DATE") throw error;
+
+      logger.warn(
+        `Order skipped: unavailable or missing schedule data (${error.message})`,
+        platform,
+        data?.id || "unknown"
+      );
+      pushEvent({
+        platform,
+        id: data?.id,
+        title: data?.title,
+        status: "info",
+        message: "Order skipped: unavailable or missing schedule data",
+      });
+      return null;
+    }
 
     // Log order details
     logger.info(
