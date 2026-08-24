@@ -39,11 +39,10 @@ export async function getFNcode(auth) {
             const code = extractVerificationCode(body);
             
             if (code) {
-                console.log(`✅ Found verification code: ${code}`);
+                console.log('✅ FieldNation verification code extracted');
                 return code;
             } else {
                 console.log('❌ Verification code not found in email content.');
-                console.log('Email content:', body);
                 return null;
             }
         } else {
@@ -160,7 +159,7 @@ export async function waitForFNcode(auth, timeoutMs = 60000, intervalMs = 3000) 
                         const code = extractVerificationCode(body);
                         
                         if (code) {
-                            console.log(`✅ Found verification code: ${code}`);
+                            console.log('✅ FieldNation verification code extracted');
                             return code;
                         }
                     }

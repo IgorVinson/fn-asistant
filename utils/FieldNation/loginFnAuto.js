@@ -352,7 +352,7 @@ export async function loginFnAuto(
                 await otpInputs[i].click();
                 await otpInputs[i].evaluate(input => (input.value = ""));
                 await otpInputs[i].type(codeDigits[i], { delay: 100 });
-                console.log(`✅ Entered digit ${i + 1}: ${codeDigits[i]}`);
+                console.log(`✅ Entered verification digit ${i + 1}`);
               } catch (error) {
                 console.log(
                   `⚠️ Error entering digit ${i + 1}: ${error.message}`

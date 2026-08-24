@@ -1,5 +1,73 @@
 import { getCookieHeader } from '../cookieStore.js';
 
+export function parseFNWorkOrder(workOrder) {
+    if (!workOrder || typeof workOrder !== 'object') {
+        throw new Error('Invalid FieldNation work order data.');
+    }
+
+    // Unavailable or partially rendered orders can omit `pay`. Normalize them
+    // to zero pay so eligibility rules reject them without crashing monitoring.
+    const pay = workOrder.pay ?? {};
+    const schedule = workOrder.schedule ?? {};
+    const serviceWindow = schedule.service_window ?? {};
+    const estLaborHours = Number(schedule.est_labor_hours) || 2;
+    let payRange = { min: 0, max: 0 };
+    let payType = 'fixed';
+    let hourlyRate = 0;
+    let payStructure = null;
+
+    if (pay.type === 'hourly' || pay.rate?.pay) {
+        payType = 'hourly';
+        hourlyRate = pay.rate?.pay || pay.range?.min || 0;
+        payRange = {
+            min: Math.round(hourlyRate),
+            max: Math.round(hourlyRate * estLaborHours),
+        };
+    } else if (pay.type === 'blended' && pay.base && pay.additional) {
+        payType = 'blended';
+        payStructure = {
+            type: 'blended',
+            base: { units: pay.base.units, amount: pay.base.amount },
+            additional: {
+                units: pay.additional.units,
+                amount: pay.additional.amount,
+            },
+        };
+        payRange = pay.range?.max > 0
+            ? pay.range
+            : {
+                min: pay.base.amount || 0,
+                max: (pay.base.amount || 0) +
+                    (pay.additional.units || 0) * (pay.additional.amount || 0),
+            };
+    } else if (pay.range?.min > 0 && pay.range?.max > 0) {
+        payRange = pay.range;
+    } else if (pay.range) {
+        payRange = {
+            min: pay.range.min || 0,
+            max: pay.range.max || pay.range.min || 0,
+        };
+    }
+
+    const distance = Number(workOrder.coords?.distance);
+    return {
+        id: workOrder.id,
+        platform: 'FieldNation',
+        company: workOrder.company?.name || 'Unknown Company',
+        title: workOrder.title || 'No Title',
+        time: {
+            start: serviceWindow.start?.local ?? null,
+            end: serviceWindow.end?.local ?? null,
+        },
+        payRange,
+        payType,
+        payStructure,
+        hourlyRate,
+        estLaborHours,
+        distance: Number.isFinite(distance) ? Math.floor(distance) : 0,
+    };
+}
+
 // Функція для виконання запиту і аналізу даних
 export async function getFNorderData(url) {
     try {
@@ -44,72 +112,7 @@ export async function getFNorderData(url) {
         }
 
         const workOrder = JSON.parse(match[1].trim());
-
-        // Calculate pay range properly based on pay type
-        let payRange = { min: 0, max: 0 };
-        let payType = "fixed"; // fixed | hourly | blended
-        let hourlyRate = 0;
-        // Preserves the raw blended (base + additional) shape so counter offers
-        // can mirror the order's pay exactly instead of flattening to "fixed".
-        let payStructure = null;
-        const pay = workOrder.pay;
-
-        if (pay.type === 'hourly' || (pay.rate && pay.rate.pay)) {
-            // Hourly rate
-            payType = "hourly";
-            hourlyRate = pay.rate?.pay || pay.range?.min || 0;
-            const estHours = workOrder.schedule.est_labor_hours || 2;
-            payRange = {
-                min: Math.round(hourlyRate * 1),
-                max: Math.round(hourlyRate * estHours),
-            };
-        } else if (pay.type === 'blended' && pay.base && pay.additional) {
-            // Blended ("combined"): fixed base for N hours + hourly for extra.
-            payType = "blended";
-            payStructure = {
-                type: "blended",
-                base: { units: pay.base.units, amount: pay.base.amount },
-                additional: {
-                    units: pay.additional.units,
-                    amount: pay.additional.amount,
-                },
-            };
-            payRange = pay.range && pay.range.max > 0
-                ? pay.range
-                : {
-                    min: pay.base.amount || 0,
-                    max: (pay.base.amount || 0) +
-                        (pay.additional.units || 0) * (pay.additional.amount || 0),
-                };
-        } else if (pay.range && pay.range.min > 0 && pay.range.max > 0) {
-            // Fixed with valid range
-            payType = "fixed";
-            payRange = pay.range;
-        } else if (pay.range) {
-            // Fallback to whatever range exists
-            payType = "fixed";
-            payRange = {
-                min: pay.range.min || 0,
-                max: pay.range.max || pay.range.min || 0,
-            };
-        }
-
-        return {
-            id: workOrder.id,
-            platform: "FieldNation",
-            company: workOrder.company.name,
-            title: workOrder.title,
-            time: {
-                start: workOrder.schedule.service_window.start.local,
-                end: workOrder.schedule.service_window.end.local
-            },
-            payRange: payRange,
-            payType: payType,
-            payStructure: payStructure,
-            hourlyRate: hourlyRate,
-            estLaborHours: workOrder.schedule.est_labor_hours,
-            distance: Math.floor(Number(workOrder.coords.distance)),
-        };
+        return parseFNWorkOrder(workOrder);
 
 
     } catch (error) {

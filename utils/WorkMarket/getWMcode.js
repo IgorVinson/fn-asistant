@@ -39,11 +39,10 @@ export async function getWMcode(auth) {
       const code = extractVerificationCode(body);
 
       if (code) {
-        console.log(`✅ Found verification code: ${code}`);
+        console.log("✅ WorkMarket verification code extracted");
         return code;
       } else {
         console.log("❌ Verification code not found in email content.");
-        console.log("Email content:", body);
         return null;
       }
     } else {
@@ -87,15 +86,11 @@ function getMessageBody(payload) {
  * @returns {string|null}
  */
 function extractVerificationCode(emailContent) {
-  console.log("🔍 Extracting verification code from email content...");
-
   // First, let's strip HTML tags to get clean text
   const cleanText = emailContent
     .replace(/<[^>]*>/g, " ")
     .replace(/\s+/g, " ")
     .trim();
-  console.log("🧹 Cleaned text:", cleanText.substring(0, 500));
-
   // Look for patterns in WorkMarket emails:
   const patterns = [
     // HTML patterns (for when HTML is not stripped)
@@ -118,26 +113,22 @@ function extractVerificationCode(emailContent) {
   ];
 
   // Try patterns on original HTML content first
-  console.log("🔍 Trying patterns on HTML content...");
   for (const pattern of patterns) {
     const match = emailContent.match(pattern);
     if (match && match[1]) {
       // Validate it's exactly 6 digits
       if (/^\d{6}$/.test(match[1])) {
-        console.log(`✅ Found code with HTML pattern: ${match[1]}`);
         return match[1];
       }
     }
   }
 
   // Try patterns on cleaned text
-  console.log("🔍 Trying patterns on cleaned text...");
   for (const pattern of patterns) {
     const match = cleanText.match(pattern);
     if (match && match[1]) {
       // Validate it's exactly 6 digits
       if (/^\d{6}$/.test(match[1])) {
-        console.log(`✅ Found code with text pattern: ${match[1]}`);
         return match[1];
       }
     }
@@ -146,7 +137,6 @@ function extractVerificationCode(emailContent) {
   // Final attempt: find any 6-digit sequences and validate context
   const sixDigitMatches = emailContent.match(/\d{6}/g);
   if (sixDigitMatches) {
-    console.log("🔍 Found 6-digit sequences:", sixDigitMatches);
     // Return the first 6-digit sequence as WorkMarket codes are typically the main content
     for (const code of sixDigitMatches) {
       // Simple validation: avoid obvious non-codes (like years, phone numbers etc)
@@ -156,7 +146,6 @@ function extractVerificationCode(emailContent) {
         !emailContent.includes(`${code}pt`)
       ) {
         // Not font sizes
-        console.log(`✅ Found valid 6-digit code: ${code}`);
         return code;
       }
     }
@@ -219,7 +208,7 @@ export async function waitForWMcode(
             const code = extractVerificationCode(body);
 
             if (code) {
-              console.log(`✅ Found verification code: ${code}`);
+              console.log("✅ WorkMarket verification code extracted");
               return code;
             } else {
               console.log("❌ No verification code found in this email");

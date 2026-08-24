@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import { buildFNCounterOfferRequestBody } from "../utils/FieldNation/postFNCounterOffer.js";
+import { parseFNWorkOrder } from "../utils/FieldNation/getFNorderData.js";
 import { calculateCounterOffer } from "../utils/isEligibleForApplication.js";
 import { CONFIG } from "../config.js";
 
@@ -11,6 +12,28 @@ const blendedPayStructure = {
   base: { units: 4, amount: 160 },
   additional: { units: 2, amount: 40 },
 };
+
+test("FieldNation orders with missing pay are safely normalized to zero pay", () => {
+  const parsed = parseFNWorkOrder({
+    id: 123,
+    company: { name: "Example Buyer" },
+    title: "Unavailable order",
+    schedule: {
+      est_labor_hours: 3,
+      service_window: {
+        start: { local: "2026-08-24T09:00:00" },
+        end: { local: "2026-08-24T12:00:00" },
+      },
+    },
+    coords: { distance: "17.9" },
+  });
+
+  assert.deepEqual(parsed.payRange, { min: 0, max: 0 });
+  assert.equal(parsed.payType, "fixed");
+  assert.equal(parsed.hourlyRate, 0);
+  assert.equal(parsed.estLaborHours, 3);
+  assert.equal(parsed.distance, 17);
+});
 
 test("blended counter mirrors the work order pay structure exactly", () => {
   const body = buildFNCounterOfferRequestBody({
