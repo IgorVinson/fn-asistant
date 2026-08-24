@@ -1,15 +1,5 @@
-import fs from 'fs';
-import path from 'path';
 import { CONFIG } from '../../config.js';
-
-function getCookies() {
-  const cookiesFilePath = path.resolve('utils', 'FieldNation', 'cookies.json');
-  if (!fs.existsSync(cookiesFilePath)) {
-    throw new Error('Cookies file not found!');
-  }
-  const cookiesJson = JSON.parse(fs.readFileSync(cookiesFilePath, 'utf-8'));
-  return cookiesJson.map(cookie => `${cookie.name}=${cookie.value}`).join('; ');
-}
+import { getCookieHeader } from '../cookieStore.js';
 
 // FieldNation counter offers carry the proposed time in
 // `schedule.service_window.start.local` as separate { date, time } wall-clock
@@ -115,7 +105,10 @@ export function buildFNCounterOfferRequestBody({
 
 export async function postFNCounterOffer(workOrderId, options = {}) {
   try {
-    const cookies = getCookies();
+    const cookies = getCookieHeader(
+      'FieldNation',
+      `https://app.fieldnation.com/v2/workorders/${workOrderId}/requests`
+    );
     console.log('Starting counter offer with params:', {
       workOrderId,
       ...options,

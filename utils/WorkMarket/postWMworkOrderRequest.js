@@ -1,47 +1,9 @@
-import fs from "fs";
-import path from "path";
-import { fileURLToPath } from "url";
-
-// Get the directory name properly in ES modules
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-// Mirror the counter-offer cookie resolution: prefer fresh auto-login cookies,
-// fall back to manually saved cookies.
-const cookiesFilePaths = [
-  path.join(__dirname, "autoCookies.json"),
-  path.join(__dirname, "cookies.json"),
-];
+import { getCookieHeader } from "../cookieStore.js";
 
 // Function to get cookies
-function getCookies() {
+function getCookies(targetUrl) {
   try {
-    const cookiesFilePath = cookiesFilePaths.find(filePath =>
-      fs.existsSync(filePath)
-    );
-
-    if (!cookiesFilePath) throw new Error("Cookies file not found!");
-
-    const cookiesJson = JSON.parse(fs.readFileSync(cookiesFilePath, "utf-8"));
-    if (!Array.isArray(cookiesJson)) {
-      throw new Error(
-        "Invalid cookies format: Expected an array of cookie objects"
-      );
-    }
-
-    const cookies = cookiesJson
-      .filter(
-        cookie =>
-          typeof cookie.name === "string" && typeof cookie.value === "string"
-      )
-      .map(cookie => `${cookie.name}=${cookie.value}`)
-      .join("; ");
-
-    if (!cookies) {
-      throw new Error("No valid cookies found in the file");
-    }
-
-    return cookies;
+    return getCookieHeader("WorkMarket", targetUrl);
   } catch (error) {
     console.error(`Error reading cookies: ${error.message}`);
     return null;
@@ -51,8 +13,8 @@ function getCookies() {
 // Function to post work order request
 export async function postWMworkOrderRequest(url, date, hours, workOrderId) {
   try {
-    // Get cookies
-    const cookies = getCookies(); // Removed 'await' since getCookies is not async
+    const requestUrl = `https://www.workmarket.com/assignments/apply/${workOrderId}`;
+    const cookies = getCookies(requestUrl);
 
     if (!cookies || typeof cookies !== "string") {
       throw new Error("Cookies is not defined or not a string");
@@ -66,14 +28,14 @@ export async function postWMworkOrderRequest(url, date, hours, workOrderId) {
       throw new Error("CSRFToken cookie not found");
     }
 
-    const CSRFToken = csrfCookie.split("=")[1];
+    const CSRFToken = csrfCookie.trim().slice("CSRFToken=".length);
 
     if (!CSRFToken) {
       throw new Error("CSRFToken value is undefined");
     }
 
     const response = await fetch(
-      `https://www.workmarket.com/assignments/apply/${workOrderId}`,
+      requestUrl,
       {
         headers: {
           accept:

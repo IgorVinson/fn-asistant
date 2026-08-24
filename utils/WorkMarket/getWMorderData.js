@@ -1,38 +1,10 @@
-import fs from "fs";
-import path from "path";
 import logger from "../logger.js";
+import { getCookieHeader } from "../cookieStore.js";
 import { inspectWMBody, dumpWMBody } from "./wmSession.js";
-
-const cookiesFilePath = path.resolve("utils", "WorkMarket", "autoCookies.json");
 
 function getCookies() {
   try {
-    if (!fs.existsSync(cookiesFilePath)) {
-      throw new Error("Cookies file not found!");
-    }
-
-    const cookiesJson = JSON.parse(fs.readFileSync(cookiesFilePath, "utf-8"));
-
-    if (!Array.isArray(cookiesJson)) {
-      throw new Error(
-        "Invalid cookies format: Expected an array of cookie objects"
-      );
-    }
-
-    // Filter valid cookies with name and value, and join them into a cookie string
-    const cookies = cookiesJson
-      .filter(
-        cookie =>
-          typeof cookie.name === "string" && typeof cookie.value === "string"
-      )
-      .map(cookie => `${cookie.name}=${cookie.value}`)
-      .join("; ");
-
-    if (!cookies) {
-      throw new Error("No valid cookies found in the file");
-    }
-
-    return cookies;
+    return getCookieHeader("WorkMarket", "https://www.workmarket.com/");
   } catch (error) {
     logger.error(`Error reading cookies: ${error.message}`, "WorkMarket");
     return null; // Return null if any error occurs

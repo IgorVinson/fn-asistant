@@ -2,8 +2,8 @@ import fs from "fs";
 import path from "path";
 import logger from "../logger.js";
 import { CONFIG } from "../../config.js";
+import { getCookieHeader as readCookieHeader } from "../cookieStore.js";
 
-const cookiesFilePath = path.resolve("utils", "WorkMarket", "autoCookies.json");
 const PROBE_URL = "https://www.workmarket.com/assignments";
 
 // A real, authenticated WorkMarket assignment page is server-rendered and always
@@ -81,19 +81,7 @@ export function isAuthenticatedWMBody(body, expectedWorkOrderId = "") {
 
 function getCookieHeader() {
   try {
-    if (!fs.existsSync(cookiesFilePath)) return null;
-    const cookiesJson = JSON.parse(fs.readFileSync(cookiesFilePath, "utf-8"));
-    if (!Array.isArray(cookiesJson)) return null;
-
-    const cookies = cookiesJson
-      .filter(
-        cookie =>
-          typeof cookie.name === "string" && typeof cookie.value === "string"
-      )
-      .map(cookie => `${cookie.name}=${cookie.value}`)
-      .join("; ");
-
-    return cookies || null;
+    return readCookieHeader("WorkMarket", PROBE_URL);
   } catch (error) {
     logger.error(`Probe could not read cookies: ${error.message}`, "WorkMarket");
     return null;

@@ -164,6 +164,7 @@ let browser; // Declare a browser instance
 let reloginTimeout; // Timeout for the relogin scheduler
 let monitoringInterval; // Store the monitoring interval
 let isRefreshingCookies = false; // Flag to prevent concurrent cookie refresh attempts
+let cookieRefreshPromise = null; // Shared single-flight refresh for every trigger
 const phoneAlertDedup = new Map();
 
 // --- WorkMarket session health -------------------------------------------
@@ -489,13 +490,17 @@ function scheduleRelogin() {
   reloginTimeout = setTimeout(async () => {
     console.log("⏰ Scheduled relogin triggered...");
     logger.info("Scheduled relogin triggered", "WorkMarket");
-    lastReloginAt = Date.now();
-    await saveCookies();
-    consecutiveWmSessionFailures = 0;
-    // Any orders dropped while the session was dead get another chance now.
-    await drainWmRetryQueue();
-    // Schedule the next relogin after this one completes
-    scheduleRelogin();
+    try {
+      await refreshCookies("scheduled rotation");
+      consecutiveWmSessionFailures = 0;
+      // Any orders dropped while the session was dead get another chance now.
+      await drainWmRetryQueue();
+    } catch (error) {
+      logger.error(`Scheduled relogin failed: ${error.message}`, "WorkMarket");
+    } finally {
+      // Schedule the next relogin even when this attempt failed.
+      scheduleRelogin();
+    }
   }, nextReloginTime);
 
   // Log the next relogin time
@@ -550,13 +555,7 @@ function scheduleSessionProbe() {
             message: "Session probe failed — re-logging in",
           });
 
-          isRefreshingCookies = true;
-          lastReloginAt = Date.now();
-          try {
-            await saveCookies();
-          } finally {
-            isRefreshingCookies = false;
-          }
+          await refreshCookies("WorkMarket session probe");
 
           const verify = await probeWMSession();
           if (verify.ok) {
@@ -626,6 +625,7 @@ async function saveCookies() {
       } catch (_) {}
       browser = null;
     }
+    throw error;
   } finally {
     if (timeoutHandle) clearTimeout(timeoutHandle);
   }
@@ -676,6 +676,8 @@ async function saveCookiesImpl() {
     // Get Gmail auth for potential 2FA code retrieval
     const gmailAuth = await authorize();
 
+    const loginFailures = [];
+
     // Login to FieldNation with the new automated system
     if (CONFIG.FIELDNATION_ENABLED) {
       console.log("🔑 Logging into FieldNation...");
@@ -691,6 +693,7 @@ async function saveCookiesImpl() {
         console.log("✅ FieldNation login successful");
       } else {
         console.error("❌ FieldNation login failed:", fnResult.error);
+        loginFailures.push(`FieldNation: ${fnResult.error}`);
       }
     } else {
       console.log("⏭️ FieldNation login skipped (disabled)");
@@ -711,15 +714,39 @@ async function saveCookiesImpl() {
         console.log("✅ WorkMarket login successful");
       } else {
         console.error("❌ WorkMarket login failed:", wmResult.error);
+        loginFailures.push(`WorkMarket: ${wmResult.error}`);
       }
     } else {
       console.log("⏭️ WorkMarket login skipped (disabled)");
     }
 
-    console.log("🍪 Login process completed, cookies saved automatically");
+    if (loginFailures.length > 0) {
+      throw new Error(`Cookie refresh failed (${loginFailures.join("; ")})`);
+    }
+
+    console.log("🍪 Login process completed, cookies validated and saved");
   } catch (error) {
     console.error("❌ Error during automated login process:", error);
+    throw error;
   }
+}
+
+// All refresh sources share one promise. This prevents scheduled, manual,
+// probe-triggered, and order-triggered logins from closing each other's browser
+// or racing to replace the same cookie files.
+function refreshCookies(reason = "unspecified") {
+  if (cookieRefreshPromise) {
+    logger.info(`Cookie refresh already running; joined by ${reason}`);
+    return cookieRefreshPromise;
+  }
+
+  isRefreshingCookies = true;
+  lastReloginAt = Date.now();
+  cookieRefreshPromise = saveCookies().finally(() => {
+    isRefreshingCookies = false;
+    cookieRefreshPromise = null;
+  });
+  return cookieRefreshPromise;
 }
 
 // Periodically check for unread emails
@@ -1104,8 +1131,6 @@ async function processOrder(orderLink) {
           );
         } else {
           // No refresh in progress, start one
-          isRefreshingCookies = true;
-          lastReloginAt = Date.now();
           console.log(
             "🔄 Invalid WorkMarket data detected, refreshing cookies and retrying..."
           );
@@ -1120,7 +1145,7 @@ async function processOrder(orderLink) {
             console.log("🔑 Re-logging into WorkMarket to refresh cookies...");
 
             // Use saveCookies() which properly initializes browser and logs into both platforms
-            await saveCookies();
+            await refreshCookies("expired WorkMarket order session");
 
             console.log("✅ WorkMarket re-login successful, cookies refreshed");
 
@@ -1182,8 +1207,6 @@ async function processOrder(orderLink) {
             });
             return null;
           } finally {
-            // Always reset the flag when done
-            isRefreshingCookies = false;
             console.log("🔓 Cookie refresh lock released");
           }
         }
@@ -1772,8 +1795,7 @@ telegramBot.onProcessOrder = processOrder;
 // Manual /relogin: refresh cookies, then replay anything dropped while the
 // session was dead, so a hand-triggered fix also recovers the lost orders.
 telegramBot.onRelogin = async () => {
-  lastReloginAt = Date.now();
-  await saveCookies();
+  await refreshCookies("manual Telegram command");
   consecutiveWmSessionFailures = 0;
   await drainWmRetryQueue();
 };
@@ -1804,8 +1826,7 @@ app.listen(port, async () => {
   // Refresh cookies on startup so we never run with a stale session
   console.log("🔑 Refreshing platform cookies on startup...");
   try {
-    lastReloginAt = Date.now();
-    await saveCookies();
+    await refreshCookies("startup");
     console.log("✅ Startup cookie refresh complete");
   } catch (err) {
     console.error("❌ Startup cookie refresh failed:", err.message);

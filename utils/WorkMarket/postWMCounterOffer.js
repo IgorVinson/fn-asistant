@@ -1,45 +1,9 @@
-import fs from "fs";
-import path from "path";
-import { fileURLToPath } from "url";
 import { CONFIG } from "../../config.js";
+import { getCookieHeader } from "../cookieStore.js";
 
-// Get the directory name properly in ES modules
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-const cookiesFilePaths = [
-  path.join(__dirname, "autoCookies.json"),
-  path.join(__dirname, "cookies.json"),
-];
-
-function getCookies() {
+function getCookies(targetUrl) {
   try {
-    const cookiesFilePath = cookiesFilePaths.find(filePath =>
-      fs.existsSync(filePath)
-    );
-
-    if (!cookiesFilePath) throw new Error("Cookies file not found!");
-
-    const cookiesJson = JSON.parse(fs.readFileSync(cookiesFilePath, "utf-8"));
-    if (!Array.isArray(cookiesJson)) {
-      throw new Error(
-        "Invalid cookies format: Expected an array of cookie objects"
-      );
-    }
-
-    const cookies = cookiesJson
-      .filter(
-        cookie =>
-          typeof cookie.name === "string" && typeof cookie.value === "string"
-      )
-      .map(cookie => `${cookie.name}=${cookie.value}`)
-      .join("; ");
-
-    if (!cookies) {
-      throw new Error("No valid cookies found in the file");
-    }
-
-    return cookies;
+    return getCookieHeader("WorkMarket", targetUrl);
   } catch (error) {
     console.error(`Error reading cookies: ${error.message}`);
     return null;
@@ -144,7 +108,8 @@ export async function postWMCounterOffer(
   options = {}
 ) {
   try {
-    const cookies = await getCookies();
+    const requestUrl = `https://www.workmarket.com/assignments/negotiate/${workOrderId}`;
+    const cookies = getCookies(requestUrl);
 
     if (!cookies) {
       throw new Error("Failed to retrieve cookies");
@@ -156,7 +121,7 @@ export async function postWMCounterOffer(
     if (!csrfCookie) {
       throw new Error("CSRFToken cookie not found");
     }
-    const CSRFToken = csrfCookie.split("=")[1];
+    const CSRFToken = csrfCookie.trim().slice("CSRFToken=".length);
 
     const formData = buildWMCounterOfferFormData({
       csrfToken: CSRFToken,
@@ -165,7 +130,6 @@ export async function postWMCounterOffer(
       distance,
       options,
     });
-    const requestUrl = `https://www.workmarket.com/assignments/negotiate/${workOrderId}`;
     const headers = {
       accept:
         "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",

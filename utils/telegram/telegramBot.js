@@ -195,12 +195,17 @@ class TelegramBotService {
     });
 
     // Relogin command
-    this.bot.onText(/\/relogin/, msg => {
+    this.bot.onText(/\/relogin/, async msg => {
       if (msg.chat && msg.chat.id.toString() === this.chatId) {
         this.clearWaitingState();
         this.sendMessage("🔄 Initiating relogin process...");
         if (this.onRelogin) {
-          this.onRelogin();
+          try {
+            await this.onRelogin();
+            this.sendMessage("✅ Platform sessions refreshed successfully");
+          } catch (error) {
+            this.sendMessage(`❌ Platform session refresh failed: ${error.message}`);
+          }
         }
       }
     });

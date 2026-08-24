@@ -13,12 +13,20 @@ import { waitForWMcode } from "./getWMcode.js";
 
 export async function loginWMAuto(
   browser,
-  email = process.env.WM_EMAIL || "igorvinson@gmail.com",
-  password = process.env.WM_PASSWORD || "Karusel123!",
+  email = process.env.WM_EMAIL,
+  password = process.env.WM_PASSWORD,
   verificationCode = null,
   waitForCode = false,
   gmailAuth = null
 ) {
+  if (!email || !password) {
+    return {
+      success: false,
+      page: null,
+      error: "WM_EMAIL and WM_PASSWORD environment variables are required",
+    };
+  }
+
   const url = "https://www.workmarket.com/login";
 
   // Create a new page with additional configurations to avoid detection
@@ -75,14 +83,6 @@ export async function loginWMAuto(
     // Wait for navigation or 2FA screen
     console.log("🔄 Waiting for authentication screen...");
     await new Promise(resolve => setTimeout(resolve, 4000));
-
-    // Take a screenshot for debugging
-    try {
-      await page.screenshot({ path: "debug-after-login.png", fullPage: true });
-      console.log("📸 Screenshot saved as debug-after-login.png");
-    } catch (screenshotError) {
-      console.log("⚠️ Could not take screenshot:", screenshotError.message);
-    }
 
     console.log("📝 Page title:", await page.title());
     console.log("🌐 Current URL:", page.url());
@@ -167,9 +167,7 @@ export async function loginWMAuto(
         try {
           verificationCode = await waitForWMcode(gmailAuth, 90000, 3000); // Wait up to 90 seconds
           if (verificationCode) {
-            console.log(
-              `✅ Retrieved verification code from Gmail: ${verificationCode}`
-            );
+            console.log("✅ Retrieved WorkMarket verification code from Gmail");
           } else {
             console.log(
               "⚠️ Could not retrieve verification code from Gmail, falling back to manual entry"
@@ -180,10 +178,8 @@ export async function loginWMAuto(
         }
       }
 
-      // If still no code, use test code as fallback for testing
-      if (!verificationCode) {
-        verificationCode = "123456";
-        console.log("🔤 Using test verification code: 123456 (fallback)");
+      if (!verificationCode && !waitForCode) {
+        throw new Error("WorkMarket verification code was not available");
       }
 
       if (verificationCode) {
@@ -385,35 +381,26 @@ export async function loginWMAuto(
       );
     }
 
-    // Step 7: Save cookies with error handling
-    console.log("🍪 Saving cookies as autoCookies.json...");
-    try {
-      // Make sure the page is still attached to browser
-      if (page.isClosed()) {
-        console.log("⚠️ Page is closed, cannot save cookies");
-        return {
-          success: false,
-          page: page,
-          error: "Page closed before cookie saving",
-        };
-      }
-
-      // Save cookies
-      await saveCookiesCustom(page, "WorkMarket", "autoCookies.json");
-      console.log("✅ Cookies saved successfully");
-    } catch (cookieError) {
-      console.error("❌ Error saving cookies:", cookieError.message);
-      // Try to save to alternative location
-      try {
-        await saveCookiesCustom(page, "WorkMarket", "fallback-cookies.json");
-        console.log("✅ Cookies saved to fallback location");
-      } catch (fallbackError) {
-        console.error(
-          "❌ Failed to save cookies to fallback location:",
-          fallbackError.message
-        );
-      }
+    const stillOnAuthScreen = await page.evaluate(() => {
+      const selectors = [
+        "#login-email",
+        "#login-password",
+        'input[name="tfaToken"]',
+        'input[autocomplete="one-time-code"]',
+      ];
+      return selectors.some(selector => {
+        const element = document.querySelector(selector);
+        return element && element.getClientRects().length > 0;
+      });
+    });
+    if (stillOnAuthScreen || /\/login(?:[/?#]|$)/i.test(page.url())) {
+      throw new Error("WorkMarket authentication did not leave the login screen");
     }
+
+    // Step 7: validate and atomically replace the known-good cookie jar.
+    console.log("🍪 Saving cookies as autoCookies.json...");
+    await saveCookiesCustom(page, "WorkMarket", "autoCookies.json");
+    console.log("✅ WorkMarket session cookies validated and saved");
 
     return {
       success: true,
@@ -422,30 +409,6 @@ export async function loginWMAuto(
     };
   } catch (error) {
     console.error("❌ Error during WorkMarket login:", error.message);
-
-    // Try to save cookies even if there's an error
-    try {
-      if (!page.isClosed()) {
-        await saveCookiesCustom(page, "WorkMarket", "error-cookies.json");
-        console.log("✅ Cookies saved from error state");
-      }
-    } catch (cookieError) {
-      console.error(
-        "❌ Could not save cookies during error:",
-        cookieError.message
-      );
-    }
-
-    // Take screenshot on error for debugging
-    try {
-      await page.screenshot({ path: "debug-error.png", fullPage: true });
-      console.log("📸 Error screenshot saved as debug-error.png");
-    } catch (screenshotError) {
-      console.log(
-        "⚠️ Could not take error screenshot:",
-        screenshotError.message
-      );
-    }
 
     return {
       success: false,
