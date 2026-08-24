@@ -163,9 +163,13 @@ app.post("/api/monitor/:action", async (req, res) => {
 let browser; // Declare a browser instance
 let reloginTimeout; // Timeout for the relogin scheduler
 let monitoringInterval; // Store the monitoring interval
+let monitoringStartPromise = null; // Single-flight guard while Gmail auth starts
 let isRefreshingCookies = false; // Flag to prevent concurrent cookie refresh attempts
 let cookieRefreshPromise = null; // Shared single-flight refresh for every trigger
 const phoneAlertDedup = new Map();
+const inFlightOrders = new Map();
+const recentlyProcessedOrders = new Map();
+const ORDER_DEDUP_TTL_MS = 5 * 60 * 1000;
 
 // --- WorkMarket session health -------------------------------------------
 // Correct session detection makes authExpired fire far more often than the old
@@ -334,6 +338,34 @@ function isDuplicatePhoneAlert(alert) {
 
   phoneAlertDedup.set(key, now + ttlMs);
   return false;
+}
+
+function buildOrderProcessingKey(orderLink) {
+  const platform = determinePlatform(orderLink);
+  const idMatch = orderLink.match(
+    platform === "FieldNation"
+      ? /\/workorders\/(\d+)/i
+      : /\/assignments\/(?:details\/)?(\d+)/i
+  );
+
+  if (idMatch) return `${platform}:${idMatch[1]}`;
+
+  try {
+    const url = new URL(orderLink);
+    const path = url.pathname.replace(/\/$/, "");
+    // WorkMarket email links are SendGrid redirects. Their pathname is always
+    // /uni/ls/click, while the query string contains the unique destination.
+    const query = url.hostname === "sendgrid.workmarket.com" ? url.search : "";
+    return `${platform}:${url.origin}${path}${query}`;
+  } catch {
+    return `${platform}:${orderLink}`;
+  }
+}
+
+function pruneRecentlyProcessedOrders(now = Date.now()) {
+  for (const [key, expiresAt] of recentlyProcessedOrders.entries()) {
+    if (expiresAt <= now) recentlyProcessedOrders.delete(key);
+  }
 }
 
 function extractFieldNationOrderLinkFromAlert(alert) {
@@ -869,13 +901,18 @@ async function periodicCheck() {
 }
 
 function startMonitoring() {
-  if (!monitoringInterval) {
-    periodicCheck().catch(error => {
+  telegramBot.isMonitoring = true;
+
+  if (monitoringInterval || monitoringStartPromise) return;
+
+  monitoringStartPromise = periodicCheck()
+    .catch(error => {
       logger.error("periodicCheck failed to start", error);
       console.error("❌ periodicCheck failed to start:", error.message);
+    })
+    .finally(() => {
+      monitoringStartPromise = null;
     });
-  }
-  telegramBot.isMonitoring = true;
 }
 
 function stopMonitoring() {
@@ -1002,7 +1039,7 @@ function isInvalidWorkMarketData(data) {
 }
 
 // Process the order: check requirements and apply if valid
-async function processOrder(orderLink) {
+async function processOrderInternal(orderLink) {
   try {
     const platform = determinePlatform(orderLink);
 
@@ -1528,27 +1565,34 @@ async function processOrder(orderLink) {
       );
 
       // Send a custom Telegram message with better formatting for counter dates
-      const modesLabel = telegramBot.getActiveModesHTML();
+      const escapeHTML = value => telegramBot.escapeHTML(value);
       const orderIdLink = orderLink
-        ? `<a href="${orderLink}">${normalizedData.id}</a>`
-        : normalizedData.id;
-
-      const telegramMsg = `📅 <b>Counter Dates</b>${modesLabel}
-
-<b>Platform:</b> ${normalizedData.platform}
-<b>Order ID:</b> ${orderIdLink}
-<b>Company:</b> ${normalizedData.company}
-<b>Title:</b> ${normalizedData.title}
-<b>Pay:</b> $${normalizedData.payRange.min}-$${normalizedData.payRange.max}
-<b>Distance:</b> ${normalizedData.distance}mi
-
-<b>Requested:</b> ${new Date(normalizedData.time.start).toLocaleString()}
-❌ <i>Conflict with existing schedule</i>
-
-<b>✅ Counter Slot:</b> ${counterDateLabel}
-${normalizedData.platform === "WorkMarket" && !isRealWorkMarketSubmission ? "\n\n<i>WorkMarket alternate date submission will be simulated in TEST mode only.</i>" : ""}
-
-<b>Counter Offer:</b> ${eligibilityResult.counterOffer.payType === "hourly" ? `$${eligibilityResult.counterOffer.counterRate}/hr × ${eligibilityResult.counterOffer.estHours}hrs = $${eligibilityResult.counterOffer.baseAmount}` : eligibilityResult.counterOffer.payType === "blended" && eligibilityResult.counterOffer.payStructure ? `$${eligibilityResult.counterOffer.payStructure.base.amount} base + $${eligibilityResult.counterOffer.payStructure.additional.amount}/hr × ${eligibilityResult.counterOffer.payStructure.additional.units}hr (combined)` : `$${eligibilityResult.counterOffer.baseAmount} (fixed)`} + $${eligibilityResult.counterOffer.travelExpense} travel`;
+        ? `<a href="${escapeHTML(orderLink)}">#${escapeHTML(normalizedData.id)}</a>`
+        : `#${escapeHTML(normalizedData.id)}`;
+      const payText =
+        normalizedData.payRange.min === normalizedData.payRange.max
+          ? `$${normalizedData.payRange.min}`
+          : `$${normalizedData.payRange.min}–$${normalizedData.payRange.max}`;
+      const counterOfferText =
+        eligibilityResult.counterOffer.payType === "hourly"
+          ? `$${eligibilityResult.counterOffer.counterRate}/hr × ${eligibilityResult.counterOffer.estHours}hrs = $${eligibilityResult.counterOffer.baseAmount}`
+          : eligibilityResult.counterOffer.payType === "blended" &&
+              eligibilityResult.counterOffer.payStructure
+            ? `$${eligibilityResult.counterOffer.payStructure.base.amount} base + $${eligibilityResult.counterOffer.payStructure.additional.amount}/hr × ${eligibilityResult.counterOffer.payStructure.additional.units}hr`
+            : `$${eligibilityResult.counterOffer.baseAmount} fixed`;
+      const telegramMsg = [
+        `<b>📅 COUNTER DATE</b> · ${escapeHTML(normalizedData.platform)} ${orderIdLink}`,
+        `<b>${escapeHTML(normalizedData.company)}</b> — ${escapeHTML(normalizedData.title)}`,
+        `💵 ${escapeHTML(payText)} · 📍 ${escapeHTML(normalizedData.distance)} mi`,
+        `❌ Requested: ${escapeHTML(new Date(normalizedData.time.start).toLocaleString())} (conflict)`,
+        `✅ Proposed: ${escapeHTML(counterDateLabel)}`,
+        `💰 ${escapeHTML(counterOfferText)} + $${escapeHTML(eligibilityResult.counterOffer.travelExpense)} travel`,
+        normalizedData.platform === "WorkMarket" && !isRealWorkMarketSubmission
+          ? "<i>TEST mode: alternate date submission is simulated.</i>"
+          : "",
+      ]
+        .filter(Boolean)
+        .join("\n");
 
       telegramBot.bot
         .sendMessage(telegramBot.chatId, telegramMsg, {
@@ -1690,11 +1734,7 @@ ${normalizedData.platform === "WorkMarket" && !isRealWorkMarketSubmission ? "\n\
           break;
         case "PAYMENT_BELOW_MINIMUM":
           rejectReason = CONFIG.STRATEGY?.ENABLED
-            ? `💸 Below lead-time threshold — not worth booking at this horizon${
-                eligibilityResult.rejectDetails
-                  ? `\n${eligibilityResult.rejectDetails}`
-                  : ""
-              }`
+            ? "💸 Below lead-time threshold — not worth booking at this horizon"
             : `Payment below minimum threshold${
                 eligibilityResult.rejectDetails
                   ? `\nReason: ${eligibilityResult.rejectDetails}`
@@ -1786,6 +1826,37 @@ ${normalizedData.platform === "WorkMarket" && !isRealWorkMarketSubmission ? "\n\
     telegramBot.sendMessage(`❌ Error processing order: ${error.message}`);
     return null;
   }
+}
+
+async function processOrder(orderLink) {
+  const key = buildOrderProcessingKey(orderLink);
+  const now = Date.now();
+  pruneRecentlyProcessedOrders(now);
+
+  if ((recentlyProcessedOrders.get(key) || 0) > now) {
+    logger.info(`Duplicate order skipped within dedup window (${key})`);
+    return null;
+  }
+
+  const existing = inFlightOrders.get(key);
+  if (existing) {
+    logger.info(`Duplicate order joined existing processing (${key})`);
+    return existing;
+  }
+
+  const processingPromise = processOrderInternal(orderLink)
+    .then(result => {
+      if (result !== null) {
+        recentlyProcessedOrders.set(key, Date.now() + ORDER_DEDUP_TTL_MS);
+      }
+      return result;
+    })
+    .finally(() => {
+      inFlightOrders.delete(key);
+    });
+
+  inFlightOrders.set(key, processingPromise);
+  return processingPromise;
 }
 
 // Set up Telegram bot event handlers

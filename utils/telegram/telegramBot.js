@@ -147,7 +147,6 @@ class TelegramBotService {
     this.bot.onText(/\/start/, msg => {
       if (msg.chat && msg.chat.id.toString() === this.chatId) {
         this.clearWaitingState();
-        this.sendMessage("🚀 Starting job monitoring...");
         this.isMonitoring = true;
         if (this.onStartMonitoring) {
           this.onStartMonitoring();
@@ -159,7 +158,6 @@ class TelegramBotService {
     this.bot.onText(/\/stop/, msg => {
       if (msg.chat && msg.chat.id.toString() === this.chatId) {
         this.clearWaitingState();
-        this.sendMessage("⏹️ Stopping job monitoring...");
         this.isMonitoring = false;
         if (this.onStopMonitoring) {
           this.onStopMonitoring();
@@ -527,66 +525,38 @@ class TelegramBotService {
     });
   }
 
-  // Build active modes string for notifications
-  getActiveModesMarkdown() {
-    const modes = [];
-    if (CONFIG.TEST_MODE) modes.push("🧪 TEST");
-    if (CONFIG.APPLICATION_MODE === "granite_only") modes.push("🪨 GRANITE ONLY");
-    if (CONFIG.APPLICATION_MODE === "all_companies") modes.push("🌐 ALL COMPANIES");
-    if (CONFIG.APPLICATION_MODE === "disabled") modes.push("⛔ DISABLED");
-    if (CONFIG.ALLOW_ALL_COMPANIES_ON_DATES.length > 0) modes.push("📆 DATE OVERRIDES");
-    if (CONFIG.IS_COUNTER_DATES) modes.push("📅 COUNTER SLOTS");
-    if (CONFIG.STRATEGY?.ENABLED) modes.push("🎯 LEAD-TIME STRATEGY");
-    return modes.length > 0 ? ` *[${modes.join(" | ")}]*` : "";
-  }
-
-  getActiveModesHTML() {
-    const modes = [];
-    if (CONFIG.TEST_MODE) modes.push("🧪 TEST");
-    if (CONFIG.APPLICATION_MODE === "granite_only") modes.push("🪨 GRANITE ONLY");
-    if (CONFIG.APPLICATION_MODE === "all_companies") modes.push("🌐 ALL COMPANIES");
-    if (CONFIG.APPLICATION_MODE === "disabled") modes.push("⛔ DISABLED");
-    if (CONFIG.ALLOW_ALL_COMPANIES_ON_DATES.length > 0) modes.push("📆 DATE OVERRIDES");
-    if (CONFIG.IS_COUNTER_DATES) modes.push("📅 COUNTER SLOTS");
-    if (CONFIG.STRATEGY?.ENABLED) modes.push("🎯 LEAD-TIME STRATEGY");
-    return modes.length > 0 ? ` <b>[${modes.join(" | ")}]</b>` : "";
+  escapeHTML(value) {
+    return String(value ?? "")
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;");
   }
 
   sendOrderNotification(orderData, action, details = "", orderLink = "") {
-    // Escape special characters for Markdown
-    const escapeMarkdown = text => {
-      return text.replace(/[_*[\]()~`>#+=|{}.!-]/g, "\\$&");
-    };
-
-    const modesLabel = this.getActiveModesMarkdown();
     const strategyLine = describeStrategy(orderData);
-
-    let orderIdText;
-    if (orderLink) {
-      // Create clickable link with escaped text
-      orderIdText = `[${orderData.id}](${orderLink})`;
-    } else {
-      orderIdText = escapeMarkdown(orderData.id.toString());
-    }
-
-    const message = `
-🔔 *New Job Alert*${modesLabel}
-
-*Platform:* ${escapeMarkdown(orderData.platform)}
-*Order ID:* ${orderIdText}
-*Company:* ${escapeMarkdown(orderData.company)}
-*Title:* ${escapeMarkdown(orderData.title)}
-*Pay:* $${orderData.payRange.min}-$${orderData.payRange.max}
-*Distance:* ${orderData.distance}mi
-*Time:* ${escapeMarkdown(new Date(orderData.time.start).toLocaleString())}
-${strategyLine ? `*Strategy:* ${escapeMarkdown(strategyLine)}\n` : ""}
-*Action:* ${action}
-${details ? escapeMarkdown(details) : ""}
-    `;
+    const escapeHTML = value => this.escapeHTML(value);
+    const orderIdText = orderLink
+      ? `<a href="${escapeHTML(orderLink)}">#${escapeHTML(orderData.id)}</a>`
+      : `#${escapeHTML(orderData.id)}`;
+    const payMin = orderData.payRange.min;
+    const payMax = orderData.payRange.max;
+    const payText =
+      payMin === payMax ? `$${payMin}` : `$${payMin}–$${payMax}`;
+    const message = [
+      `<b>${escapeHTML(action)}</b> · ${escapeHTML(orderData.platform)} ${orderIdText}`,
+      `<b>${escapeHTML(orderData.company)}</b> — ${escapeHTML(orderData.title)}`,
+      `💵 ${escapeHTML(payText)} · 📍 ${escapeHTML(orderData.distance)} mi`,
+      `📅 ${escapeHTML(new Date(orderData.time.start).toLocaleString())}`,
+      strategyLine ? `🎯 ${escapeHTML(strategyLine)}` : "",
+      details ? escapeHTML(details) : "",
+    ]
+      .filter(Boolean)
+      .join("\n");
 
     this.bot
       .sendMessage(this.chatId, message, {
-        parse_mode: "Markdown",
+        parse_mode: "HTML",
         disable_web_page_preview: true,
       })
       .catch(error => {
