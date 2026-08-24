@@ -10,6 +10,19 @@ export function isStrategyEnabled() {
   return CONFIG.STRATEGY?.ENABLED === true;
 }
 
+export function formatLeadTimePolicy() {
+  const tiers = CONFIG.STRATEGY?.LEAD_TIME_TIERS || [];
+  const sameDay = tiers[0]?.minPay ?? 0;
+  const mid = tiers[1]?.minPay ?? 0;
+  const advance = tiers[2]?.minPay ?? 0;
+
+  return [
+    `⚡ Same day / urgent (≤36h): $${sameDay}`,
+    `📆 Mid-range (36h–7 days): $${mid}`,
+    `🗓️ 7+ days: $${advance}`,
+  ].join("\n");
+}
+
 function isGraniteCompany(companyName) {
   return (companyName || "").trim().toLowerCase() === "granite telecommunications";
 }

@@ -17,10 +17,12 @@ import { getOrderLink } from "./utils/gmail/getOrderLink.js";
 import { authorize } from "./utils/gmail/login.js";
 import isEligibleForApplication from "./utils/isEligibleForApplication.js";
 import { isTransientNetworkError } from "./utils/isTransientNetworkError.js";
+import { createLogThrottle } from "./utils/logThrottle.js";
 import logger from "./utils/logger.js";
 import normalizeDateFromWO from "./utils/normalizedDateFromWO.js";
 import playSound from "./utils/playSound.js";
 import { saveReplay } from "./utils/saveReplay.js";
+import { formatLeadTimePolicy } from "./utils/strategy/leadTimeStrategy.js";
 import { getAvailableBlocks } from "./utils/availability/getAvailableBlocks.js";
 import { getWorkOrderLocalDate } from "./utils/isEligibleForApplication.js";
 import telegramBot from "./utils/telegram/telegramBot.js";
@@ -811,6 +813,7 @@ async function periodicCheck() {
   playSound("notification");
 
   let isCheckingEmail = false;
+  const shouldLogNoUnreadEmail = createLogThrottle(10 * 60 * 1000);
 
   // Backoff state for transient network outages (e.g. VPN/DNS stalls causing
   // the Gmail OAuth token refresh to ETIMEDOUT). During an outage we skip
@@ -873,7 +876,9 @@ async function periodicCheck() {
           console.log("No valid order link found in email.");
         }
       } else {
-        console.log("No unread emails found.");
+        if (shouldLogNoUnreadEmail()) {
+          console.log("📭 No unread emails found (status repeats every 10 min).");
+        }
       }
     } catch (error) {
       if (isTransientNetworkError(error)) {
@@ -1496,7 +1501,12 @@ async function processOrderInternal(orderLink) {
 
           playSound("applied");
           logger.info(
-            `Result: Counter offer sent successfully 🔊
+            CONFIG.TEST_MODE
+              ? `Result: TEST MODE — counter offer simulated; nothing submitted
+             Type: ${co.payType}
+             ${co.payType === "hourly" ? `Rate: $${co.counterRate}/hr × ${co.estHours}hrs` : `Fixed: $${co.baseAmount}`}
+             Travel: $${co.travelExpense}`
+              : `Result: Counter offer sent successfully 🔊
              Type: ${co.payType}
              ${co.payType === "hourly" ? `Rate: $${co.counterRate}/hr × ${co.estHours}hrs` : `Fixed: $${co.baseAmount}`}
              Travel: $${co.travelExpense}`,
@@ -1562,7 +1572,9 @@ async function processOrderInternal(orderLink) {
 
           playSound("applied");
           logger.info(
-            `Result: WM Counter offer sent 🔊 Type: ${co.payType}, Rate: $${co.counterRate}/hr, Total: $${co.baseAmount}, Travel: $${co.travelExpense}`,
+            CONFIG.TEST_MODE
+              ? `Result: TEST MODE — WM counter offer simulated; nothing submitted. Type: ${co.payType}, Rate: $${co.counterRate}/hr, Total: $${co.baseAmount}, Travel: $${co.travelExpense}`
+              : `Result: WM Counter offer sent 🔊 Type: ${co.payType}, Rate: $${co.counterRate}/hr, Total: $${co.baseAmount}, Travel: $${co.travelExpense}`,
             normalizedData.platform,
             normalizedData.id
           );
@@ -1618,6 +1630,9 @@ async function processOrderInternal(orderLink) {
             ? `$${eligibilityResult.counterOffer.payStructure.base.amount} base + $${eligibilityResult.counterOffer.payStructure.additional.amount}/hr × ${eligibilityResult.counterOffer.payStructure.additional.units}hr`
             : `$${eligibilityResult.counterOffer.baseAmount} fixed`;
       const telegramMsg = [
+        CONFIG.TEST_MODE
+          ? "<b>🧪 TEST MODE — no application will be submitted</b>"
+          : "",
         `<b>📅 COUNTER DATE</b> · ${escapeHTML(normalizedData.platform)} ${orderIdLink}`,
         `<b>${escapeHTML(normalizedData.company)}</b> — ${escapeHTML(normalizedData.title)}`,
         `💵 ${escapeHTML(payText)} · 📍 ${escapeHTML(normalizedData.distance)} mi`,
@@ -1641,7 +1656,7 @@ async function processOrderInternal(orderLink) {
             `Failed to send counter dates notification: ${err.message}`
           );
           telegramBot.sendMessage(
-            `📅 Counter Dates\n\nOrder: ${normalizedData.id}\nCompany: ${normalizedData.company}\nRequested: ${new Date(normalizedData.time.start).toLocaleString()}\n\nCounter Slot: ${counterDateLabel}\n\nCounter: $${eligibilityResult.counterOffer.baseAmount} + $${eligibilityResult.counterOffer.travelExpense} travel`
+            `${CONFIG.TEST_MODE ? "🧪 TEST MODE — no application will be submitted\n\n" : ""}📅 Counter Dates\n\nOrder: ${normalizedData.id}\nCompany: ${normalizedData.company}\nRequested: ${new Date(normalizedData.time.start).toLocaleString()}\n\nCounter Slot: ${counterDateLabel}\n\nCounter: $${eligibilityResult.counterOffer.baseAmount} + $${eligibilityResult.counterOffer.travelExpense} travel`
           );
         });
 
@@ -1931,7 +1946,7 @@ app.listen(port, async () => {
   await cleanupChromeProcesses();
 
   telegramBot.sendMessage(
-    `🚀 Server started on port ${port}\nMonitoring auto-started ✅\nUse /help for available commands or the menu button (☰) for quick access`
+    `${CONFIG.TEST_MODE ? "🧪 TEST MODE — no applications will be submitted" : "🚀 LIVE MODE — real applications enabled"}\n\nServer started on port ${port}\nMonitoring auto-started ✅\n\n🎯 Active minimum payment policy\n${formatLeadTimePolicy()}\n\nUse /policy to change it or the menu button (☰) for quick access`
   );
   // Initialize logs.json with current eventHistory
   await writeEventsToFile(eventHistory);
