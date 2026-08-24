@@ -368,6 +368,11 @@ function pruneRecentlyProcessedOrders(now = Date.now()) {
   }
 }
 
+function buildNormalizedOrderKey(orderData) {
+  if (!orderData?.platform || !orderData?.id) return null;
+  return `${orderData.platform}:${orderData.id}`;
+}
+
 function extractFieldNationOrderLinkFromAlert(alert) {
   const candidates = [
     alert?.link,
@@ -1285,6 +1290,19 @@ async function processOrderInternal(orderLink) {
       return null;
     }
 
+    const normalizedOrderKey = buildNormalizedOrderKey(normalizedData);
+    if (
+      normalizedOrderKey &&
+      (recentlyProcessedOrders.get(normalizedOrderKey) || 0) > Date.now()
+    ) {
+      logger.info(
+        `Duplicate order skipped after ID resolution (${normalizedOrderKey})`,
+        normalizedData.platform,
+        normalizedData.id
+      );
+      return null;
+    }
+
     // Log order details
     logger.info(
       `New Order - Platform: ${normalizedData.platform}, ID: ${
@@ -1866,7 +1884,12 @@ async function processOrder(orderLink) {
   const processingPromise = processOrderInternal(orderLink)
     .then(result => {
       if (result !== null) {
-        recentlyProcessedOrders.set(key, Date.now() + ORDER_DEDUP_TTL_MS);
+        const expiresAt = Date.now() + ORDER_DEDUP_TTL_MS;
+        recentlyProcessedOrders.set(key, expiresAt);
+        const normalizedOrderKey = buildNormalizedOrderKey(result);
+        if (normalizedOrderKey) {
+          recentlyProcessedOrders.set(normalizedOrderKey, expiresAt);
+        }
       }
       return result;
     })
