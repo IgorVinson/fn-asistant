@@ -23,6 +23,7 @@ import { isTransientNetworkError } from "./utils/isTransientNetworkError.js";
 import { createLogThrottle } from "./utils/logThrottle.js";
 import logger from "./utils/logger.js";
 import normalizeDateFromWO from "./utils/normalizedDateFromWO.js";
+import { PersistentOrderDeduper } from "./utils/orderDedup.js";
 import playSound from "./utils/playSound.js";
 import { saveReplay } from "./utils/saveReplay.js";
 import { formatLeadTimePolicy } from "./utils/strategy/leadTimeStrategy.js";
@@ -175,6 +176,9 @@ const phoneAlertDedup = new Map();
 const inFlightOrders = new Map();
 const recentlyProcessedOrders = new Map();
 const ORDER_DEDUP_TTL_MS = 5 * 60 * 1000;
+const processedOrderDeduper = new PersistentOrderDeduper({
+  filePath: path.join(process.cwd(), "logs", "processed-order-fingerprints.json"),
+});
 
 // --- WorkMarket session health -------------------------------------------
 // Correct session detection makes authExpired fire far more often than the old
@@ -263,6 +267,46 @@ function queueOrderForRetry(
     platform,
     workOrderId
   );
+}
+
+async function recoverAvailabilitySession(
+  orderLink,
+  workOrderId = "unknown",
+  reason = ""
+) {
+  queueOrderForRetry(orderLink, workOrderId, reason);
+  pushEvent({
+    platform: "WorkMarket",
+    id: workOrderId,
+    status: "info",
+    message: "Order queued: WorkMarket availability session unavailable",
+  });
+
+  if (!canRelogin()) {
+    logger.warn(
+      `Availability order queued; re-login is on cooldown for ${Math.ceil(reloginCooldownRemainingMs() / 1000)}s`,
+      "WorkMarket",
+      workOrderId
+    );
+    return;
+  }
+
+  try {
+    await refreshCookies("WorkMarket availability session expired");
+    consecutiveWmSessionFailures = 0;
+    pendingRetryDrain = true;
+    logger.info(
+      "Availability session restored; queued order will be retried",
+      "WorkMarket",
+      workOrderId
+    );
+  } catch (error) {
+    logger.error(
+      `Availability session refresh failed: ${error.message}`,
+      "WorkMarket",
+      workOrderId
+    );
+  }
 }
 
 // Re-process orders that were dropped while the session was dead. Called after
@@ -1400,6 +1444,15 @@ async function processOrderInternal(orderLink) {
       return null;
     }
 
+    if (processedOrderDeduper.has(normalizedData)) {
+      logger.info(
+        `Unchanged order skipped by persistent fingerprint (${normalizedOrderKey})`,
+        normalizedData.platform,
+        normalizedData.id
+      );
+      return null;
+    }
+
     // Log order details
     logger.info(
       `New Order - Platform: ${normalizedData.platform}, ID: ${
@@ -1422,6 +1475,18 @@ async function processOrderInternal(orderLink) {
     );
 
     const eligibilityResult = await isEligibleForApplication(normalizedData);
+
+    // A broken WorkMarket session means availability is unknown, not that the
+    // calendar is full. Keep the order for a post-login retry and avoid sending
+    // a false "Calendar conflict" rejection.
+    if (eligibilityResult.reason === "AVAILABILITY_AUTH_REQUIRED") {
+      await recoverAvailabilitySession(
+        orderLink,
+        normalizedData.id,
+        eligibilityResult.rejectDetails
+      );
+      return null;
+    }
 
     // Process the order based on eligibility
     if (eligibilityResult.eligible) {
@@ -1990,18 +2055,22 @@ async function processOrder(orderLink) {
 
   const processingPromise = processOrderInternal(orderLink)
     .then(result => {
-      if (result !== null) {
+      if (result) {
         const expiresAt = Date.now() + ORDER_DEDUP_TTL_MS;
         recentlyProcessedOrders.set(key, expiresAt);
         const normalizedOrderKey = buildNormalizedOrderKey(result);
         if (normalizedOrderKey) {
           recentlyProcessedOrders.set(normalizedOrderKey, expiresAt);
         }
+        processedOrderDeduper.remember(result);
       }
       return result;
     })
     .finally(() => {
       inFlightOrders.delete(key);
+      if (pendingRetryDrain && !isDrainingRetryQueue) {
+        setTimeout(() => void drainWmRetryQueue(), 0);
+      }
     });
 
   inFlightOrders.set(key, processingPromise);

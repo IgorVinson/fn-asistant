@@ -3,6 +3,7 @@ import logger from "./logger.js";
 import { getAvailableBlocks } from "./availability/getAvailableBlocks.js";
 import { findFitBlock } from "./availability/findFitBlock.js";
 import { decideFitAction } from "./availability/decideFitAction.js";
+import { classifyAvailabilityError } from "./availability/availabilityError.js";
 import {
   isStrategyEnabled,
   getMinPayThreshold,
@@ -635,10 +636,21 @@ async function evaluateEligibilityInternal(workOrder, availabilityCtx) {
         workOrder.platform,
         workOrder.id
       );
+
+      const failureReason = classifyAvailabilityError(err);
+      if (failureReason === "AVAILABILITY_AUTH_REQUIRED") {
+        return {
+          eligible: false,
+          counterOffer: null,
+          reason: "AVAILABILITY_AUTH_REQUIRED",
+          rejectDetails: err.message,
+        };
+      }
+
       return {
         eligible: false,
         counterOffer: null,
-        reason: "SLOT_UNAVAILABLE",
+        reason: failureReason,
         rejectDetails: err.message,
       };
     }
