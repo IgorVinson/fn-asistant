@@ -1,6 +1,6 @@
 export const CONFIG = {
   // Platform configuration
-  TEST_MODE: true, // If true, agent will not perform destructive/real actions
+  TEST_MODE: false, // If true, agent will not perform destructive/real actions
   FIELDNATION_ENABLED: true, // Set to false to disable FieldNation applications
   WORKMARKET_ENABLED: true, // Set to false to disable WorkMarket applications
   APPLICATION_MODE: "all_companies", // "granite_only" | "all_companies" | "disabled"
