@@ -35,10 +35,34 @@ function wmCookies(value = "session-one") {
   ];
 }
 
+function fnCookies(domain = "app.fieldnation.com") {
+  return [
+    {
+      name: "FNSESS",
+      value: "fn-session",
+      domain,
+      path: "/",
+      secure: true,
+      expires: -1,
+    },
+  ];
+}
+
 test("cookie validation rejects jars without recognized session cookies", () => {
   assert.throws(
     () => validateCookieJar([{ name: "analytics", value: "1" }], "WorkMarket"),
     /no recognized session cookies/
+  );
+});
+
+test("FieldNation validation rejects auth cookies scoped only to the identity host", () => {
+  assert.throws(
+    () => validateCookieJar(fnCookies("id.fieldnation.com"), "FieldNation"),
+    /no recognized session cookies valid for app\.fieldnation\.com/
+  );
+
+  assert.doesNotThrow(() =>
+    validateCookieJar(fnCookies(".fieldnation.com"), "FieldNation")
   );
 });
 

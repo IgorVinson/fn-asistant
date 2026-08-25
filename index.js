@@ -7,7 +7,10 @@ import { google } from "googleapis";
 import path from "path";
 import puppeteer from "puppeteer";
 import { CONFIG } from "./config.js";
-import { getFNorderData } from "./utils/FieldNation/getFNorderData.js";
+import {
+  FNAuthError,
+  getFNorderData,
+} from "./utils/FieldNation/getFNorderData.js";
 import { loginFnAuto } from "./utils/FieldNation/loginFnAuto.js";
 import { postFNCounterOffer } from "./utils/FieldNation/postFNCounterOffer.js";
 import { postFNworkOrderRequest } from "./utils/FieldNation/postFNworkOrderRequest.js";
@@ -186,15 +189,16 @@ const WM_FAILURE_ALERT_THRESHOLD = 3;
 // Orders dropped because the session was dead. getLastUnreadEmail marks the
 // email read BEFORE the order is processed, so without this queue a dropped
 // order is gone for good.
-const wmRetryQueue = [];
+const retryQueue = [];
 // Attempt counts live outside the queue so they survive a drain: an order that
 // fails again is re-queued as a fresh entry, and without this it would retry
 // forever.
-const wmRetryAttempts = new Map();
+const retryAttempts = new Map();
 const RETRY_MAX_ATTEMPTS = 2;
 const RETRY_TTL_MS = 30 * 60 * 1000;
 let isDrainingRetryQueue = false; // Reentrancy guard: draining calls processOrder
 let pendingRetryDrain = false; // Set when a refresh inside processOrder succeeds
+let lastFnRecoveryAt = 0;
 
 function canRelogin() {
   return Date.now() - lastReloginAt >= RELOGIN_COOLDOWN_MS;
@@ -205,7 +209,12 @@ function reloginCooldownRemainingMs() {
 }
 
 // Append a dropped order to logs/unprocessed-orders.ndjson for post-mortem.
-function recordUnprocessedOrder(orderLink, reason, workOrderId = "unknown") {
+function recordUnprocessedOrder(
+  orderLink,
+  reason,
+  workOrderId = "unknown",
+  platform = "WorkMarket"
+) {
   try {
     const logDir = path.join(process.cwd(), "logs");
     fsSync.mkdirSync(logDir, { recursive: true });
@@ -214,6 +223,7 @@ function recordUnprocessedOrder(orderLink, reason, workOrderId = "unknown") {
       `${JSON.stringify({
         orderLink,
         workOrderId,
+        platform,
         reason,
         ts: new Date().toISOString(),
       })}\n`
@@ -221,77 +231,88 @@ function recordUnprocessedOrder(orderLink, reason, workOrderId = "unknown") {
   } catch (error) {
     logger.error(
       `Failed to record unprocessed order: ${error.message}`,
-      "WorkMarket"
+      platform
     );
   }
 }
 
-function queueOrderForRetry(orderLink, workOrderId = "unknown", reason = "") {
+function queueOrderForRetry(
+  orderLink,
+  workOrderId = "unknown",
+  reason = "",
+  platform = "WorkMarket"
+) {
   if (!orderLink) return;
 
-  const existing = wmRetryQueue.find(item => item.orderLink === orderLink);
+  const existing = retryQueue.find(item => item.orderLink === orderLink);
   if (existing) {
     existing.ts = Date.now();
     return;
   }
 
-  wmRetryQueue.push({ orderLink, workOrderId, ts: Date.now(), attempts: 0 });
-  recordUnprocessedOrder(orderLink, reason, workOrderId);
+  retryQueue.push({
+    orderLink,
+    workOrderId,
+    platform,
+    ts: Date.now(),
+    attempts: 0,
+  });
+  recordUnprocessedOrder(orderLink, reason, workOrderId, platform);
   logger.warn(
     `Order queued for retry after session recovery (${reason})`,
-    "WorkMarket",
+    platform,
     workOrderId
   );
 }
 
 // Re-process orders that were dropped while the session was dead. Called after
 // any successful cookie refresh (scheduled rotation or probe-triggered).
-async function drainWmRetryQueue() {
+async function drainRetryQueue() {
   pendingRetryDrain = false;
-  // drainWmRetryQueue -> processOrder -> (session failure) -> queueOrderForRetry
+  // drainRetryQueue -> processOrder -> (session failure) -> queueOrderForRetry
   // is a live cycle; the guard keeps it from re-entering itself.
-  if (isDrainingRetryQueue || wmRetryQueue.length === 0) return;
+  if (isDrainingRetryQueue || retryQueue.length === 0) return;
   isDrainingRetryQueue = true;
 
   const now = Date.now();
   // Drop stale entries — a hours-old work order is not worth applying to.
-  for (let i = wmRetryQueue.length - 1; i >= 0; i--) {
-    if (now - wmRetryQueue[i].ts > RETRY_TTL_MS) {
-      const [stale] = wmRetryQueue.splice(i, 1);
-      wmRetryAttempts.delete(stale.orderLink);
+  for (let i = retryQueue.length - 1; i >= 0; i--) {
+    if (now - retryQueue[i].ts > RETRY_TTL_MS) {
+      const [stale] = retryQueue.splice(i, 1);
+      retryAttempts.delete(stale.orderLink);
       logger.info(
         `Dropping expired retry entry (older than ${RETRY_TTL_MS / 60000} min)`,
-        "WorkMarket",
+        stale.platform,
         stale.workOrderId
       );
     }
   }
 
   try {
-    const batch = wmRetryQueue.splice(0, wmRetryQueue.length);
+    const batch = retryQueue.splice(0, retryQueue.length);
     if (batch.length === 0) return;
 
     logger.info(
       `Retrying ${batch.length} order(s) after session recovery`,
-      "WorkMarket"
+      "System"
     );
     pushEvent({
-      platform: "WorkMarket",
+      platform: "System",
       status: "info",
       message: `Retrying ${batch.length} order(s) after re-login`,
     });
 
     for (const item of batch) {
-      const attempts = (wmRetryAttempts.get(item.orderLink) || 0) + 1;
-      wmRetryAttempts.set(item.orderLink, attempts);
+      const attempts = (retryAttempts.get(item.orderLink) || 0) + 1;
+      retryAttempts.set(item.orderLink, attempts);
 
       if (attempts > RETRY_MAX_ATTEMPTS) {
         logger.warn(
           `Giving up on order after ${RETRY_MAX_ATTEMPTS} retry attempts`,
-          "WorkMarket",
+          item.platform,
           item.workOrderId
         );
-        wmRetryAttempts.delete(item.orderLink);
+        retryAttempts.delete(item.orderLink);
         continue;
       }
 
@@ -299,11 +320,11 @@ async function drainWmRetryQueue() {
         const result = await processOrder(item.orderLink);
         // processOrder re-queues itself if the session is still dead, so a
         // clean return means this entry is finished with.
-        if (result !== null) wmRetryAttempts.delete(item.orderLink);
+        if (result !== null) retryAttempts.delete(item.orderLink);
       } catch (error) {
         logger.error(
           `Retry failed: ${error.message}`,
-          "WorkMarket",
+          item.platform,
           item.workOrderId
         );
       }
@@ -533,7 +554,7 @@ function scheduleRelogin() {
       await refreshCookies("scheduled rotation");
       consecutiveWmSessionFailures = 0;
       // Any orders dropped while the session was dead get another chance now.
-      await drainWmRetryQueue();
+      await drainRetryQueue();
     } catch (error) {
       logger.error(`Scheduled relogin failed: ${error.message}`, "WorkMarket");
     } finally {
@@ -603,7 +624,7 @@ function scheduleSessionProbe() {
               "WorkMarket session restored by probe-triggered re-login",
               "WorkMarket"
             );
-            await drainWmRetryQueue();
+            await drainRetryQueue();
           } else {
             noteWmSessionFailure(`probe re-login did not restore session (${verify.reason})`);
           }
@@ -868,7 +889,7 @@ async function periodicCheck() {
           // If processOrder recovered the session mid-flight, replay anything
           // that was dropped while it was dead. Done here, outside
           // processOrder, to keep the drain from re-entering it.
-          if (pendingRetryDrain) await drainWmRetryQueue();
+          if (pendingRetryDrain) await drainRetryQueue();
 
           // Add a delay to ensure sounds can finish playing
           await new Promise(resolve => setTimeout(resolve, 3000));
@@ -1095,7 +1116,78 @@ async function processOrderInternal(orderLink) {
     let data;
 
     if (platform === "FieldNation") {
-      data = await getFNorderData(orderLink);
+      const workOrderId = orderLink.match(/\/workorders\/(\d+)/i)?.[1] || "unknown";
+
+      try {
+        data = await getFNorderData(orderLink);
+      } catch (error) {
+        if (!(error instanceof FNAuthError)) throw error;
+
+        logger.warn(
+          `FieldNation session invalid (${error.message}) — attempting recovery`,
+          platform,
+          workOrderId
+        );
+
+        if (isRefreshingCookies) {
+          try {
+            await cookieRefreshPromise;
+          } catch (refreshError) {
+            queueOrderForRetry(
+              orderLink,
+              workOrderId,
+              `concurrent cookie refresh failed: ${refreshError.message}`,
+              platform
+            );
+            return null;
+          }
+        } else if (Date.now() - lastFnRecoveryAt < RELOGIN_COOLDOWN_MS) {
+          queueOrderForRetry(
+            orderLink,
+            workOrderId,
+            "FieldNation re-login cooldown",
+            platform
+          );
+          return null;
+        } else {
+          lastFnRecoveryAt = Date.now();
+          try {
+            await refreshCookies("expired FieldNation order session");
+          } catch (refreshError) {
+            logger.error(
+              `FieldNation session recovery failed: ${refreshError.message}`,
+              platform,
+              workOrderId
+            );
+            queueOrderForRetry(
+              orderLink,
+              workOrderId,
+              `FieldNation cookie refresh failed: ${refreshError.message}`,
+              platform
+            );
+            return null;
+          }
+        }
+
+        try {
+          data = await getFNorderData(orderLink);
+          pendingRetryDrain = true;
+          logger.info(
+            "FieldNation order retrieved after session recovery",
+            platform,
+            workOrderId
+          );
+        } catch (retryError) {
+          if (!(retryError instanceof FNAuthError)) throw retryError;
+          queueOrderForRetry(
+            orderLink,
+            workOrderId,
+            `FieldNation auth still invalid after refresh: ${retryError.message}`,
+            platform
+          );
+          return null;
+        }
+      }
     } else if (platform === "WorkMarket") {
       data = await getWMorderData(orderLink);
 
@@ -1925,7 +2017,7 @@ telegramBot.onProcessOrder = processOrder;
 telegramBot.onRelogin = async () => {
   await refreshCookies("manual Telegram command");
   consecutiveWmSessionFailures = 0;
-  await drainWmRetryQueue();
+  await drainRetryQueue();
 };
 telegramBot.onPhoneAlert = handlePhoneAlert;
 

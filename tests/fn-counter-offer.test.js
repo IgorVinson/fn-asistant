@@ -2,7 +2,11 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import { buildFNCounterOfferRequestBody } from "../utils/FieldNation/postFNCounterOffer.js";
-import { parseFNWorkOrder } from "../utils/FieldNation/getFNorderData.js";
+import {
+  FNAuthError,
+  getFNorderData,
+  parseFNWorkOrder,
+} from "../utils/FieldNation/getFNorderData.js";
 import { calculateCounterOffer } from "../utils/isEligibleForApplication.js";
 import normalizeDateFromWO from "../utils/normalizedDateFromWO.js";
 import { CONFIG } from "../config.js";
@@ -13,6 +17,35 @@ const blendedPayStructure = {
   base: { units: 4, amount: 160 },
   additional: { units: 2, amount: 40 },
 };
+
+test("FieldNation work-order redirects are classified as expired authentication", async () => {
+  await assert.rejects(
+    getFNorderData(
+      "https://app.fieldnation.com/workorders/19819430?t=ActionNewWorkOrder",
+      {
+        getCookieHeader: () => "FNSESS=test",
+        fetch: async () => ({
+          ok: true,
+          status: 200,
+          url: "https://app.fieldnation.com/workorders/tomorrow",
+          text: async () => "<html>redirected</html>",
+        }),
+      }
+    ),
+    error => error instanceof FNAuthError && error.code === "FN_AUTH_EXPIRED"
+  );
+});
+
+test("FieldNation cookie-loading failures are classified as expired authentication", async () => {
+  await assert.rejects(
+    getFNorderData("https://app.fieldnation.com/workorders/19819430", {
+      getCookieHeader: () => {
+        throw new Error("no cookies valid for the requested URL");
+      },
+    }),
+    error => error instanceof FNAuthError && error.code === "FN_AUTH_EXPIRED"
+  );
+});
 
 test("FieldNation orders with missing pay are safely normalized to zero pay", () => {
   const parsed = parseFNWorkOrder({

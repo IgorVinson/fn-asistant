@@ -1,5 +1,27 @@
 import { getCookieHeader } from '../cookieStore.js';
 
+export class FNAuthError extends Error {
+    constructor(message) {
+        super(message);
+        this.name = 'FNAuthError';
+        this.code = 'FN_AUTH_EXPIRED';
+        this.authExpired = true;
+    }
+}
+
+function isExpectedWorkOrderUrl(requestUrl, responseUrl) {
+    const requested = new URL(requestUrl);
+    const received = new URL(responseUrl || requestUrl);
+    const requestedId = requested.pathname.match(/^\/workorders\/(\d+)/)?.[1];
+    const receivedId = received.pathname.match(/^\/workorders\/(\d+)/)?.[1];
+
+    return (
+        received.hostname === 'app.fieldnation.com' &&
+        Boolean(requestedId) &&
+        receivedId === requestedId
+    );
+}
+
 export function parseFNWorkOrder(workOrder) {
     if (!workOrder || typeof workOrder !== 'object') {
         throw new Error('Invalid FieldNation work order data.');
@@ -69,13 +91,19 @@ export function parseFNWorkOrder(workOrder) {
 }
 
 // Функція для виконання запиту і аналізу даних
-export async function getFNorderData(url) {
+export async function getFNorderData(url, dependencies = {}) {
     try {
-
-        const cookies = getCookieHeader('FieldNation', url);
+        const getCookies = dependencies.getCookieHeader || getCookieHeader;
+        const fetchPage = dependencies.fetch || fetch;
+        let cookies;
+        try {
+            cookies = getCookies('FieldNation', url);
+        } catch (error) {
+            throw new FNAuthError(`FieldNation cookies are not usable: ${error.message}`);
+        }
 
         // Виконуємо запит
-        const response = await fetch(url, {
+        const response = await fetchPage(url, {
             headers: {
                 "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
                 "accept-language": "en-US,en;q=0.9,uk-UA;q=0.8,uk;q=0.7,ru-UA;q=0.6,ru;q=0.5",
@@ -96,8 +124,18 @@ export async function getFNorderData(url) {
             method: "GET"
         });
 
+        if (response.status === 401 || response.status === 403) {
+            throw new FNAuthError(`FieldNation returned HTTP ${response.status}`);
+        }
+
         if (!response.ok) {
             throw new Error(`HTTP помилка: ${response.status}`);
+        }
+
+        if (!isExpectedWorkOrderUrl(url, response.url)) {
+            throw new FNAuthError(
+                `FieldNation redirected the work order request to ${response.url || 'an unknown page'}`
+            );
         }
 
         // Аналіз відповіді
@@ -117,6 +155,7 @@ export async function getFNorderData(url) {
 
     } catch (error) {
         console.error('Помилка:', error.message);
+        if (error instanceof FNAuthError) throw error;
         return null;
     }
 }

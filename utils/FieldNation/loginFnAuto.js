@@ -479,6 +479,19 @@ export async function loginFnAuto(
       throw new Error("FieldNation authentication did not leave the login screen");
     }
 
+    if (new URL(page.url()).hostname !== "app.fieldnation.com") {
+      try {
+        await page.waitForFunction(
+          () => window.location.hostname === "app.fieldnation.com",
+          { timeout: 30000 }
+        );
+      } catch {
+        throw new Error(
+          `FieldNation authentication did not return to app.fieldnation.com (current host: ${new URL(page.url()).hostname})`
+        );
+      }
+    }
+
     // Step 6: validate and atomically replace the known-good cookie jar.
     console.log("🍪 Saving FieldNation cookies...");
     await saveCookiesCustom(page, "FieldNation", "cookies.json");

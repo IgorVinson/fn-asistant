@@ -57,7 +57,7 @@ function isExpired(cookie, nowSeconds) {
 }
 
 export function validateCookieJar(cookies, platform, options = {}) {
-  getPlatformConfig(platform);
+  const config = getPlatformConfig(platform);
   if (!Array.isArray(cookies)) {
     throw new Error(`${platform} cookie jar must be an array`);
   }
@@ -77,9 +77,13 @@ export function validateCookieJar(cookies, platform, options = {}) {
   }
 
   if (options.requireSession !== false) {
-    const names = new Set(validCookies.map(cookie => cookie.name));
-    if (!getPlatformConfig(platform).hasSessionCookie(names)) {
-      throw new Error(`${platform} cookie jar has no recognized session cookies`);
+    const targetUrl = options.targetUrl || config.targetUrl;
+    const scopedCookies = cookiesForUrl(validCookies, targetUrl, options.nowMs);
+    const names = new Set(scopedCookies.map(cookie => cookie.name));
+    if (!config.hasSessionCookie(names)) {
+      throw new Error(
+        `${platform} cookie jar has no recognized session cookies valid for ${new URL(targetUrl).hostname}`
+      );
     }
   }
 
