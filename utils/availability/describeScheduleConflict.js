@@ -66,13 +66,6 @@ export function describeScheduleConflict(
   const checkedDates = getCheckedWeekdays(requestedStart, daysToCheck)
     .map(formatDate)
     .join(", ");
-  const laborHours =
-    workOrder.estLaborHours || CONFIG.TIME.DEFAULT_LABOR_HOURS;
-  const travelMinutes = Math.round(
-    ((workOrder.distance || 0) / CONFIG.DISTANCE.AVERAGE_SPEED) * 60
-  );
-  const travelText =
-    travelMinutes > 0 ? ` + ${travelMinutes} min travel each way` : "";
   const workWindow = `${formatWorkTime(CONFIG.TIME.WORK_START_TIME)}–${formatWorkTime(CONFIG.TIME.WORK_END_TIME)}`;
 
   return [
@@ -80,11 +73,7 @@ export function describeScheduleConflict(
       ? "📅 No in-hours counter slot available"
       : "📅 No available schedule slot",
     `Requested: ${formatDateTime(requestedStart)}`,
-    outsideWorkingHours
-      ? `Original start is outside working hours (${workWindow}).`
-      : null,
     `Checked: ${checkedDates} · ${workWindow}`,
-    `Needed: ${laborHours}h labor${travelText}`,
     "No block long enough was found.",
   ]
     .filter(Boolean)

@@ -646,6 +646,7 @@ class TelegramBotService {
       modeBanner,
       `<b>${escapeHTML(action)}</b> · ${escapeHTML(orderData.platform)} ${orderIdText}`,
       `<b>${escapeHTML(orderData.company)}</b> — ${escapeHTML(orderData.title)}`,
+      `⏱ ${escapeHTML(orderData.estLaborHours)}h labor`,
       `💵 ${escapeHTML(payText)} · 📍 ${escapeHTML(orderData.distance)} mi`,
       `📅 ${escapeHTML(new Date(orderData.time.start).toLocaleString())}`,
       strategyLine ? `🎯 ${escapeHTML(strategyLine)}` : "",
@@ -669,6 +670,7 @@ Platform: ${orderData.platform}
 Order ID: ${orderData.id} (${orderLink || "No link"})
 Company: ${orderData.company}
 Title: ${orderData.title}
+Labor: ${orderData.estLaborHours}h
 Pay: $${orderData.payRange.min}-$${orderData.payRange.max}
 Distance: ${orderData.distance}mi
 Time: ${new Date(orderData.time.start).toLocaleString()}

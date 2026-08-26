@@ -1792,6 +1792,7 @@ async function processOrderInternal(orderLink) {
           : "",
         `<b>📅 COUNTER DATE</b> · ${escapeHTML(normalizedData.platform)} ${orderIdLink}`,
         `<b>${escapeHTML(normalizedData.company)}</b> — ${escapeHTML(normalizedData.title)}`,
+        `⏱ ${escapeHTML(normalizedData.estLaborHours)}h labor`,
         `💵 ${escapeHTML(payText)} · 📍 ${escapeHTML(normalizedData.distance)} mi`,
         `❌ Requested: ${escapeHTML(new Date(normalizedData.time.start).toLocaleString())} (conflict)`,
         `✅ Proposed: ${escapeHTML(counterDateLabel)}`,

@@ -17,7 +17,7 @@ test("schedule conflict lists only checked weekdays across the lookahead", () =>
   );
 });
 
-test("schedule conflict explains requested time, search window, and required duration", () => {
+test("schedule conflict explains requested time and search window", () => {
   const description = describeScheduleConflict({
     time: { start: "2026-08-28T09:00:00" },
     estLaborHours: 3,
@@ -28,7 +28,7 @@ test("schedule conflict explains requested time, search window, and required dur
   assert.match(description, /Requested: Fri, Aug 28, 9:00 AM/);
   assert.match(description, /Checked: Fri, Aug 28, Mon, Aug 31, Tue, Sep 1/);
   assert.match(description, /9:00 AM–8:00 PM/);
-  assert.match(description, /Needed: 3h labor \+ 30 min travel each way/);
+  assert.doesNotMatch(description, /Needed:/);
   assert.match(description, /No block long enough was found/);
 });
 
@@ -59,10 +59,7 @@ test("outside-hours jobs explain that no in-hours counter slot was found", () =>
 
   assert.match(description, /No in-hours counter slot available/);
   assert.match(description, /Requested: Mon, Aug 31, 8:00 AM/);
-  assert.match(
-    description,
-    /Original start is outside working hours \(9:00 AM–8:00 PM\)/
-  );
-  assert.match(description, /Needed: 8h labor \+ 19 min travel each way/);
+  assert.doesNotMatch(description, /Original start is outside working hours/);
+  assert.doesNotMatch(description, /Needed:/);
   assert.match(description, /No block long enough was found/);
 });
