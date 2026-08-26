@@ -46,3 +46,23 @@ test("schedule fetch errors are not described as calendar conflicts", () => {
   assert.match(description, /Reason: Calendar API unavailable/);
   assert.doesNotMatch(description, /No block long enough/);
 });
+
+test("outside-hours jobs explain that no in-hours counter slot was found", () => {
+  const description = describeScheduleConflict(
+    {
+      time: { start: "2026-08-31T08:00:00" },
+      estLaborHours: 8,
+      distance: 16,
+    },
+    { outsideWorkingHours: true }
+  );
+
+  assert.match(description, /No in-hours counter slot available/);
+  assert.match(description, /Requested: Mon, Aug 31, 8:00 AM/);
+  assert.match(
+    description,
+    /Original start is outside working hours \(9:00 AM–8:00 PM\)/
+  );
+  assert.match(description, /Needed: 8h labor \+ 19 min travel each way/);
+  assert.match(description, /No block long enough was found/);
+});

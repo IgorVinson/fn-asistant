@@ -721,10 +721,10 @@ async function evaluateEligibilityInternal(workOrder, availabilityCtx) {
       return {
         eligible: false,
         counterOffer: null,
-        reason: isInWorkingHours ? "SLOT_UNAVAILABLE" : "OUTSIDE_WORKING_HOURS",
-        rejectDetails: isInWorkingHours
-          ? describeScheduleConflict(workOrder)
-          : undefined,
+        reason: "SLOT_UNAVAILABLE",
+        rejectDetails: describeScheduleConflict(workOrder, {
+          outsideWorkingHours: !isInWorkingHours,
+        }),
       };
     }
 

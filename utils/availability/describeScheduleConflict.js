@@ -47,7 +47,11 @@ export function getCheckedWeekdays(requestedStart, daysToCheck = AVAILABILITY_LO
 
 export function describeScheduleConflict(
   workOrder,
-  { error = null, daysToCheck = AVAILABILITY_LOOKAHEAD_DAYS } = {}
+  {
+    error = null,
+    daysToCheck = AVAILABILITY_LOOKAHEAD_DAYS,
+    outsideWorkingHours = false,
+  } = {}
 ) {
   const requestedStart = new Date(workOrder.time.start);
 
@@ -69,12 +73,20 @@ export function describeScheduleConflict(
   );
   const travelText =
     travelMinutes > 0 ? ` + ${travelMinutes} min travel each way` : "";
+  const workWindow = `${formatWorkTime(CONFIG.TIME.WORK_START_TIME)}–${formatWorkTime(CONFIG.TIME.WORK_END_TIME)}`;
 
   return [
-    "📅 No available schedule slot",
+    outsideWorkingHours
+      ? "📅 No in-hours counter slot available"
+      : "📅 No available schedule slot",
     `Requested: ${formatDateTime(requestedStart)}`,
-    `Checked: ${checkedDates} · ${formatWorkTime(CONFIG.TIME.WORK_START_TIME)}–${formatWorkTime(CONFIG.TIME.WORK_END_TIME)}`,
+    outsideWorkingHours
+      ? `Original start is outside working hours (${workWindow}).`
+      : null,
+    `Checked: ${checkedDates} · ${workWindow}`,
     `Needed: ${laborHours}h labor${travelText}`,
     "No block long enough was found.",
-  ].join("\n");
+  ]
+    .filter(Boolean)
+    .join("\n");
 }
