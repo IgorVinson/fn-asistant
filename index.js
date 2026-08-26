@@ -1590,7 +1590,7 @@ async function processOrderInternal(orderLink) {
       telegramBot.sendOrderNotification(
         normalizedData,
         "❌ REJECTED",
-        "Calendar conflict",
+        eligibilityResult.rejectDetails || "📅 No available schedule slot",
         orderLink
       );
 

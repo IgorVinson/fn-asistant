@@ -5,6 +5,10 @@ import { findFitBlock } from "./availability/findFitBlock.js";
 import { decideFitAction } from "./availability/decideFitAction.js";
 import { classifyAvailabilityError } from "./availability/availabilityError.js";
 import {
+  AVAILABILITY_LOOKAHEAD_DAYS,
+  describeScheduleConflict,
+} from "./availability/describeScheduleConflict.js";
+import {
   isStrategyEnabled,
   getMinPayThreshold,
   getSameDaySmallEarliestStart,
@@ -248,7 +252,7 @@ async function checkAvailabilityNew(workOrder) {
   const woDateString = getWorkOrderLocalDate(workOrder);
   const { free: availableBlocks, busy: busyBlocks } = await getAvailableBlocks({
     date: woDateString,
-    daysToCheck: 4,
+    daysToCheck: AVAILABILITY_LOOKAHEAD_DAYS,
     withBusy: true,
     capacity: getBookingCapacity(workOrder),
   });
@@ -651,7 +655,9 @@ async function evaluateEligibilityInternal(workOrder, availabilityCtx) {
         eligible: false,
         counterOffer: null,
         reason: failureReason,
-        rejectDetails: err.message,
+        rejectDetails: describeScheduleConflict(workOrder, {
+          error: err.message,
+        }),
       };
     }
 
@@ -701,6 +707,8 @@ async function evaluateEligibilityInternal(workOrder, availabilityCtx) {
         eligible: false,
         counterOffer: null,
         reason: "SLOT_UNAVAILABLE",
+        rejectDetails:
+          "An alternative slot was found, but date counter-offers are disabled.",
       };
     }
 
@@ -714,6 +722,9 @@ async function evaluateEligibilityInternal(workOrder, availabilityCtx) {
         eligible: false,
         counterOffer: null,
         reason: isInWorkingHours ? "SLOT_UNAVAILABLE" : "OUTSIDE_WORKING_HOURS",
+        rejectDetails: isInWorkingHours
+          ? describeScheduleConflict(workOrder)
+          : undefined,
       };
     }
 
