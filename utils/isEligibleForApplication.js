@@ -148,6 +148,51 @@ function getBaseHourlyRate(platform) {
   return platformRate || CONFIG.RATES.BASE_HOURLY_RATE;
 }
 
+function getOfferedPaymentMetrics(workOrder, estHours) {
+  const isBlended =
+    workOrder.payType === "blended" &&
+    workOrder.payStructure?.base &&
+    workOrder.payStructure?.additional;
+
+  if (isBlended) {
+    const { base, additional } = workOrder.payStructure;
+    const baseUnits = Number(base.units) || 0;
+    const additionalUnits = Number(additional.units) || 0;
+    const baseAmount = Number(base.amount) || 0;
+    const additionalRate = Number(additional.amount) || 0;
+    const componentRates = [];
+
+    if (baseUnits > 0) componentRates.push(baseAmount / baseUnits);
+    if (additionalUnits > 0) componentRates.push(additionalRate);
+
+    const calculatedMaximum =
+      baseAmount + additionalUnits * additionalRate;
+
+    return {
+      total: workOrder.payRange.max || calculatedMaximum,
+      rate:
+        componentRates.length > 0
+          ? Math.min(...componentRates)
+          : calculatedMaximum / (estHours || 1),
+    };
+  }
+
+  const isHourly = workOrder.payType === "hourly" || workOrder.hourlyRate > 0;
+  if (isHourly) {
+    const rate = workOrder.hourlyRate || workOrder.payRange.min || 0;
+    return {
+      total: workOrder.payRange.max || rate * estHours,
+      rate,
+    };
+  }
+
+  const total = workOrder.payRange.max || 0;
+  return {
+    total,
+    rate: total / (estHours || 1),
+  };
+}
+
 function isPaymentEligible(workOrder) {
   const isFieldNation = workOrder.platform === "FieldNation";
   const MIN_HOURLY_RATE = getBaseHourlyRate(workOrder.platform);
@@ -163,18 +208,14 @@ function isPaymentEligible(workOrder) {
     ? getMinPayThreshold(workOrder)
     : platformMinTotal;
 
-  const isHourly = workOrder.payType === "hourly" || workOrder.hourlyRate > 0;
-
-  // Calculate their offered total and hourly rate
-  let theirTotal = 0;
-  let theirRate = 0;
-  if (isHourly) {
-    theirRate = workOrder.hourlyRate || workOrder.payRange.min || 0;
-    theirTotal = workOrder.payRange.max || theirRate * estHours;
-  } else {
-    theirTotal = workOrder.payRange.max || 0;
-    theirRate = theirTotal / (estHours || 1);
-  }
+  // Total pay and hourly rate are separate for blended work orders. Their
+  // maximum total may cover base + additional hours, while estLaborHours only
+  // describes the scheduled base duration. Evaluate each blended component's
+  // actual rate instead of dividing the maximum total by the shorter duration.
+  const { total: theirTotal, rate: theirRate } = getOfferedPaymentMetrics(
+    workOrder,
+    estHours
+  );
 
   const effectiveDistance =
     (workOrder.distance || 0) + CONFIG.DISTANCE.DISTANCE_PADDING_MILES;
@@ -801,6 +842,7 @@ export {
   calculateCounterOffer,
   evaluateApplicationPolicy,
   findFreeSlots,
+  isPaymentEligible,
   getWorkOrderLocalDate,
   isGraniteCompany,
 };
