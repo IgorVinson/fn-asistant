@@ -27,7 +27,7 @@ export const CONFIG = {
     // Last entry (maxLeadHours: null) = "everything else / far in advance".
     LEAD_TIME_TIERS: [
       { maxLeadHours: 36, minPay: 150 }, // same-day + tomorrow: take (almost) all
-      { maxLeadHours: 168, minPay: 200 }, // this week (7 days): $200+
+      { maxLeadHours: 168, minPay: 250 }, // this week (7 days): $200+
       { maxLeadHours: null, minPay: 260 }, // 7+ days out: $260+
     ],
     BIG_TICKET_MIN: 210, // "big" ticket — used for same-day morning reserve
@@ -42,9 +42,9 @@ export const CONFIG = {
   // Payment and Rate Settings
   RATES: {
     BASE_HOURLY_RATE: 50, // Minimum desired hourly rate
-    BASE_HOURLY_RATE_WORKMARKET: 50, // Minimum desired hourly rate
+    BASE_HOURLY_RATE_WORKMARKET: 65, // Minimum desired hourly rate
     BASE_HOURLY_RATE_FIELDNATION: 60, // Minimum desired hourly rate
-    MIN_PAY_THRESHOLD_WORKMARKET: 100, // Minimum total pay for WorkMarket jobs
+    MIN_PAY_THRESHOLD_WORKMARKET: 150, // Minimum total pay for WorkMarket jobs
     MIN_PAY_THRESHOLD_FIELDNATION: 100, // Minimum total pay for FieldNation jobs
     TRAVEL_RATE: 30, // Rate per hour of travel
   },
@@ -52,7 +52,7 @@ export const CONFIG = {
   // Distance and Travel Settings
   DISTANCE: {
     TRAVEL_THRESHOLD_MILES: 20, // Miles before charging travel expenses (applied to padded distance)
-    TRAVEL_RATE_PER_MILE: 1.2, // Amount to charge per mile over threshold
+    TRAVEL_RATE_PER_MILE: 1.25, // Amount to charge per mile over threshold
     FREE_TRAVEL_LIMIT: 30 / 60, // Free travel time in hours (30 minutes)
     AVERAGE_SPEED: 50, // Average travel speed in miles per hour
     DISTANCE_PADDING_MILES: 10, // Padding added to reported distance for pricing + standalone-travel trigger (city-traffic offset; not used for scheduling)
