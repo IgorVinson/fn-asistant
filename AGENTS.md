@@ -43,6 +43,7 @@ This project is an autonomous bot built using Node.js and Puppeteer to monitor, 
 
 6. **Git Workflow**:
    - For every user task that requires repository changes, create a new, dedicated branch from `dev` before editing. Use a short descriptive branch name with the `codex/` prefix, and do not reuse the branch for unrelated work.
+   - Never create or use an additional Git worktree unless the user explicitly requests one. Use ordinary branches in the main checkout by default so ignored local dependencies and credentials remain available.
    - Check the worktree before creating the branch. Preserve all existing user changes and never stage, commit, discard, or otherwise modify unrelated files.
    - Test every change carefully and in proportion to its risk. Run the relevant automated tests, linting, or focused checks before presenting the work; use `CONFIG.TEST_MODE` whenever a test could submit data to FieldNation or WorkMarket. Report what was tested and any validation that could not be completed.
    - Create a focused commit when the task has reached a coherent, validated state and a commit is useful. Stage only files belonging to the current task and use a descriptive commit message.
