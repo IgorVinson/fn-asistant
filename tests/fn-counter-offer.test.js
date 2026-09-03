@@ -18,22 +18,79 @@ const blendedPayStructure = {
   additional: { units: 2, amount: 40 },
 };
 
-test("FieldNation work-order redirects are classified as expired authentication", async () => {
-  await assert.rejects(
-    getFNorderData(
-      "https://app.fieldnation.com/workorders/19819430?t=ActionNewWorkOrder",
-      {
-        getCookieHeader: () => "FNSESS=test",
-        fetch: async () => ({
+test("FieldNation work orders are fetched from the JSON API", async () => {
+  let requestedUrl;
+  const result = await getFNorderData(
+    "https://app.fieldnation.com/workorders/19819430?t=ActionNewWorkOrder",
+    {
+      getCookieHeader: () => "FNSESS=test",
+      fetch: async url => {
+        requestedUrl = url;
+        return {
           ok: true,
           status: 200,
-          url: "https://app.fieldnation.com/workorders/tomorrow",
-          text: async () => "<html>redirected</html>",
-        }),
-      }
-    ),
+          url,
+          json: async () => ({
+            id: 19819430,
+            company: { name: "Example Buyer" },
+            title: "Example order",
+            pay: { type: "fixed", range: { min: 200, max: 200 } },
+            schedule: {
+              est_labor_hours: 2,
+              service_window: {
+                start: { local: "2026-09-24T09:00:00" },
+                end: { local: "2026-09-24T11:00:00" },
+              },
+            },
+            coords: { distance: "12.8" },
+          }),
+        };
+      },
+    }
+  );
+
+  assert.equal(
+    requestedUrl,
+    "https://app.fieldnation.com/v2/workorders/19819430"
+  );
+  assert.equal(result.id, 19819430);
+  assert.equal(result.company, "Example Buyer");
+});
+
+test("FieldNation login redirects are classified as expired authentication", async () => {
+  await assert.rejects(
+    getFNorderData("https://app.fieldnation.com/workorders/19819430", {
+      getCookieHeader: () => "FNSESS=test",
+      fetch: async url => ({
+        ok: true,
+        status: 200,
+        url: "https://app.fieldnation.com/login?from=" + encodeURIComponent(url),
+        json: async () => {
+          throw new SyntaxError("Unexpected token '<'");
+        },
+      }),
+    }),
     error => error instanceof FNAuthError && error.code === "FN_AUTH_EXPIRED"
   );
+});
+
+test("FieldNation schedule redirects do not trigger an authentication recovery", async () => {
+  const result = await getFNorderData(
+    "https://app.fieldnation.com/workorders/19819430",
+    {
+      getCookieHeader: () => "FNSESS=test",
+      fetch: async () => ({
+        ok: true,
+        status: 200,
+        url: "https://app.fieldnation.com/workorders/tomorrow?from=%2Fworkorders%2F19819430",
+        json: async () => {
+          throw new SyntaxError("Unexpected token '<'");
+        },
+      }),
+    }
+  );
+
+  assert.equal(result, null);
 });
 
 test("FieldNation cookie-loading failures are classified as expired authentication", async () => {

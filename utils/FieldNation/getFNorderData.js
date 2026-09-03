@@ -9,16 +9,23 @@ export class FNAuthError extends Error {
     }
 }
 
-function isExpectedWorkOrderUrl(requestUrl, responseUrl) {
-    const requested = new URL(requestUrl);
-    const received = new URL(responseUrl || requestUrl);
-    const requestedId = requested.pathname.match(/^\/workorders\/(\d+)/)?.[1];
-    const receivedId = received.pathname.match(/^\/workorders\/(\d+)/)?.[1];
+function getWorkOrderId(requestUrl) {
+    return new URL(requestUrl).pathname.match(/^\/workorders\/(\d+)/)?.[1] || null;
+}
 
+function buildWorkOrderApiUrl(requestUrl, workOrderId) {
+    return new URL(`/v2/workorders/${workOrderId}`, requestUrl).toString();
+}
+
+function isAuthenticationUrl(responseUrl) {
+    if (!responseUrl) return false;
+
+    const received = new URL(responseUrl);
     return (
-        received.hostname === 'app.fieldnation.com' &&
-        Boolean(requestedId) &&
-        receivedId === requestedId
+        received.hostname !== 'app.fieldnation.com' ||
+        /^\/(?:login|logout|oauth|oauth2|authorize|authentication)(?:\/|$)/i.test(
+            received.pathname
+        )
     );
 }
 
@@ -90,36 +97,34 @@ export function parseFNWorkOrder(workOrder) {
     };
 }
 
-// Функція для виконання запиту і аналізу даних
 export async function getFNorderData(url, dependencies = {}) {
     try {
         const getCookies = dependencies.getCookieHeader || getCookieHeader;
         const fetchPage = dependencies.fetch || fetch;
+        const workOrderId = getWorkOrderId(url);
+        if (!workOrderId) {
+            throw new Error(`Invalid FieldNation work order URL: ${url}`);
+        }
+
+        // The browser-facing route now redirects authenticated users to the
+        // schedule view. Fetch the canonical JSON resource instead.
+        const apiUrl = buildWorkOrderApiUrl(url, workOrderId);
         let cookies;
         try {
-            cookies = getCookies('FieldNation', url);
+            cookies = getCookies('FieldNation', apiUrl);
         } catch (error) {
             throw new FNAuthError(`FieldNation cookies are not usable: ${error.message}`);
         }
 
-        // Виконуємо запит
-        const response = await fetchPage(url, {
+        const response = await fetchPage(apiUrl, {
             headers: {
-                "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
+                "accept": "application/json",
                 "accept-language": "en-US,en;q=0.9,uk-UA;q=0.8,uk;q=0.7,ru-UA;q=0.6,ru;q=0.5",
-                "cache-control": "max-age=0",
-                "priority": "u=0, i",
-                "sec-ch-ua": "\"Google Chrome\";v=\"131\", \"Chromium\";v=\"131\", \"Not_A Brand\";v=\"24\"",
-                "sec-ch-ua-mobile": "?0",
-                "sec-ch-ua-platform": "\"macOS\"",
-                "sec-fetch-dest": "document",
-                "sec-fetch-mode": "navigate",
+                "cache-control": "no-cache",
                 "sec-fetch-site": "same-origin",
-                "sec-fetch-user": "?1",
-                "upgrade-insecure-requests": "1",
-                "cookie": cookies, // Додаємо куки
-                "Referer": "https://app.fieldnation.com/workorders/",
-                "Referrer-Policy": "strict-origin-when-cross-origin"
+                "x-requested-with": "XMLHttpRequest",
+                "cookie": cookies,
+                "Referer": url,
             },
             method: "GET"
         });
@@ -128,31 +133,24 @@ export async function getFNorderData(url, dependencies = {}) {
             throw new FNAuthError(`FieldNation returned HTTP ${response.status}`);
         }
 
+        if (isAuthenticationUrl(response.url)) {
+            throw new FNAuthError(
+                `FieldNation redirected the API request to ${response.url}`
+            );
+        }
+
         if (!response.ok) {
             throw new Error(`HTTP помилка: ${response.status}`);
         }
 
-        if (!isExpectedWorkOrderUrl(url, response.url)) {
-            throw new FNAuthError(
-                `FieldNation redirected the work order request to ${response.url || 'an unknown page'}`
-            );
+        const workOrder = typeof response.json === 'function'
+            ? await response.json()
+            : JSON.parse(await response.text());
+        if (String(workOrder?.id) !== workOrderId) {
+            throw new Error(`FieldNation returned invalid data for work order ${workOrderId}`);
         }
 
-        // Аналіз відповіді
-        const text = await response.text();
-        const start = "<script type=\"text/javascript\">window.work_order =";
-        const end = ";</script>";
-        const workOrderRegEx = new RegExp(start + "(.+?)" + end, "m");
-        const match = workOrderRegEx.exec(text);
-
-        if (!match) {
-            throw new Error('Не вдалося знайти дані work_order.');
-        }
-
-        const workOrder = JSON.parse(match[1].trim());
         return parseFNWorkOrder(workOrder);
-
-
     } catch (error) {
         console.error('Помилка:', error.message);
         if (error instanceof FNAuthError) throw error;
