@@ -1398,6 +1398,15 @@ async function processOrderInternal(orderLink) {
       throw new Error("Unsupported platform or invalid order link.");
     }
 
+    if (data?.unavailable) {
+      logger.info(
+        `Order skipped: ${data.unavailableReason}`,
+        platform,
+        data.id || "unknown"
+      );
+      return null;
+    }
+
     if (!data) {
       console.error("Failed to retrieve order data.");
       // Another path that used to vanish from the log file entirely.

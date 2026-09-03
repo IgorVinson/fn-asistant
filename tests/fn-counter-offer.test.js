@@ -93,6 +93,95 @@ test("FieldNation schedule redirects do not trigger an authentication recovery",
   assert.equal(result, null);
 });
 
+test("FieldNation unavailable-order 401 is not classified as expired authentication", async () => {
+  let sessionProbeCalled = false;
+  const result = await getFNorderData(
+    "https://app.fieldnation.com/workorders/19885083",
+    {
+      getCookieHeader: () => "FNSESS=test",
+      fetch: async url => {
+        if (url === "https://app.fieldnation.com/") {
+          sessionProbeCalled = true;
+        }
+        return {
+          ok: false,
+          status: 401,
+          url,
+          json: async () => ({
+            message: "Unauthorized",
+            extra: {
+              work_order: {
+                unavailable: true,
+                error_message: "Sorry, this work order has been assigned to someone else.",
+              },
+            },
+          }),
+        };
+      },
+    }
+  );
+
+  assert.equal(result.unavailable, true);
+  assert.equal(result.id, 19885083);
+  assert.equal(
+    result.unavailableReason,
+    "Sorry, this work order has been assigned to someone else."
+  );
+  assert.equal(sessionProbeCalled, false);
+});
+
+test("FieldNation generic order 401 is skipped when the account session is active", async () => {
+  const result = await getFNorderData(
+    "https://app.fieldnation.com/workorders/19890422",
+    {
+      getCookieHeader: () => "FNSESS=test",
+      fetch: async url => {
+        if (url === "https://app.fieldnation.com/") {
+          return {
+            ok: true,
+            status: 200,
+            url: "https://app.fieldnation.com/workorders/tomorrow",
+          };
+        }
+        return {
+          ok: false,
+          status: 401,
+          url,
+          json: async () => ({ message: "Unauthorized" }),
+        };
+      },
+    }
+  );
+
+  assert.equal(result.unavailable, true);
+  assert.equal(result.id, 19890422);
+  assert.equal(result.unavailableReason, "Unauthorized");
+});
+
+test("FieldNation generic order 401 remains an auth error when the session probe redirects to login", async () => {
+  await assert.rejects(
+    getFNorderData("https://app.fieldnation.com/workorders/19890422", {
+      getCookieHeader: () => "FNSESS=test",
+      fetch: async url => {
+        if (url === "https://app.fieldnation.com/") {
+          return {
+            ok: true,
+            status: 200,
+            url: "https://id.fieldnation.com/login",
+          };
+        }
+        return {
+          ok: false,
+          status: 401,
+          url,
+          json: async () => ({ message: "Unauthorized" }),
+        };
+      },
+    }),
+    error => error instanceof FNAuthError && error.code === "FN_AUTH_EXPIRED"
+  );
+});
+
 test("FieldNation cookie-loading failures are classified as expired authentication", async () => {
   await assert.rejects(
     getFNorderData("https://app.fieldnation.com/workorders/19819430", {

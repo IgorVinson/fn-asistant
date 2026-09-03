@@ -29,6 +29,43 @@ function isAuthenticationUrl(responseUrl) {
     );
 }
 
+function unavailableWorkOrder(workOrderId, reason) {
+    return {
+        id: Number(workOrderId),
+        platform: 'FieldNation',
+        unavailable: true,
+        unavailableReason: reason || 'Work order is no longer available',
+    };
+}
+
+async function readJsonSafely(response) {
+    try {
+        if (typeof response.json === 'function') return await response.json();
+        if (typeof response.text === 'function') {
+            return JSON.parse(await response.text());
+        }
+    } catch {
+        // Some error responses are HTML or empty. The session probe below will
+        // distinguish a real login failure from an inaccessible work order.
+    }
+    return null;
+}
+
+async function hasActiveFieldNationSession(fetchPage, cookies) {
+    try {
+        const response = await fetchPage('https://app.fieldnation.com/', {
+            headers: {
+                accept: 'text/html,application/xhtml+xml',
+                cookie: cookies,
+            },
+            method: 'GET',
+        });
+        return response.ok && !isAuthenticationUrl(response.url);
+    } catch {
+        return false;
+    }
+}
+
 export function parseFNWorkOrder(workOrder) {
     if (!workOrder || typeof workOrder !== 'object') {
         throw new Error('Invalid FieldNation work order data.');
@@ -130,6 +167,23 @@ export async function getFNorderData(url, dependencies = {}) {
         });
 
         if (response.status === 401 || response.status === 403) {
+            const errorPayload = await readJsonSafely(response);
+            const unavailable = errorPayload?.extra?.work_order;
+
+            if (unavailable?.unavailable === true) {
+                return unavailableWorkOrder(workOrderId, unavailable.error_message);
+            }
+
+            // FieldNation also uses 401 for orders that this provider can no
+            // longer access. Confirm the account session before triggering an
+            // expensive full 2FA re-login for both platforms.
+            if (await hasActiveFieldNationSession(fetchPage, cookies)) {
+                return unavailableWorkOrder(
+                    workOrderId,
+                    errorPayload?.message || `Work order returned HTTP ${response.status}`
+                );
+            }
+
             throw new FNAuthError(`FieldNation returned HTTP ${response.status}`);
         }
 
