@@ -7,7 +7,10 @@ import { google } from "googleapis";
 import path from "path";
 import puppeteer from "puppeteer";
 import { CONFIG } from "./config.js";
-import { getFNorderData } from "./utils/FieldNation/getFNorderData.js";
+import {
+  FNAuthError,
+  getFNorderData,
+} from "./utils/FieldNation/getFNorderData.js";
 import { loginFnAuto } from "./utils/FieldNation/loginFnAuto.js";
 import { postFNCounterOffer } from "./utils/FieldNation/postFNCounterOffer.js";
 import { postFNworkOrderRequest } from "./utils/FieldNation/postFNworkOrderRequest.js";
@@ -17,10 +20,13 @@ import { getOrderLink } from "./utils/gmail/getOrderLink.js";
 import { authorize } from "./utils/gmail/login.js";
 import isEligibleForApplication from "./utils/isEligibleForApplication.js";
 import { isTransientNetworkError } from "./utils/isTransientNetworkError.js";
+import { createLogThrottle } from "./utils/logThrottle.js";
 import logger from "./utils/logger.js";
 import normalizeDateFromWO from "./utils/normalizedDateFromWO.js";
+import { PersistentOrderDeduper } from "./utils/orderDedup.js";
 import playSound from "./utils/playSound.js";
 import { saveReplay } from "./utils/saveReplay.js";
+import { formatLeadTimePolicy } from "./utils/strategy/leadTimeStrategy.js";
 import { getAvailableBlocks } from "./utils/availability/getAvailableBlocks.js";
 import { getWorkOrderLocalDate } from "./utils/isEligibleForApplication.js";
 import telegramBot from "./utils/telegram/telegramBot.js";
@@ -163,8 +169,16 @@ app.post("/api/monitor/:action", async (req, res) => {
 let browser; // Declare a browser instance
 let reloginTimeout; // Timeout for the relogin scheduler
 let monitoringInterval; // Store the monitoring interval
+let monitoringStartPromise = null; // Single-flight guard while Gmail auth starts
 let isRefreshingCookies = false; // Flag to prevent concurrent cookie refresh attempts
+let cookieRefreshPromise = null; // Shared single-flight refresh for every trigger
 const phoneAlertDedup = new Map();
+const inFlightOrders = new Map();
+const recentlyProcessedOrders = new Map();
+const ORDER_DEDUP_TTL_MS = 5 * 60 * 1000;
+const processedOrderDeduper = new PersistentOrderDeduper({
+  filePath: path.join(process.cwd(), "logs", "processed-order-fingerprints.json"),
+});
 
 // --- WorkMarket session health -------------------------------------------
 // Correct session detection makes authExpired fire far more often than the old
@@ -179,15 +193,16 @@ const WM_FAILURE_ALERT_THRESHOLD = 3;
 // Orders dropped because the session was dead. getLastUnreadEmail marks the
 // email read BEFORE the order is processed, so without this queue a dropped
 // order is gone for good.
-const wmRetryQueue = [];
+const retryQueue = [];
 // Attempt counts live outside the queue so they survive a drain: an order that
 // fails again is re-queued as a fresh entry, and without this it would retry
 // forever.
-const wmRetryAttempts = new Map();
+const retryAttempts = new Map();
 const RETRY_MAX_ATTEMPTS = 2;
 const RETRY_TTL_MS = 30 * 60 * 1000;
 let isDrainingRetryQueue = false; // Reentrancy guard: draining calls processOrder
 let pendingRetryDrain = false; // Set when a refresh inside processOrder succeeds
+let lastFnRecoveryAt = 0;
 
 function canRelogin() {
   return Date.now() - lastReloginAt >= RELOGIN_COOLDOWN_MS;
@@ -198,7 +213,12 @@ function reloginCooldownRemainingMs() {
 }
 
 // Append a dropped order to logs/unprocessed-orders.ndjson for post-mortem.
-function recordUnprocessedOrder(orderLink, reason, workOrderId = "unknown") {
+function recordUnprocessedOrder(
+  orderLink,
+  reason,
+  workOrderId = "unknown",
+  platform = "WorkMarket"
+) {
   try {
     const logDir = path.join(process.cwd(), "logs");
     fsSync.mkdirSync(logDir, { recursive: true });
@@ -207,6 +227,7 @@ function recordUnprocessedOrder(orderLink, reason, workOrderId = "unknown") {
       `${JSON.stringify({
         orderLink,
         workOrderId,
+        platform,
         reason,
         ts: new Date().toISOString(),
       })}\n`
@@ -214,77 +235,128 @@ function recordUnprocessedOrder(orderLink, reason, workOrderId = "unknown") {
   } catch (error) {
     logger.error(
       `Failed to record unprocessed order: ${error.message}`,
-      "WorkMarket"
+      platform
     );
   }
 }
 
-function queueOrderForRetry(orderLink, workOrderId = "unknown", reason = "") {
+function queueOrderForRetry(
+  orderLink,
+  workOrderId = "unknown",
+  reason = "",
+  platform = "WorkMarket"
+) {
   if (!orderLink) return;
 
-  const existing = wmRetryQueue.find(item => item.orderLink === orderLink);
+  const existing = retryQueue.find(item => item.orderLink === orderLink);
   if (existing) {
     existing.ts = Date.now();
     return;
   }
 
-  wmRetryQueue.push({ orderLink, workOrderId, ts: Date.now(), attempts: 0 });
-  recordUnprocessedOrder(orderLink, reason, workOrderId);
+  retryQueue.push({
+    orderLink,
+    workOrderId,
+    platform,
+    ts: Date.now(),
+    attempts: 0,
+  });
+  recordUnprocessedOrder(orderLink, reason, workOrderId, platform);
   logger.warn(
     `Order queued for retry after session recovery (${reason})`,
-    "WorkMarket",
+    platform,
     workOrderId
   );
 }
 
+async function recoverAvailabilitySession(
+  orderLink,
+  workOrderId = "unknown",
+  reason = ""
+) {
+  queueOrderForRetry(orderLink, workOrderId, reason);
+  pushEvent({
+    platform: "WorkMarket",
+    id: workOrderId,
+    status: "info",
+    message: "Order queued: WorkMarket availability session unavailable",
+  });
+
+  if (!canRelogin()) {
+    logger.warn(
+      `Availability order queued; re-login is on cooldown for ${Math.ceil(reloginCooldownRemainingMs() / 1000)}s`,
+      "WorkMarket",
+      workOrderId
+    );
+    return;
+  }
+
+  try {
+    await refreshCookies("WorkMarket availability session expired");
+    consecutiveWmSessionFailures = 0;
+    pendingRetryDrain = true;
+    logger.info(
+      "Availability session restored; queued order will be retried",
+      "WorkMarket",
+      workOrderId
+    );
+  } catch (error) {
+    logger.error(
+      `Availability session refresh failed: ${error.message}`,
+      "WorkMarket",
+      workOrderId
+    );
+  }
+}
+
 // Re-process orders that were dropped while the session was dead. Called after
 // any successful cookie refresh (scheduled rotation or probe-triggered).
-async function drainWmRetryQueue() {
+async function drainRetryQueue() {
   pendingRetryDrain = false;
-  // drainWmRetryQueue -> processOrder -> (session failure) -> queueOrderForRetry
+  // drainRetryQueue -> processOrder -> (session failure) -> queueOrderForRetry
   // is a live cycle; the guard keeps it from re-entering itself.
-  if (isDrainingRetryQueue || wmRetryQueue.length === 0) return;
+  if (isDrainingRetryQueue || retryQueue.length === 0) return;
   isDrainingRetryQueue = true;
 
   const now = Date.now();
   // Drop stale entries — a hours-old work order is not worth applying to.
-  for (let i = wmRetryQueue.length - 1; i >= 0; i--) {
-    if (now - wmRetryQueue[i].ts > RETRY_TTL_MS) {
-      const [stale] = wmRetryQueue.splice(i, 1);
-      wmRetryAttempts.delete(stale.orderLink);
+  for (let i = retryQueue.length - 1; i >= 0; i--) {
+    if (now - retryQueue[i].ts > RETRY_TTL_MS) {
+      const [stale] = retryQueue.splice(i, 1);
+      retryAttempts.delete(stale.orderLink);
       logger.info(
         `Dropping expired retry entry (older than ${RETRY_TTL_MS / 60000} min)`,
-        "WorkMarket",
+        stale.platform,
         stale.workOrderId
       );
     }
   }
 
   try {
-    const batch = wmRetryQueue.splice(0, wmRetryQueue.length);
+    const batch = retryQueue.splice(0, retryQueue.length);
     if (batch.length === 0) return;
 
     logger.info(
       `Retrying ${batch.length} order(s) after session recovery`,
-      "WorkMarket"
+      "System"
     );
     pushEvent({
-      platform: "WorkMarket",
+      platform: "System",
       status: "info",
       message: `Retrying ${batch.length} order(s) after re-login`,
     });
 
     for (const item of batch) {
-      const attempts = (wmRetryAttempts.get(item.orderLink) || 0) + 1;
-      wmRetryAttempts.set(item.orderLink, attempts);
+      const attempts = (retryAttempts.get(item.orderLink) || 0) + 1;
+      retryAttempts.set(item.orderLink, attempts);
 
       if (attempts > RETRY_MAX_ATTEMPTS) {
         logger.warn(
           `Giving up on order after ${RETRY_MAX_ATTEMPTS} retry attempts`,
-          "WorkMarket",
+          item.platform,
           item.workOrderId
         );
-        wmRetryAttempts.delete(item.orderLink);
+        retryAttempts.delete(item.orderLink);
         continue;
       }
 
@@ -292,11 +364,11 @@ async function drainWmRetryQueue() {
         const result = await processOrder(item.orderLink);
         // processOrder re-queues itself if the session is still dead, so a
         // clean return means this entry is finished with.
-        if (result !== null) wmRetryAttempts.delete(item.orderLink);
+        if (result !== null) retryAttempts.delete(item.orderLink);
       } catch (error) {
         logger.error(
           `Retry failed: ${error.message}`,
-          "WorkMarket",
+          item.platform,
           item.workOrderId
         );
       }
@@ -333,6 +405,39 @@ function isDuplicatePhoneAlert(alert) {
 
   phoneAlertDedup.set(key, now + ttlMs);
   return false;
+}
+
+function buildOrderProcessingKey(orderLink) {
+  const platform = determinePlatform(orderLink);
+  const idMatch = orderLink.match(
+    platform === "FieldNation"
+      ? /\/workorders\/(\d+)/i
+      : /\/assignments\/(?:details\/)?(\d+)/i
+  );
+
+  if (idMatch) return `${platform}:${idMatch[1]}`;
+
+  try {
+    const url = new URL(orderLink);
+    const path = url.pathname.replace(/\/$/, "");
+    // WorkMarket email links are SendGrid redirects. Their pathname is always
+    // /uni/ls/click, while the query string contains the unique destination.
+    const query = url.hostname === "sendgrid.workmarket.com" ? url.search : "";
+    return `${platform}:${url.origin}${path}${query}`;
+  } catch {
+    return `${platform}:${orderLink}`;
+  }
+}
+
+function pruneRecentlyProcessedOrders(now = Date.now()) {
+  for (const [key, expiresAt] of recentlyProcessedOrders.entries()) {
+    if (expiresAt <= now) recentlyProcessedOrders.delete(key);
+  }
+}
+
+function buildNormalizedOrderKey(orderData) {
+  if (!orderData?.platform || !orderData?.id) return null;
+  return `${orderData.platform}:${orderData.id}`;
 }
 
 function extractFieldNationOrderLinkFromAlert(alert) {
@@ -489,13 +594,17 @@ function scheduleRelogin() {
   reloginTimeout = setTimeout(async () => {
     console.log("⏰ Scheduled relogin triggered...");
     logger.info("Scheduled relogin triggered", "WorkMarket");
-    lastReloginAt = Date.now();
-    await saveCookies();
-    consecutiveWmSessionFailures = 0;
-    // Any orders dropped while the session was dead get another chance now.
-    await drainWmRetryQueue();
-    // Schedule the next relogin after this one completes
-    scheduleRelogin();
+    try {
+      await refreshCookies("scheduled rotation");
+      consecutiveWmSessionFailures = 0;
+      // Any orders dropped while the session was dead get another chance now.
+      await drainRetryQueue();
+    } catch (error) {
+      logger.error(`Scheduled relogin failed: ${error.message}`, "WorkMarket");
+    } finally {
+      // Schedule the next relogin even when this attempt failed.
+      scheduleRelogin();
+    }
   }, nextReloginTime);
 
   // Log the next relogin time
@@ -550,13 +659,7 @@ function scheduleSessionProbe() {
             message: "Session probe failed — re-logging in",
           });
 
-          isRefreshingCookies = true;
-          lastReloginAt = Date.now();
-          try {
-            await saveCookies();
-          } finally {
-            isRefreshingCookies = false;
-          }
+          await refreshCookies("WorkMarket session probe");
 
           const verify = await probeWMSession();
           if (verify.ok) {
@@ -565,7 +668,7 @@ function scheduleSessionProbe() {
               "WorkMarket session restored by probe-triggered re-login",
               "WorkMarket"
             );
-            await drainWmRetryQueue();
+            await drainRetryQueue();
           } else {
             noteWmSessionFailure(`probe re-login did not restore session (${verify.reason})`);
           }
@@ -626,6 +729,7 @@ async function saveCookies() {
       } catch (_) {}
       browser = null;
     }
+    throw error;
   } finally {
     if (timeoutHandle) clearTimeout(timeoutHandle);
   }
@@ -676,6 +780,8 @@ async function saveCookiesImpl() {
     // Get Gmail auth for potential 2FA code retrieval
     const gmailAuth = await authorize();
 
+    const loginFailures = [];
+
     // Login to FieldNation with the new automated system
     if (CONFIG.FIELDNATION_ENABLED) {
       console.log("🔑 Logging into FieldNation...");
@@ -691,6 +797,7 @@ async function saveCookiesImpl() {
         console.log("✅ FieldNation login successful");
       } else {
         console.error("❌ FieldNation login failed:", fnResult.error);
+        loginFailures.push(`FieldNation: ${fnResult.error}`);
       }
     } else {
       console.log("⏭️ FieldNation login skipped (disabled)");
@@ -711,15 +818,39 @@ async function saveCookiesImpl() {
         console.log("✅ WorkMarket login successful");
       } else {
         console.error("❌ WorkMarket login failed:", wmResult.error);
+        loginFailures.push(`WorkMarket: ${wmResult.error}`);
       }
     } else {
       console.log("⏭️ WorkMarket login skipped (disabled)");
     }
 
-    console.log("🍪 Login process completed, cookies saved automatically");
+    if (loginFailures.length > 0) {
+      throw new Error(`Cookie refresh failed (${loginFailures.join("; ")})`);
+    }
+
+    console.log("🍪 Login process completed, cookies validated and saved");
   } catch (error) {
     console.error("❌ Error during automated login process:", error);
+    throw error;
   }
+}
+
+// All refresh sources share one promise. This prevents scheduled, manual,
+// probe-triggered, and order-triggered logins from closing each other's browser
+// or racing to replace the same cookie files.
+function refreshCookies(reason = "unspecified") {
+  if (cookieRefreshPromise) {
+    logger.info(`Cookie refresh already running; joined by ${reason}`);
+    return cookieRefreshPromise;
+  }
+
+  isRefreshingCookies = true;
+  lastReloginAt = Date.now();
+  cookieRefreshPromise = saveCookies().finally(() => {
+    isRefreshingCookies = false;
+    cookieRefreshPromise = null;
+  });
+  return cookieRefreshPromise;
 }
 
 // Periodically check for unread emails
@@ -747,6 +878,7 @@ async function periodicCheck() {
   playSound("notification");
 
   let isCheckingEmail = false;
+  const shouldLogNoUnreadEmail = createLogThrottle(10 * 60 * 1000);
 
   // Backoff state for transient network outages (e.g. VPN/DNS stalls causing
   // the Gmail OAuth token refresh to ETIMEDOUT). During an outage we skip
@@ -801,7 +933,7 @@ async function periodicCheck() {
           // If processOrder recovered the session mid-flight, replay anything
           // that was dropped while it was dead. Done here, outside
           // processOrder, to keep the drain from re-entering it.
-          if (pendingRetryDrain) await drainWmRetryQueue();
+          if (pendingRetryDrain) await drainRetryQueue();
 
           // Add a delay to ensure sounds can finish playing
           await new Promise(resolve => setTimeout(resolve, 3000));
@@ -809,7 +941,9 @@ async function periodicCheck() {
           console.log("No valid order link found in email.");
         }
       } else {
-        console.log("No unread emails found.");
+        if (shouldLogNoUnreadEmail()) {
+          console.log("📭 No unread emails found (status repeats every 10 min).");
+        }
       }
     } catch (error) {
       if (isTransientNetworkError(error)) {
@@ -842,13 +976,18 @@ async function periodicCheck() {
 }
 
 function startMonitoring() {
-  if (!monitoringInterval) {
-    periodicCheck().catch(error => {
+  telegramBot.isMonitoring = true;
+
+  if (monitoringInterval || monitoringStartPromise) return;
+
+  monitoringStartPromise = periodicCheck()
+    .catch(error => {
       logger.error("periodicCheck failed to start", error);
       console.error("❌ periodicCheck failed to start:", error.message);
+    })
+    .finally(() => {
+      monitoringStartPromise = null;
     });
-  }
-  telegramBot.isMonitoring = true;
 }
 
 function stopMonitoring() {
@@ -975,7 +1114,7 @@ function isInvalidWorkMarketData(data) {
 }
 
 // Process the order: check requirements and apply if valid
-async function processOrder(orderLink) {
+async function processOrderInternal(orderLink) {
   try {
     const platform = determinePlatform(orderLink);
 
@@ -1021,7 +1160,78 @@ async function processOrder(orderLink) {
     let data;
 
     if (platform === "FieldNation") {
-      data = await getFNorderData(orderLink);
+      const workOrderId = orderLink.match(/\/workorders\/(\d+)/i)?.[1] || "unknown";
+
+      try {
+        data = await getFNorderData(orderLink);
+      } catch (error) {
+        if (!(error instanceof FNAuthError)) throw error;
+
+        logger.warn(
+          `FieldNation session invalid (${error.message}) — attempting recovery`,
+          platform,
+          workOrderId
+        );
+
+        if (isRefreshingCookies) {
+          try {
+            await cookieRefreshPromise;
+          } catch (refreshError) {
+            queueOrderForRetry(
+              orderLink,
+              workOrderId,
+              `concurrent cookie refresh failed: ${refreshError.message}`,
+              platform
+            );
+            return null;
+          }
+        } else if (Date.now() - lastFnRecoveryAt < RELOGIN_COOLDOWN_MS) {
+          queueOrderForRetry(
+            orderLink,
+            workOrderId,
+            "FieldNation re-login cooldown",
+            platform
+          );
+          return null;
+        } else {
+          lastFnRecoveryAt = Date.now();
+          try {
+            await refreshCookies("expired FieldNation order session");
+          } catch (refreshError) {
+            logger.error(
+              `FieldNation session recovery failed: ${refreshError.message}`,
+              platform,
+              workOrderId
+            );
+            queueOrderForRetry(
+              orderLink,
+              workOrderId,
+              `FieldNation cookie refresh failed: ${refreshError.message}`,
+              platform
+            );
+            return null;
+          }
+        }
+
+        try {
+          data = await getFNorderData(orderLink);
+          pendingRetryDrain = true;
+          logger.info(
+            "FieldNation order retrieved after session recovery",
+            platform,
+            workOrderId
+          );
+        } catch (retryError) {
+          if (!(retryError instanceof FNAuthError)) throw retryError;
+          queueOrderForRetry(
+            orderLink,
+            workOrderId,
+            `FieldNation auth still invalid after refresh: ${retryError.message}`,
+            platform
+          );
+          return null;
+        }
+      }
     } else if (platform === "WorkMarket") {
       data = await getWMorderData(orderLink);
 
@@ -1104,8 +1314,6 @@ async function processOrder(orderLink) {
           );
         } else {
           // No refresh in progress, start one
-          isRefreshingCookies = true;
-          lastReloginAt = Date.now();
           console.log(
             "🔄 Invalid WorkMarket data detected, refreshing cookies and retrying..."
           );
@@ -1120,7 +1328,7 @@ async function processOrder(orderLink) {
             console.log("🔑 Re-logging into WorkMarket to refresh cookies...");
 
             // Use saveCookies() which properly initializes browser and logs into both platforms
-            await saveCookies();
+            await refreshCookies("expired WorkMarket order session");
 
             console.log("✅ WorkMarket re-login successful, cookies refreshed");
 
@@ -1182,14 +1390,21 @@ async function processOrder(orderLink) {
             });
             return null;
           } finally {
-            // Always reset the flag when done
-            isRefreshingCookies = false;
             console.log("🔓 Cookie refresh lock released");
           }
         }
       }
     } else {
       throw new Error("Unsupported platform or invalid order link.");
+    }
+
+    if (data?.unavailable) {
+      logger.info(
+        `Order skipped: ${data.unavailableReason}`,
+        platform,
+        data.id || "unknown"
+      );
+      return null;
     }
 
     if (!data) {
@@ -1204,7 +1419,48 @@ async function processOrder(orderLink) {
       return null;
     }
 
-    const normalizedData = normalizeDateFromWO(data);
+    let normalizedData;
+    try {
+      normalizedData = normalizeDateFromWO(data);
+    } catch (error) {
+      if (error.code !== "INVALID_WORK_ORDER_DATE") throw error;
+
+      logger.warn(
+        `Order skipped: unavailable or missing schedule data (${error.message})`,
+        platform,
+        data?.id || "unknown"
+      );
+      pushEvent({
+        platform,
+        id: data?.id,
+        title: data?.title,
+        status: "info",
+        message: "Order skipped: unavailable or missing schedule data",
+      });
+      return null;
+    }
+
+    const normalizedOrderKey = buildNormalizedOrderKey(normalizedData);
+    if (
+      normalizedOrderKey &&
+      (recentlyProcessedOrders.get(normalizedOrderKey) || 0) > Date.now()
+    ) {
+      logger.info(
+        `Duplicate order skipped after ID resolution (${normalizedOrderKey})`,
+        normalizedData.platform,
+        normalizedData.id
+      );
+      return null;
+    }
+
+    if (processedOrderDeduper.has(normalizedData)) {
+      logger.info(
+        `Unchanged order skipped by persistent fingerprint (${normalizedOrderKey})`,
+        normalizedData.platform,
+        normalizedData.id
+      );
+      return null;
+    }
 
     // Log order details
     logger.info(
@@ -1228,6 +1484,18 @@ async function processOrder(orderLink) {
     );
 
     const eligibilityResult = await isEligibleForApplication(normalizedData);
+
+    // A broken WorkMarket session means availability is unknown, not that the
+    // calendar is full. Keep the order for a post-login retry and avoid sending
+    // a false "Calendar conflict" rejection.
+    if (eligibilityResult.reason === "AVAILABILITY_AUTH_REQUIRED") {
+      await recoverAvailabilitySession(
+        orderLink,
+        normalizedData.id,
+        eligibilityResult.rejectDetails
+      );
+      return null;
+    }
 
     // Process the order based on eligibility
     if (eligibilityResult.eligible) {
@@ -1331,7 +1599,7 @@ async function processOrder(orderLink) {
       telegramBot.sendOrderNotification(
         normalizedData,
         "❌ REJECTED",
-        "Calendar conflict",
+        eligibilityResult.rejectDetails || "📅 No available schedule slot",
         orderLink
       );
 
@@ -1399,7 +1667,12 @@ async function processOrder(orderLink) {
 
           playSound("applied");
           logger.info(
-            `Result: Counter offer sent successfully 🔊
+            CONFIG.TEST_MODE
+              ? `Result: TEST MODE — counter offer simulated; nothing submitted
+             Type: ${co.payType}
+             ${co.payType === "hourly" ? `Rate: $${co.counterRate}/hr × ${co.estHours}hrs` : `Fixed: $${co.baseAmount}`}
+             Travel: $${co.travelExpense}`
+              : `Result: Counter offer sent successfully 🔊
              Type: ${co.payType}
              ${co.payType === "hourly" ? `Rate: $${co.counterRate}/hr × ${co.estHours}hrs` : `Fixed: $${co.baseAmount}`}
              Travel: $${co.travelExpense}`,
@@ -1465,7 +1738,9 @@ async function processOrder(orderLink) {
 
           playSound("applied");
           logger.info(
-            `Result: WM Counter offer sent 🔊 Type: ${co.payType}, Rate: $${co.counterRate}/hr, Total: $${co.baseAmount}, Travel: $${co.travelExpense}`,
+            CONFIG.TEST_MODE
+              ? `Result: TEST MODE — WM counter offer simulated; nothing submitted. Type: ${co.payType}, Rate: $${co.counterRate}/hr, Total: $${co.baseAmount}, Travel: $${co.travelExpense}`
+              : `Result: WM Counter offer sent 🔊 Type: ${co.payType}, Rate: $${co.counterRate}/hr, Total: $${co.baseAmount}, Travel: $${co.travelExpense}`,
             normalizedData.platform,
             normalizedData.id
           );
@@ -1505,27 +1780,38 @@ async function processOrder(orderLink) {
       );
 
       // Send a custom Telegram message with better formatting for counter dates
-      const modesLabel = telegramBot.getActiveModesHTML();
+      const escapeHTML = value => telegramBot.escapeHTML(value);
       const orderIdLink = orderLink
-        ? `<a href="${orderLink}">${normalizedData.id}</a>`
-        : normalizedData.id;
-
-      const telegramMsg = `📅 <b>Counter Dates</b>${modesLabel}
-
-<b>Platform:</b> ${normalizedData.platform}
-<b>Order ID:</b> ${orderIdLink}
-<b>Company:</b> ${normalizedData.company}
-<b>Title:</b> ${normalizedData.title}
-<b>Pay:</b> $${normalizedData.payRange.min}-$${normalizedData.payRange.max}
-<b>Distance:</b> ${normalizedData.distance}mi
-
-<b>Requested:</b> ${new Date(normalizedData.time.start).toLocaleString()}
-❌ <i>Conflict with existing schedule</i>
-
-<b>✅ Counter Slot:</b> ${counterDateLabel}
-${normalizedData.platform === "WorkMarket" && !isRealWorkMarketSubmission ? "\n\n<i>WorkMarket alternate date submission will be simulated in TEST mode only.</i>" : ""}
-
-<b>Counter Offer:</b> ${eligibilityResult.counterOffer.payType === "hourly" ? `$${eligibilityResult.counterOffer.counterRate}/hr × ${eligibilityResult.counterOffer.estHours}hrs = $${eligibilityResult.counterOffer.baseAmount}` : eligibilityResult.counterOffer.payType === "blended" && eligibilityResult.counterOffer.payStructure ? `$${eligibilityResult.counterOffer.payStructure.base.amount} base + $${eligibilityResult.counterOffer.payStructure.additional.amount}/hr × ${eligibilityResult.counterOffer.payStructure.additional.units}hr (combined)` : `$${eligibilityResult.counterOffer.baseAmount} (fixed)`} + $${eligibilityResult.counterOffer.travelExpense} travel`;
+        ? `<a href="${escapeHTML(orderLink)}">#${escapeHTML(normalizedData.id)}</a>`
+        : `#${escapeHTML(normalizedData.id)}`;
+      const payText =
+        normalizedData.payRange.min === normalizedData.payRange.max
+          ? `$${normalizedData.payRange.min}`
+          : `$${normalizedData.payRange.min}–$${normalizedData.payRange.max}`;
+      const counterOfferText =
+        eligibilityResult.counterOffer.payType === "hourly"
+          ? `$${eligibilityResult.counterOffer.counterRate}/hr × ${eligibilityResult.counterOffer.estHours}hrs = $${eligibilityResult.counterOffer.baseAmount}`
+          : eligibilityResult.counterOffer.payType === "blended" &&
+              eligibilityResult.counterOffer.payStructure
+            ? `$${eligibilityResult.counterOffer.payStructure.base.amount} base + $${eligibilityResult.counterOffer.payStructure.additional.amount}/hr × ${eligibilityResult.counterOffer.payStructure.additional.units}hr`
+            : `$${eligibilityResult.counterOffer.baseAmount} fixed`;
+      const telegramMsg = [
+        CONFIG.TEST_MODE
+          ? "<b>🧪 TEST MODE — no application will be submitted</b>"
+          : "",
+        `<b>📅 COUNTER DATE</b> · ${escapeHTML(normalizedData.platform)} ${orderIdLink}`,
+        `<b>${escapeHTML(normalizedData.company)}</b> — ${escapeHTML(normalizedData.title)}`,
+        `⏱ ${escapeHTML(normalizedData.estLaborHours)}h labor`,
+        `💵 ${escapeHTML(payText)} · 📍 ${escapeHTML(normalizedData.distance)} mi`,
+        `❌ Requested: ${escapeHTML(new Date(normalizedData.time.start).toLocaleString())} (conflict)`,
+        `✅ Proposed: ${escapeHTML(counterDateLabel)}`,
+        `💰 ${escapeHTML(counterOfferText)} + $${escapeHTML(eligibilityResult.counterOffer.travelExpense)} travel`,
+        normalizedData.platform === "WorkMarket" && !isRealWorkMarketSubmission
+          ? "<i>TEST mode: alternate date submission is simulated.</i>"
+          : "",
+      ]
+        .filter(Boolean)
+        .join("\n");
 
       telegramBot.bot
         .sendMessage(telegramBot.chatId, telegramMsg, {
@@ -1537,7 +1823,7 @@ ${normalizedData.platform === "WorkMarket" && !isRealWorkMarketSubmission ? "\n\
             `Failed to send counter dates notification: ${err.message}`
           );
           telegramBot.sendMessage(
-            `📅 Counter Dates\n\nOrder: ${normalizedData.id}\nCompany: ${normalizedData.company}\nRequested: ${new Date(normalizedData.time.start).toLocaleString()}\n\nCounter Slot: ${counterDateLabel}\n\nCounter: $${eligibilityResult.counterOffer.baseAmount} + $${eligibilityResult.counterOffer.travelExpense} travel`
+            `${CONFIG.TEST_MODE ? "🧪 TEST MODE — no application will be submitted\n\n" : ""}📅 Counter Dates\n\nOrder: ${normalizedData.id}\nCompany: ${normalizedData.company}\nRequested: ${new Date(normalizedData.time.start).toLocaleString()}\n\nCounter Slot: ${counterDateLabel}\n\nCounter: $${eligibilityResult.counterOffer.baseAmount} + $${eligibilityResult.counterOffer.travelExpense} travel`
           );
         });
 
@@ -1667,11 +1953,7 @@ ${normalizedData.platform === "WorkMarket" && !isRealWorkMarketSubmission ? "\n\
           break;
         case "PAYMENT_BELOW_MINIMUM":
           rejectReason = CONFIG.STRATEGY?.ENABLED
-            ? `💸 Below lead-time threshold — not worth booking at this horizon${
-                eligibilityResult.rejectDetails
-                  ? `\n${eligibilityResult.rejectDetails}`
-                  : ""
-              }`
+            ? "💸 Below lead-time threshold — not worth booking at this horizon"
             : `Payment below minimum threshold${
                 eligibilityResult.rejectDetails
                   ? `\nReason: ${eligibilityResult.rejectDetails}`
@@ -1765,6 +2047,46 @@ ${normalizedData.platform === "WorkMarket" && !isRealWorkMarketSubmission ? "\n\
   }
 }
 
+async function processOrder(orderLink) {
+  const key = buildOrderProcessingKey(orderLink);
+  const now = Date.now();
+  pruneRecentlyProcessedOrders(now);
+
+  if ((recentlyProcessedOrders.get(key) || 0) > now) {
+    logger.info(`Duplicate order skipped within dedup window (${key})`);
+    return null;
+  }
+
+  const existing = inFlightOrders.get(key);
+  if (existing) {
+    logger.info(`Duplicate order joined existing processing (${key})`);
+    return existing;
+  }
+
+  const processingPromise = processOrderInternal(orderLink)
+    .then(result => {
+      if (result) {
+        const expiresAt = Date.now() + ORDER_DEDUP_TTL_MS;
+        recentlyProcessedOrders.set(key, expiresAt);
+        const normalizedOrderKey = buildNormalizedOrderKey(result);
+        if (normalizedOrderKey) {
+          recentlyProcessedOrders.set(normalizedOrderKey, expiresAt);
+        }
+        processedOrderDeduper.remember(result);
+      }
+      return result;
+    })
+    .finally(() => {
+      inFlightOrders.delete(key);
+      if (pendingRetryDrain && !isDrainingRetryQueue) {
+        setTimeout(() => void drainRetryQueue(), 0);
+      }
+    });
+
+  inFlightOrders.set(key, processingPromise);
+  return processingPromise;
+}
+
 // Set up Telegram bot event handlers
 telegramBot.onStartMonitoring = startMonitoring;
 telegramBot.onStopMonitoring = stopMonitoring;
@@ -1772,10 +2094,9 @@ telegramBot.onProcessOrder = processOrder;
 // Manual /relogin: refresh cookies, then replay anything dropped while the
 // session was dead, so a hand-triggered fix also recovers the lost orders.
 telegramBot.onRelogin = async () => {
-  lastReloginAt = Date.now();
-  await saveCookies();
+  await refreshCookies("manual Telegram command");
   consecutiveWmSessionFailures = 0;
-  await drainWmRetryQueue();
+  await drainRetryQueue();
 };
 telegramBot.onPhoneAlert = handlePhoneAlert;
 
@@ -1796,7 +2117,7 @@ app.listen(port, async () => {
   await cleanupChromeProcesses();
 
   telegramBot.sendMessage(
-    `🚀 Server started on port ${port}\nMonitoring auto-started ✅\nUse /help for available commands or the menu button (☰) for quick access`
+    `${CONFIG.TEST_MODE ? "🧪 TEST MODE — no applications will be submitted" : "🚀 LIVE MODE — real applications enabled"}\n\nServer started on port ${port}\nMonitoring auto-started ✅\n\n🎯 Active minimum payment policy\n${formatLeadTimePolicy()}\n\nUse /policy to change it or the menu button (☰) for quick access`
   );
   // Initialize logs.json with current eventHistory
   await writeEventsToFile(eventHistory);
@@ -1804,8 +2125,7 @@ app.listen(port, async () => {
   // Refresh cookies on startup so we never run with a stale session
   console.log("🔑 Refreshing platform cookies on startup...");
   try {
-    lastReloginAt = Date.now();
-    await saveCookies();
+    await refreshCookies("startup");
     console.log("✅ Startup cookie refresh complete");
   } catch (err) {
     console.error("❌ Startup cookie refresh failed:", err.message);

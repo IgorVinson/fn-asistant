@@ -1,8 +1,12 @@
-import { timeout } from "puppeteer";
 import {saveCookies} from "../saveCookies.js";
 
 
 export async function loginToWorkMarket(browser) {
+    const email = process.env.WM_EMAIL;
+    const password = process.env.WM_PASSWORD;
+    if (!email || !password) {
+        throw new Error('WM_EMAIL and WM_PASSWORD environment variables are required');
+    }
 
     const url = 'https://www.workmarket.com/login';
     const page = await browser.newPage();
@@ -13,13 +17,13 @@ export async function loginToWorkMarket(browser) {
 
         // Введення username
         await page.waitForSelector('#login-email', {visible: true}); // Чекаємо на появу поля username
-        await page.type('#login-email', 'igorvinson@gmail.com', {delay: Math.random() * 100}); // Вводимо username (емейл)
+        await page.type('#login-email', email, {delay: Math.random() * 100}); // Вводимо username (емейл)
         // await page.click('button[type="submit"]'); // Натискаємо кнопку "Submit" після введення username
 
         // Чекаємо на навігацію або оновлення
 
         await page.waitForSelector('#login-password', {visible: true}); // Чекаємо на появу поля для пароля
-        await page.type('#login-password', 'Karusel123!', {delay: Math.random() * 100}); // Вводимо пароль
+        await page.type('#login-password', password, {delay: Math.random() * 100}); // Вводимо пароль
         await page.click('#login_page_button');
         await page.waitForNavigation(); // Чекаємо на навігацію після входу
 
@@ -27,6 +31,7 @@ export async function loginToWorkMarket(browser) {
 
     } catch (error) {
         console.error('Помилка з Cookies:', error.message,);
+        throw error;
     }
 
 }

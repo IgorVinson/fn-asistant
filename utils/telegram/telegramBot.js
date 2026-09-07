@@ -1,7 +1,11 @@
 import TelegramBot from "node-telegram-bot-api";
 import { CONFIG } from "../../config.js";
 import logger from "../logger.js";
-import { describeStrategy } from "../strategy/leadTimeStrategy.js";
+import { persistLeadTimeTierMinPay } from "../configPersistence.js";
+import {
+  describeStrategy,
+  formatLeadTimePolicy,
+} from "../strategy/leadTimeStrategy.js";
 
 class TelegramBotService {
   constructor() {
@@ -96,6 +100,7 @@ class TelegramBotService {
         { command: "stop", description: "⏹️ Stop job monitoring" },
         { command: "status", description: "📊 Check monitoring status" },
         { command: "settings", description: "⚙️ View/update settings" },
+        { command: "policy", description: "🎯 Change minimum payment policy" },
         { command: "mode", description: "🧭 Show application mode" },
         { command: "setmode", description: "🧭 Set application mode" },
         { command: "dates", description: "📅 Show override dates" },
@@ -138,16 +143,42 @@ class TelegramBotService {
 
       // Handle waiting for input
       if (this.waitingForInput && msg.text) {
-        this.handleUserInput(msg.text);
+        void this.handleUserInput(msg.text);
         return;
       }
+    });
+
+    this.bot.on("callback_query", query => {
+      if (
+        !query.message?.chat ||
+        query.message.chat.id.toString() !== this.chatId
+      ) {
+        return;
+      }
+
+      const match = query.data?.match(/^policy_tier:(\d)$/);
+      if (!match) return;
+
+      const tierIndex = Number(match[1]);
+      const tier = CONFIG.STRATEGY?.LEAD_TIME_TIERS?.[tierIndex];
+      if (!tier) return;
+
+      this.waitingForInput = `policy:${tierIndex}`;
+      void this.bot.answerCallbackQuery(query.id);
+      const labels = [
+        "Same day / urgent (≤36h)",
+        "Mid-range (36h–7 days)",
+        "7+ days",
+      ];
+      this.sendMessage(
+        `💵 Enter the new minimum for ${labels[tierIndex]}\nCurrent: $${tier.minPay}\n\nExample: 150`
+      );
     });
 
     // Start monitoring command
     this.bot.onText(/\/start/, msg => {
       if (msg.chat && msg.chat.id.toString() === this.chatId) {
         this.clearWaitingState();
-        this.sendMessage("🚀 Starting job monitoring...");
         this.isMonitoring = true;
         if (this.onStartMonitoring) {
           this.onStartMonitoring();
@@ -159,7 +190,6 @@ class TelegramBotService {
     this.bot.onText(/\/stop/, msg => {
       if (msg.chat && msg.chat.id.toString() === this.chatId) {
         this.clearWaitingState();
-        this.sendMessage("⏹️ Stopping job monitoring...");
         this.isMonitoring = false;
         if (this.onStopMonitoring) {
           this.onStopMonitoring();
@@ -195,12 +225,17 @@ class TelegramBotService {
     });
 
     // Relogin command
-    this.bot.onText(/\/relogin/, msg => {
+    this.bot.onText(/\/relogin/, async msg => {
       if (msg.chat && msg.chat.id.toString() === this.chatId) {
         this.clearWaitingState();
         this.sendMessage("🔄 Initiating relogin process...");
         if (this.onRelogin) {
-          this.onRelogin();
+          try {
+            await this.onRelogin();
+            this.sendMessage("✅ Platform sessions refreshed successfully");
+          } catch (error) {
+            this.sendMessage(`❌ Platform session refresh failed: ${error.message}`);
+          }
         }
       }
     });
@@ -234,6 +269,7 @@ class TelegramBotService {
 *Quick Update Commands:*
 /mode - Show current mode
 /setmode granite_only|all_companies|disabled
+/policy - View/change lead-time minimums
 /dates - Show override dates
 /adddate YYYY-MM-DD
 /deldate YYYY-MM-DD
@@ -248,6 +284,40 @@ class TelegramBotService {
         this.bot.sendMessage(this.chatId, settingsText, {
           parse_mode: "Markdown",
         });
+      }
+    });
+
+    this.bot.onText(/\/policy$/, msg => {
+      if (msg.chat && msg.chat.id.toString() === this.chatId) {
+        this.clearWaitingState();
+        this.bot.sendMessage(
+          this.chatId,
+          `🎯 Current minimum payment policy\n\n${formatLeadTimePolicy()}\n\nChoose a tier to change:`,
+          {
+            reply_markup: {
+              inline_keyboard: [
+                [
+                  {
+                    text: `⚡ Same day / urgent — $${CONFIG.STRATEGY.LEAD_TIME_TIERS[0].minPay}`,
+                    callback_data: "policy_tier:0",
+                  },
+                ],
+                [
+                  {
+                    text: `📆 Mid-range — $${CONFIG.STRATEGY.LEAD_TIME_TIERS[1].minPay}`,
+                    callback_data: "policy_tier:1",
+                  },
+                ],
+                [
+                  {
+                    text: `🗓️ 7+ days — $${CONFIG.STRATEGY.LEAD_TIME_TIERS[2].minPay}`,
+                    callback_data: "policy_tier:2",
+                  },
+                ],
+              ],
+            },
+          }
+        );
       }
     });
 
@@ -401,6 +471,7 @@ class TelegramBotService {
 *Settings Commands:*
 /mode - Show application mode
 /setmode - Update application mode
+/policy - View/change lead-time minimums
 /dates - Show override dates
 /adddate - Add override date
 /deldate - Remove override date
@@ -424,7 +495,7 @@ class TelegramBotService {
     });
   }
 
-  handleUserInput(input) {
+  async handleUserInput(input) {
     if (this.waitingForInput === "workhours") {
       const hoursRegex = /^([01]\d|2[0-3]):([0-5]\d)-([01]\d|2[0-3]):([0-5]\d)$/;
       if (!hoursRegex.test(input)) {
@@ -444,6 +515,34 @@ class TelegramBotService {
 
     if (isNaN(value) || value <= 0) {
       this.sendMessage("❌ Please enter a valid positive number.");
+      return;
+    }
+
+    if (this.waitingForInput?.startsWith("policy:")) {
+      if (value > 2000) {
+        this.sendMessage(
+          "❌ Amount too high. Please enter a value between $1-$2000"
+        );
+        return;
+      }
+
+      const tierIndex = Number(this.waitingForInput.split(":")[1]);
+      try {
+        await persistLeadTimeTierMinPay(tierIndex, value);
+        CONFIG.STRATEGY.LEAD_TIME_TIERS[tierIndex].minPay = value;
+        this.sendMessage(
+          `✅ Policy updated and saved to config.js\n\n${formatLeadTimePolicy()}`
+        );
+        logger.info(
+          `Settings updated: Lead-time tier ${tierIndex + 1} minimum set to $${value} and persisted`
+        );
+        this.clearWaitingState();
+      } catch (error) {
+        logger.error(`Failed to persist payment policy: ${error.message}`);
+        this.sendMessage(
+          `❌ Policy was not changed because config.js could not be saved: ${error.message}`
+        );
+      }
       return;
     }
 
@@ -522,77 +621,56 @@ class TelegramBotService {
     });
   }
 
-  // Build active modes string for notifications
-  getActiveModesMarkdown() {
-    const modes = [];
-    if (CONFIG.TEST_MODE) modes.push("🧪 TEST");
-    if (CONFIG.APPLICATION_MODE === "granite_only") modes.push("🪨 GRANITE ONLY");
-    if (CONFIG.APPLICATION_MODE === "all_companies") modes.push("🌐 ALL COMPANIES");
-    if (CONFIG.APPLICATION_MODE === "disabled") modes.push("⛔ DISABLED");
-    if (CONFIG.ALLOW_ALL_COMPANIES_ON_DATES.length > 0) modes.push("📆 DATE OVERRIDES");
-    if (CONFIG.IS_COUNTER_DATES) modes.push("📅 COUNTER SLOTS");
-    if (CONFIG.STRATEGY?.ENABLED) modes.push("🎯 LEAD-TIME STRATEGY");
-    return modes.length > 0 ? ` *[${modes.join(" | ")}]*` : "";
-  }
-
-  getActiveModesHTML() {
-    const modes = [];
-    if (CONFIG.TEST_MODE) modes.push("🧪 TEST");
-    if (CONFIG.APPLICATION_MODE === "granite_only") modes.push("🪨 GRANITE ONLY");
-    if (CONFIG.APPLICATION_MODE === "all_companies") modes.push("🌐 ALL COMPANIES");
-    if (CONFIG.APPLICATION_MODE === "disabled") modes.push("⛔ DISABLED");
-    if (CONFIG.ALLOW_ALL_COMPANIES_ON_DATES.length > 0) modes.push("📆 DATE OVERRIDES");
-    if (CONFIG.IS_COUNTER_DATES) modes.push("📅 COUNTER SLOTS");
-    if (CONFIG.STRATEGY?.ENABLED) modes.push("🎯 LEAD-TIME STRATEGY");
-    return modes.length > 0 ? ` <b>[${modes.join(" | ")}]</b>` : "";
+  escapeHTML(value) {
+    return String(value ?? "")
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;");
   }
 
   sendOrderNotification(orderData, action, details = "", orderLink = "") {
-    // Escape special characters for Markdown
-    const escapeMarkdown = text => {
-      return text.replace(/[_*[\]()~`>#+=|{}.!-]/g, "\\$&");
-    };
-
-    const modesLabel = this.getActiveModesMarkdown();
     const strategyLine = describeStrategy(orderData);
-
-    let orderIdText;
-    if (orderLink) {
-      // Create clickable link with escaped text
-      orderIdText = `[${orderData.id}](${orderLink})`;
-    } else {
-      orderIdText = escapeMarkdown(orderData.id.toString());
-    }
-
-    const message = `
-🔔 *New Job Alert*${modesLabel}
-
-*Platform:* ${escapeMarkdown(orderData.platform)}
-*Order ID:* ${orderIdText}
-*Company:* ${escapeMarkdown(orderData.company)}
-*Title:* ${escapeMarkdown(orderData.title)}
-*Pay:* $${orderData.payRange.min}-$${orderData.payRange.max}
-*Distance:* ${orderData.distance}mi
-*Time:* ${escapeMarkdown(new Date(orderData.time.start).toLocaleString())}
-${strategyLine ? `*Strategy:* ${escapeMarkdown(strategyLine)}\n` : ""}
-*Action:* ${action}
-${details ? escapeMarkdown(details) : ""}
-    `;
+    const escapeHTML = value => this.escapeHTML(value);
+    const modeBanner = CONFIG.TEST_MODE
+      ? "<b>🧪 TEST MODE — no application will be submitted</b>"
+      : "";
+    const orderIdText = orderLink
+      ? `<a href="${escapeHTML(orderLink)}">#${escapeHTML(orderData.id)}</a>`
+      : `#${escapeHTML(orderData.id)}`;
+    const payMin = orderData.payRange.min;
+    const payMax = orderData.payRange.max;
+    const payText =
+      payMin === payMax ? `$${payMin}` : `$${payMin}–$${payMax}`;
+    const message = [
+      modeBanner,
+      `<b>${escapeHTML(action)}</b> · ${escapeHTML(orderData.platform)} ${orderIdText}`,
+      `<b>${escapeHTML(orderData.company)}</b> — ${escapeHTML(orderData.title)}`,
+      `⏱ ${escapeHTML(orderData.estLaborHours)}h labor`,
+      `💵 ${escapeHTML(payText)} · 📍 ${escapeHTML(orderData.distance)} mi`,
+      `📅 ${escapeHTML(new Date(orderData.time.start).toLocaleString())}`,
+      strategyLine ? `🎯 ${escapeHTML(strategyLine)}` : "",
+      details ? escapeHTML(details) : "",
+    ]
+      .filter(Boolean)
+      .join("\n");
 
     this.bot
       .sendMessage(this.chatId, message, {
-        parse_mode: "Markdown",
+        parse_mode: "HTML",
         disable_web_page_preview: true,
       })
       .catch(error => {
         // If Markdown fails, send as plain text
         const plainMessage = `
+${CONFIG.TEST_MODE ? "🧪 TEST MODE — no application will be submitted\n" : ""}
 🔔 New Job Alert
 
 Platform: ${orderData.platform}
 Order ID: ${orderData.id} (${orderLink || "No link"})
 Company: ${orderData.company}
 Title: ${orderData.title}
+Labor: ${orderData.estLaborHours}h
 Pay: $${orderData.payRange.min}-$${orderData.payRange.max}
 Distance: ${orderData.distance}mi
 Time: ${new Date(orderData.time.start).toLocaleString()}

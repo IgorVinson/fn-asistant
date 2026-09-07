@@ -18,7 +18,6 @@ export async function getLastUnreadEmail(auth, gmail) {
     const messages = res.data.messages;
 
     if (!messages || messages.length === 0) {
-        console.log('No new unread emails.');
         return null;
     }
 

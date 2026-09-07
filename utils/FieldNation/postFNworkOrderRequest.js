@@ -1,24 +1,14 @@
-import fs from 'fs';
-import path from 'path';
 import { CONFIG } from '../../config.js';
-
-// Шлях до файлу з куками
-const cookiesFilePath = path.resolve('utils', 'FieldNation', 'cookies.json');
-
-// Функція для отримання куків
-function getCookies() {
-    if (!fs.existsSync(cookiesFilePath)) {
-        throw new Error('Файл куків не знайдено!');
-    }
-    const cookiesJson = JSON.parse(fs.readFileSync(cookiesFilePath, 'utf-8'));
-    return cookiesJson.map(cookie => `${cookie.name}=${cookie.value}`).join('; ');
-}
+import { getCookieHeader } from '../cookieStore.js';
 
 // Функція для виконання запиту і аналізу даних
 export async function postFNworkOrderRequest(url, time, estHours) {
     try {
-        const cookies = getCookies();
         const workOrderId = url.split('?')[0].split('/').pop();
+        const cookies = getCookieHeader(
+            'FieldNation',
+            `https://app.fieldnation.com/v2/workorders/${workOrderId}/requests`
+        );
         const etaStartLocal =
             (typeof time === 'string' ? time : null) ||
             time?.start ||

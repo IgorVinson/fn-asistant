@@ -1,10 +1,8 @@
-import fs from "fs";
-import path from "path";
 import puppeteer from "puppeteer";
 import { CONFIG } from "../../config.js";
 import logger from "../logger.js";
+import { getCookieHeader, loadCookieJar, cookiesForUrl } from "../cookieStore.js";
 
-const cookiesFilePath = path.resolve("utils", "WorkMarket", "autoCookies.json");
 const ASSIGNMENTS_URL = "https://www.workmarket.com/assignments#status/active/managing";
 const CACHE_TTL_MS = 5 * 60 * 1000;
 
@@ -21,19 +19,7 @@ export class WMAuthError extends Error {
 
 function getCookies() {
   try {
-    if (!fs.existsSync(cookiesFilePath)) {
-      throw new Error("Cookies file not found!");
-    }
-    const cookiesJson = JSON.parse(fs.readFileSync(cookiesFilePath, "utf-8"));
-    if (!Array.isArray(cookiesJson)) {
-      throw new Error("Invalid cookies format: Expected an array of cookie objects");
-    }
-    const cookies = cookiesJson
-      .filter(cookie => typeof cookie.name === "string" && typeof cookie.value === "string")
-      .map(cookie => `${cookie.name}=${cookie.value}`)
-      .join("; ");
-    if (!cookies) throw new Error("No valid cookies found in the file");
-    return cookies;
+    return getCookieHeader("WorkMarket", ASSIGNMENTS_URL);
   } catch (error) {
     logger.error(`Error reading cookies: ${error.message}`, "WorkMarket");
     return null;
@@ -243,8 +229,10 @@ async function fetchViaPuppeteer() {
   const cookies = getCookies();
   if (!cookies) throw new Error("No WM cookies available");
 
-  const cookieArray = JSON.parse(fs.readFileSync(cookiesFilePath, "utf-8"))
-    .filter(c => typeof c.name === "string" && typeof c.value === "string");
+  const cookieArray = cookiesForUrl(
+    loadCookieJar("WorkMarket"),
+    ASSIGNMENTS_URL
+  );
 
   const browser = await puppeteer.launch({
     headless: true,

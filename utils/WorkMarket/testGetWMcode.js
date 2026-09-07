@@ -18,7 +18,7 @@ async function testGetWMcode() {
     const code = await getWMcode(gmailAuth);
 
     if (code) {
-      console.log(`✅ SUCCESS: Found verification code: ${code}`);
+      console.log("✅ SUCCESS: Verification code extracted");
     } else {
       console.log("❌ FAILED: No verification code found");
     }

@@ -2,7 +2,13 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import { buildFNCounterOfferRequestBody } from "../utils/FieldNation/postFNCounterOffer.js";
+import {
+  FNAuthError,
+  getFNorderData,
+  parseFNWorkOrder,
+} from "../utils/FieldNation/getFNorderData.js";
 import { calculateCounterOffer } from "../utils/isEligibleForApplication.js";
+import normalizeDateFromWO from "../utils/normalizedDateFromWO.js";
 import { CONFIG } from "../config.js";
 
 // Blended ("combined") work order — first 4 hrs for $160, up to 2 more hrs at $40/hr.
@@ -11,6 +17,216 @@ const blendedPayStructure = {
   base: { units: 4, amount: 160 },
   additional: { units: 2, amount: 40 },
 };
+
+test("FieldNation work orders are fetched from the JSON API", async () => {
+  let requestedUrl;
+  const result = await getFNorderData(
+    "https://app.fieldnation.com/workorders/19819430?t=ActionNewWorkOrder",
+    {
+      getCookieHeader: () => "FNSESS=test",
+      fetch: async url => {
+        requestedUrl = url;
+        return {
+          ok: true,
+          status: 200,
+          url,
+          json: async () => ({
+            id: 19819430,
+            company: { name: "Example Buyer" },
+            title: "Example order",
+            pay: { type: "fixed", range: { min: 200, max: 200 } },
+            schedule: {
+              est_labor_hours: 2,
+              service_window: {
+                start: { local: "2026-09-24T09:00:00" },
+                end: { local: "2026-09-24T11:00:00" },
+              },
+            },
+            coords: { distance: "12.8" },
+          }),
+        };
+      },
+    }
+  );
+
+  assert.equal(
+    requestedUrl,
+    "https://app.fieldnation.com/v2/workorders/19819430"
+  );
+  assert.equal(result.id, 19819430);
+  assert.equal(result.company, "Example Buyer");
+});
+
+test("FieldNation login redirects are classified as expired authentication", async () => {
+  await assert.rejects(
+    getFNorderData("https://app.fieldnation.com/workorders/19819430", {
+      getCookieHeader: () => "FNSESS=test",
+      fetch: async url => ({
+        ok: true,
+        status: 200,
+        url: "https://app.fieldnation.com/login?from=" + encodeURIComponent(url),
+        json: async () => {
+          throw new SyntaxError("Unexpected token '<'");
+        },
+      }),
+    }),
+    error => error instanceof FNAuthError && error.code === "FN_AUTH_EXPIRED"
+  );
+});
+
+test("FieldNation schedule redirects do not trigger an authentication recovery", async () => {
+  const result = await getFNorderData(
+    "https://app.fieldnation.com/workorders/19819430",
+    {
+      getCookieHeader: () => "FNSESS=test",
+      fetch: async () => ({
+        ok: true,
+        status: 200,
+        url: "https://app.fieldnation.com/workorders/tomorrow?from=%2Fworkorders%2F19819430",
+        json: async () => {
+          throw new SyntaxError("Unexpected token '<'");
+        },
+      }),
+    }
+  );
+
+  assert.equal(result, null);
+});
+
+test("FieldNation unavailable-order 401 is not classified as expired authentication", async () => {
+  let sessionProbeCalled = false;
+  const result = await getFNorderData(
+    "https://app.fieldnation.com/workorders/19885083",
+    {
+      getCookieHeader: () => "FNSESS=test",
+      fetch: async url => {
+        if (url === "https://app.fieldnation.com/") {
+          sessionProbeCalled = true;
+        }
+        return {
+          ok: false,
+          status: 401,
+          url,
+          json: async () => ({
+            message: "Unauthorized",
+            extra: {
+              work_order: {
+                unavailable: true,
+                error_message: "Sorry, this work order has been assigned to someone else.",
+              },
+            },
+          }),
+        };
+      },
+    }
+  );
+
+  assert.equal(result.unavailable, true);
+  assert.equal(result.id, 19885083);
+  assert.equal(
+    result.unavailableReason,
+    "Sorry, this work order has been assigned to someone else."
+  );
+  assert.equal(sessionProbeCalled, false);
+});
+
+test("FieldNation generic order 401 is skipped when the account session is active", async () => {
+  const result = await getFNorderData(
+    "https://app.fieldnation.com/workorders/19890422",
+    {
+      getCookieHeader: () => "FNSESS=test",
+      fetch: async url => {
+        if (url === "https://app.fieldnation.com/") {
+          return {
+            ok: true,
+            status: 200,
+            url: "https://app.fieldnation.com/workorders/tomorrow",
+          };
+        }
+        return {
+          ok: false,
+          status: 401,
+          url,
+          json: async () => ({ message: "Unauthorized" }),
+        };
+      },
+    }
+  );
+
+  assert.equal(result.unavailable, true);
+  assert.equal(result.id, 19890422);
+  assert.equal(result.unavailableReason, "Unauthorized");
+});
+
+test("FieldNation generic order 401 remains an auth error when the session probe redirects to login", async () => {
+  await assert.rejects(
+    getFNorderData("https://app.fieldnation.com/workorders/19890422", {
+      getCookieHeader: () => "FNSESS=test",
+      fetch: async url => {
+        if (url === "https://app.fieldnation.com/") {
+          return {
+            ok: true,
+            status: 200,
+            url: "https://id.fieldnation.com/login",
+          };
+        }
+        return {
+          ok: false,
+          status: 401,
+          url,
+          json: async () => ({ message: "Unauthorized" }),
+        };
+      },
+    }),
+    error => error instanceof FNAuthError && error.code === "FN_AUTH_EXPIRED"
+  );
+});
+
+test("FieldNation cookie-loading failures are classified as expired authentication", async () => {
+  await assert.rejects(
+    getFNorderData("https://app.fieldnation.com/workorders/19819430", {
+      getCookieHeader: () => {
+        throw new Error("no cookies valid for the requested URL");
+      },
+    }),
+    error => error instanceof FNAuthError && error.code === "FN_AUTH_EXPIRED"
+  );
+});
+
+test("FieldNation orders with missing pay are safely normalized to zero pay", () => {
+  const parsed = parseFNWorkOrder({
+    id: 123,
+    company: { name: "Example Buyer" },
+    title: "Unavailable order",
+    schedule: {
+      est_labor_hours: 3,
+      service_window: {
+        start: { local: "2026-08-24T09:00:00" },
+        end: { local: "2026-08-24T12:00:00" },
+      },
+    },
+    coords: { distance: "17.9" },
+  });
+
+  assert.deepEqual(parsed.payRange, { min: 0, max: 0 });
+  assert.equal(parsed.payType, "fixed");
+  assert.equal(parsed.hourlyRate, 0);
+  assert.equal(parsed.estLaborHours, 3);
+  assert.equal(parsed.distance, 17);
+});
+
+test("normalization identifies unavailable orders with no schedule date", () => {
+  assert.throws(
+    () =>
+      normalizeDateFromWO({
+        id: 123,
+        platform: "WorkMarket",
+        company: "Unavailable Buyer",
+        title: "Unavailable order",
+      }),
+    error => error.code === "INVALID_WORK_ORDER_DATE"
+  );
+});
 
 test("blended counter mirrors the work order pay structure exactly", () => {
   const body = buildFNCounterOfferRequestBody({

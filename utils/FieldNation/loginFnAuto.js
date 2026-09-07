@@ -13,12 +13,20 @@ import { saveCookiesCustom } from "../saveCookies.js";
  */
 export async function loginFnAuto(
   browser,
-  email = process.env.FN_EMAIL || "igorvinson@gmail.com",
-  password = process.env.FN_PASSWORD || "N25z*D4eXiyuPM@",
+  email = process.env.FN_EMAIL,
+  password = process.env.FN_PASSWORD,
   verificationCode = null,
   waitForCode = false,
   gmailAuth = null
 ) {
+  if (!email || !password) {
+    return {
+      success: false,
+      page: null,
+      error: "FN_EMAIL and FN_PASSWORD environment variables are required",
+    };
+  }
+
   const url = "https://app.fieldnation.com/";
   const page = await browser.newPage();
 
@@ -299,9 +307,7 @@ export async function loginFnAuto(
         try {
           verificationCode = await waitForFNcode(gmailAuth, 90000, 3000); // Wait up to 90 seconds
           if (verificationCode) {
-            console.log(
-              `✅ Retrieved verification code from Gmail: ${verificationCode}`
-            );
+            console.log("✅ Retrieved FieldNation verification code from Gmail");
           } else {
             console.log(
               "⚠️ Could not retrieve verification code from Gmail, falling back to manual entry"
@@ -310,6 +316,10 @@ export async function loginFnAuto(
         } catch (error) {
           console.log(`⚠️ Error retrieving code from Gmail: ${error.message}`);
         }
+      }
+
+      if (!verificationCode && !waitForCode) {
+        throw new Error("FieldNation verification code was not available");
       }
 
       if (verificationCode) {
@@ -342,7 +352,7 @@ export async function loginFnAuto(
                 await otpInputs[i].click();
                 await otpInputs[i].evaluate(input => (input.value = ""));
                 await otpInputs[i].type(codeDigits[i], { delay: 100 });
-                console.log(`✅ Entered digit ${i + 1}: ${codeDigits[i]}`);
+                console.log(`✅ Entered verification digit ${i + 1}`);
               } catch (error) {
                 console.log(
                   `⚠️ Error entering digit ${i + 1}: ${error.message}`
@@ -453,8 +463,37 @@ export async function loginFnAuto(
       // Debug screenshot disabled
     }
 
-    // Step 6: Save cookies as autoCookies.json
-    console.log("🍪 Saving cookies as autoCookies.json...");
+    const stillOnAuthScreen = await page.evaluate(() => {
+      const selectors = [
+        "#username",
+        "#password",
+        'input[autocomplete="one-time-code"]',
+        '.MuiOtpInput-TextField input',
+      ];
+      return selectors.some(selector => {
+        const element = document.querySelector(selector);
+        return element && element.getClientRects().length > 0;
+      });
+    });
+    if (stillOnAuthScreen) {
+      throw new Error("FieldNation authentication did not leave the login screen");
+    }
+
+    if (new URL(page.url()).hostname !== "app.fieldnation.com") {
+      try {
+        await page.waitForFunction(
+          () => window.location.hostname === "app.fieldnation.com",
+          { timeout: 30000 }
+        );
+      } catch {
+        throw new Error(
+          `FieldNation authentication did not return to app.fieldnation.com (current host: ${new URL(page.url()).hostname})`
+        );
+      }
+    }
+
+    // Step 6: validate and atomically replace the known-good cookie jar.
+    console.log("🍪 Saving FieldNation cookies...");
     await saveCookiesCustom(page, "FieldNation", "cookies.json");
 
     return {

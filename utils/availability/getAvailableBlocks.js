@@ -208,7 +208,15 @@ export async function getAvailableBlocks({
   );
 
   if (withBusy) {
-    return { free: allFreeBlocks, busy: allBusyBlocks };
+    return {
+      free: allFreeBlocks,
+      busy: allBusyBlocks,
+      sources: {
+        calendar: calendarBusyBlocks,
+        workMarket: wmBusyBlocks,
+        fieldNation: fnBusyBlocks,
+      },
+    };
   }
   return allFreeBlocks;
 }
