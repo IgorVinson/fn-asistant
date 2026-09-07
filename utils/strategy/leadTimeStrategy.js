@@ -54,6 +54,15 @@ export function isGranitePremium(workOrder) {
   if (rate >= (strat.GRANITE_PREMIUM_MIN_RATE ?? Infinity)) return true;
   const pattern = strat.GRANITE_PREMIUM_TITLE_RE;
   if (pattern && new RegExp(pattern, "i").test(workOrder.title || "")) return true;
+
+  // When counter rates is active, Granite orders of 3+ hours (e.g. 3h @ $50/hr)
+  // will be countered at our base rate ($65/hr = $195+), qualifying as Granite priority.
+  if (CONFIG.IS_COUNTER_RATES) {
+    const estHours =
+      workOrder.estLaborHours || CONFIG.TIME?.DEFAULT_LABOR_HOURS || 2;
+    if (estHours >= 3) return true;
+  }
+
   return false;
 }
 
@@ -110,7 +119,21 @@ export function shouldSkipAdvanceCounter(workOrder, counterStart, now = Date.now
   }
 
   const leadHours = (counterStart.getTime() - now) / (60 * 60 * 1000);
-  return getWorkOrderTotalPay(workOrder) < minPayForLeadHours(leadHours);
+  const minPay = minPayForLeadHours(leadHours);
+  const isHourly = workOrder.payType === "hourly" || workOrder.hourlyRate > 0;
+  const estHours =
+    workOrder.estLaborHours || CONFIG.TIME?.DEFAULT_LABOR_HOURS || 2;
+  const rate = getWorkOrderRate(workOrder);
+  const baseRate =
+    workOrder.platform === "FieldNation"
+      ? CONFIG.RATES?.BASE_HOURLY_RATE_FIELDNATION || CONFIG.RATES?.BASE_HOURLY_RATE
+      : CONFIG.RATES?.BASE_HOURLY_RATE_WORKMARKET || CONFIG.RATES?.BASE_HOURLY_RATE;
+  const counterRate = Math.max(rate, CONFIG.IS_COUNTER_RATES ? baseRate : rate);
+  const effectivePay = isHourly
+    ? counterRate * estHours
+    : getWorkOrderTotalPay(workOrder);
+
+  return effectivePay < minPay;
 }
 
 // Is this work order starting on the current calendar day (machine-local, to

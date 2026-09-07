@@ -179,14 +179,14 @@ function getOfferedPaymentMetrics(workOrder, estHours) {
 
   const isHourly = workOrder.payType === "hourly" || workOrder.hourlyRate > 0;
   if (isHourly) {
-    const rate = workOrder.hourlyRate || workOrder.payRange.min || 0;
+    const rate = workOrder.hourlyRate || workOrder.payRange?.min || 0;
     return {
-      total: workOrder.payRange.max || rate * estHours,
+      total: workOrder.payRange?.max || rate * estHours,
       rate,
     };
   }
 
-  const total = workOrder.payRange.max || 0;
+  const total = workOrder.payRange?.max || 0;
   return {
     total,
     rate: total / (estHours || 1),
@@ -225,9 +225,20 @@ function isPaymentEligible(workOrder) {
     ? `Travel required (${workOrder.distance}mi reported + ${CONFIG.DISTANCE.DISTANCE_PADDING_MILES}mi padding = ${effectiveDistance}mi > ${TRAVEL_THRESHOLD}mi)`
     : null;
 
+  const isHourly = workOrder.payType === "hourly" || workOrder.hourlyRate > 0;
+  const potentialRate = (isHourly && CONFIG.IS_COUNTER_RATES)
+    ? Math.max(theirRate, MIN_HOURLY_RATE)
+    : theirRate;
+  const potentialTotal = isHourly
+    ? Math.round(potentialRate * estHours)
+    : theirTotal;
+
   // RULE 1: If total pay is less than minimum -> ALWAYS REJECT (no counter)
-  if (CONFIG.ENFORCE_MIN_PAYMENT && theirTotal < minTotal) {
-    const details = `Total pay $${theirTotal} is below minimum threshold $${minTotal}`;
+  // When IS_COUNTER_RATES is enabled, evaluate against potentialTotal at our base
+  // rate so orders whose counter meets the threshold (e.g. 3h @ $50 -> 3h @ $65 = $195 >= $180)
+  // are not prematurely rejected before Rule 2 can generate the rate counter.
+  if (CONFIG.ENFORCE_MIN_PAYMENT && potentialTotal < minTotal) {
+    const details = `Total pay $${theirTotal}${isHourly && CONFIG.IS_COUNTER_RATES ? ` (countered: $${potentialTotal})` : ""} is below minimum threshold $${minTotal}`;
     logger.info(
       `Payment Analysis: ${details} -> REJECT`,
       workOrder.platform,
