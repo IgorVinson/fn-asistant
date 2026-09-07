@@ -1,6 +1,5 @@
 export const CONFIG = {
   // Platform configuration
-  TEST_MODE: true, // If true, agent will not perform destructive/real actions
   TEST_MODE: true, // Manual validation branch: do not perform destructive/real actions
   FIELDNATION_ENABLED: true, // Set to false to disable FieldNation applications
   WORKMARKET_ENABLED: true, // Set to false to disable WorkMarket applications
