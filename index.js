@@ -2079,7 +2079,7 @@ async function processOrder(orderLink) {
     .finally(() => {
       inFlightOrders.delete(key);
       if (pendingRetryDrain && !isDrainingRetryQueue) {
-        setTimeout(() => void drainWmRetryQueue(), 0);
+        setTimeout(() => void drainRetryQueue(), 0);
       }
     });
 
