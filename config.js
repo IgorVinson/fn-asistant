@@ -26,7 +26,7 @@ export const CONFIG = {
     // Minimum total pay by booking horizon, sorted ascending by maxLeadHours.
     // Last entry (maxLeadHours: null) = "everything else / far in advance".
     LEAD_TIME_TIERS: [
-      { maxLeadHours: 36, minPay: 150 }, // same-day + tomorrow: take (almost) all
+      { maxLeadHours: 36, minPay: 180 }, // same-day + tomorrow: 
       { maxLeadHours: 168, minPay: 250 }, // this week (7 days): $200+
       { maxLeadHours: null, minPay: 260 }, // 7+ days out: $260+
     ],
