@@ -63,7 +63,7 @@ export function buildFNCounterOfferRequestBody({
   const resolvedNotes =
     notes ||
     (counterDate?.start instanceof Date
-      ? `${COUNTER_INTRO} I have a scheduling conflict with the requested time — would ${counterDate.start.toLocaleString()}${counterDate.mode === 'hours' ? ` – ${counterDate.end.toLocaleString()}` : ''} work instead?`
+      ? `${COUNTER_INTRO} ${counterDate.reason === 'arrival_window' ? 'Following an earlier appointment, I am requesting an arrival window of' : 'I have a scheduling conflict with the requested time — would'} ${counterDate.start.toLocaleString()}${counterDate.mode === 'hours' ? ` – ${counterDate.end.toLocaleString()}` : ''}${counterDate.reason === 'arrival_window' ? '.' : ' work instead?'}`
       : `${COUNTER_INTRO} Looking forward to working on this!`);
 
   const requestBody = {
@@ -107,6 +107,12 @@ export function buildFNCounterOfferRequestBody({
 }
 
 export async function postFNCounterOffer(workOrderId, options = {}) {
+  if (CONFIG.TEST_MODE) {
+    const result = { status: 'test', message: 'TEST: FN counter simulated; no submission', workOrderId,
+      requestBody: buildFNCounterOfferRequestBody(options) };
+    console.log(result);
+    return result;
+  }
   try {
     const cookies = getCookieHeader(
       'FieldNation',

@@ -289,9 +289,9 @@ function isSameDay(a, b) {
   );
 }
 
-async function checkAvailabilityNew(workOrder) {
+export async function checkAvailabilityNew(workOrder, loadBlocks = getAvailableBlocks) {
   const woDateString = getWorkOrderLocalDate(workOrder);
-  const { free: availableBlocks, busy: busyBlocks } = await getAvailableBlocks({
+  const { free: availableBlocks, busy: busyBlocks } = await loadBlocks({
     date: woDateString,
     daysToCheck: AVAILABILITY_LOOKAHEAD_DAYS,
     withBusy: true,
@@ -299,6 +299,10 @@ async function checkAvailabilityNew(workOrder) {
   });
 
   const travelMin = calculateTravelMinutes(workOrder);
+  const arrivalOptions = {
+    busyBlocks,
+    arrivalWindowMinutes: CONFIG.TIME.ARRIVAL_WINDOW_AFTER_JOB_MINUTES,
+  };
   const durationMs = getJobDurationMs(workOrder);
   const estHours = workOrder.estLaborHours || CONFIG.TIME.DEFAULT_LABOR_HOURS;
 
@@ -339,7 +343,8 @@ async function checkAvailabilityNew(workOrder) {
       latestStart: woLatestStart,
       durationMs,
     },
-    travelMin
+    travelMin,
+    { ...arrivalOptions, preserveRequestedWindow: Boolean(workOrder.isRequestedWindow) }
   );
 
   const shiftedSameDay = findFitBlock(
@@ -349,7 +354,8 @@ async function checkAvailabilityNew(workOrder) {
       latestStart: latestCounterStart,
       durationMs,
     },
-    travelMin
+    travelMin,
+    arrivalOptions
   );
 
   let shiftedResult = shiftedSameDay;
@@ -365,7 +371,8 @@ async function checkAvailabilityNew(workOrder) {
         latestStart: new Date(2099, 0, 1),
         durationMs,
       },
-      travelMin
+      travelMin,
+      arrivalOptions
     );
   }
 

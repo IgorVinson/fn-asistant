@@ -1803,7 +1803,7 @@ async function processOrderInternal(orderLink) {
         `<b>${escapeHTML(normalizedData.company)}</b> — ${escapeHTML(normalizedData.title)}`,
         `⏱ ${escapeHTML(normalizedData.estLaborHours)}h labor`,
         `💵 ${escapeHTML(payText)} · 📍 ${escapeHTML(normalizedData.distance)} mi`,
-        `❌ Requested: ${escapeHTML(new Date(normalizedData.time.start).toLocaleString())} (conflict)`,
+        `${slot.reason === 'arrival_window' ? '🕒' : '❌'} Requested: ${escapeHTML(new Date(normalizedData.time.start).toLocaleString())} (${slot.reason === 'arrival_window' ? 'arrival flexibility after earlier appointment' : 'conflict'})`,
         `✅ Proposed: ${escapeHTML(counterDateLabel)}`,
         `💰 ${escapeHTML(counterOfferText)} + $${escapeHTML(eligibilityResult.counterOffer.travelExpense)} travel`,
         normalizedData.platform === "WorkMarket" && !isRealWorkMarketSubmission
@@ -1852,10 +1852,10 @@ async function processOrderInternal(orderLink) {
               payType: co.payType,
               baseAmount: co.baseAmount,
               travelExpense: co.travelExpense,
-              rescheduleOption: normalizedData.isRequestedWindow
+              rescheduleOption: isSlotWindow
                 ? "window"
                 : "time",
-              isRequestedWindow: Boolean(normalizedData.isRequestedWindow),
+              isRequestedWindow: isSlotWindow,
               note: "",
             }
           );
@@ -2111,6 +2111,7 @@ setInterval(
 
 // Start the server
 app.listen(port, async () => {
+  logger.info(`Arrival window after earlier appointment: ${CONFIG.TIME.ARRIVAL_WINDOW_AFTER_JOB_MINUTES} minutes (0 = disabled)`);
   console.log(`Server running on port ${port}`);
 
   // Clean up any zombies from previous runs on startup

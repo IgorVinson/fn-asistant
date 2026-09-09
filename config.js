@@ -71,6 +71,7 @@ export const CONFIG = {
     WORK_START_TIME: "9:00", // Earliest time to accept jobs
     WORK_END_TIME: "20:00", // Latest time to accept jobs
     BUFFER_MINUTES: 0, // Buffer time between jobs
+    ARRIVAL_WINDOW_AFTER_JOB_MINUTES: 90, // Arrival flexibility after a same-day busy event; 0 disables. Replaces estimated travel time, not travel fees.
     LATEST_COUNTER_START_TIME: "15:00", // Latest same-day counter slot start time
     PREFERRED_SLOTS: [
       { start: "10:00", end: "12:00", label: "Morning" },

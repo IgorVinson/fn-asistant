@@ -50,7 +50,7 @@ function buildWMCounterOfferFormData({
   const priceType = options.priceType ?? (isHourlyCounter ? "2" : "1");
   const rescheduleOption =
     options.rescheduleOption ??
-    (options.isRequestedWindow ? "window" : "time");
+    (options.counterDate?.mode === 'hours' || options.isRequestedWindow ? "window" : "time");
 
   const formData = new URLSearchParams({
     _tk: csrfToken,
@@ -107,6 +107,12 @@ export async function postWMCounterOffer(
   distance,
   options = {}
 ) {
+  if (CONFIG.TEST_MODE) {
+    const result = { status: 'test', message: 'TEST: WM counter simulated; no submission', workOrderId,
+      formData: buildWMCounterOfferFormData({ csrfToken: 'test', hourlyRate, hours, distance, options }).toString() };
+    console.log(result);
+    return result;
+  }
   try {
     const requestUrl = `https://www.workmarket.com/assignments/negotiate/${workOrderId}`;
     const cookies = getCookies(requestUrl);
