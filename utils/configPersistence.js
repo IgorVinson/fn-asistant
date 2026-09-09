@@ -1,5 +1,6 @@
 import fs from "fs/promises";
 import { fileURLToPath } from "url";
+import { randomUUID } from "node:crypto";
 
 const DEFAULT_CONFIG_PATH = fileURLToPath(
   new URL("../config.js", import.meta.url)
@@ -47,7 +48,38 @@ export async function persistLeadTimeTierMinPay(
   minPay,
   configPath = DEFAULT_CONFIG_PATH
 ) {
-  const source = await fs.readFile(configPath, "utf8");
-  const updatedSource = replaceLeadTimeTierMinPay(source, tierIndex, minPay);
-  await fs.writeFile(configPath, updatedSource, "utf8");
+  return persistConfigUpdate(configPath, source => replaceLeadTimeTierMinPay(source, tierIndex, minPay));
+}
+
+const writes = new Map();
+function persistConfigUpdate(configPath, transform) {
+  const previous = writes.get(configPath) || Promise.resolve();
+  const next = previous.catch(() => {}).then(async () => {
+    const source = await fs.readFile(configPath, 'utf8');
+    const updated = transform(source);
+    const temporary = `${configPath}.${randomUUID()}.tmp`;
+    try {
+      await fs.writeFile(temporary, updated, 'utf8');
+      await fs.rename(temporary, configPath);
+    } finally {
+      await fs.rm(temporary, { force: true });
+    }
+  });
+  writes.set(configPath, next);
+  return next.finally(() => { if (writes.get(configPath) === next) writes.delete(configPath); });
+}
+
+export function replaceArrivalWindowMinutes(source, minutes) {
+  if (!Number.isInteger(minutes) || minutes < 0 || minutes > 240) {
+    throw new Error('Enter whole minutes from 0 to 240 (0 = disabled)');
+  }
+  const pattern = /(ARRIVAL_WINDOW_AFTER_JOB_MINUTES\s*:\s*)\d+/g;
+  if ([...source.matchAll(pattern)].length !== 1) {
+    throw new Error('Expected one ARRIVAL_WINDOW_AFTER_JOB_MINUTES setting in config.js');
+  }
+  return source.replace(pattern, (_, prefix) => `${prefix}${minutes}`);
+}
+
+export function persistArrivalWindowMinutes(minutes, configPath = DEFAULT_CONFIG_PATH) {
+  return persistConfigUpdate(configPath, source => replaceArrivalWindowMinutes(source, minutes));
 }

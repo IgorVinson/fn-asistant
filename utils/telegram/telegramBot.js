@@ -2,6 +2,7 @@ import TelegramBot from "node-telegram-bot-api";
 import { CONFIG } from "../../config.js";
 import logger from "../logger.js";
 import { persistLeadTimeTierMinPay } from "../configPersistence.js";
+import { arrivalWindowLabel, setupArrivalWindowSettings, updateArrivalWindow } from './arrivalWindowSettings.js';
 import {
   describeStrategy,
   formatLeadTimePolicy,
@@ -101,6 +102,7 @@ class TelegramBotService {
         { command: "status", description: "📊 Check monitoring status" },
         { command: "settings", description: "⚙️ View/update settings" },
         { command: "policy", description: "🎯 Change minimum payment policy" },
+        { command: "arrival", description: "🕒 Change arrival window (minutes)" },
         { command: "mode", description: "🧭 Show application mode" },
         { command: "setmode", description: "🧭 Set application mode" },
         { command: "dates", description: "📅 Show override dates" },
@@ -122,6 +124,7 @@ class TelegramBotService {
   }
 
   setupCommands() {
+    setupArrivalWindowSettings(this);
     const formatOverrideDates = () =>
       CONFIG.ALLOW_ALL_COMPANIES_ON_DATES.length > 0
         ? CONFIG.ALLOW_ALL_COMPANIES_ON_DATES.join(", ")
@@ -265,11 +268,13 @@ class TelegramBotService {
 📏 *Radius Threshold:* ${CONFIG.DISTANCE.TRAVEL_THRESHOLD_MILES} miles
 ⏰ *Work Hours:* ${CONFIG.TIME.WORK_START_TIME} - ${CONFIG.TIME.WORK_END_TIME}
 ⏳ *Buffer:* ${CONFIG.BUFFER_MINUTES || CONFIG.TIME.BUFFER_MINUTES} min
+🕒 *Arrival window after earlier appointment:* ${arrivalWindowLabel()}
 
 *Quick Update Commands:*
 /mode - Show current mode
 /setmode granite_only|all_companies|disabled
 /policy - View/change lead-time minimums
+/arrival - Change arrival window (e.g., /arrival 90; 0 = OFF)
 /dates - Show override dates
 /adddate YYYY-MM-DD
 /deldate YYYY-MM-DD
@@ -472,6 +477,7 @@ class TelegramBotService {
 /mode - Show application mode
 /setmode - Update application mode
 /policy - View/change lead-time minimums
+/arrival - Change arrival window (minutes; 0 = OFF)
 /dates - Show override dates
 /adddate - Add override date
 /deldate - Remove override date
@@ -496,6 +502,9 @@ class TelegramBotService {
   }
 
   async handleUserInput(input) {
+    if (this.waitingForInput === 'arrival') {
+      return updateArrivalWindow(this, input);
+    }
     if (this.waitingForInput === "workhours") {
       const hoursRegex = /^([01]\d|2[0-3]):([0-5]\d)-([01]\d|2[0-3]):([0-5]\d)$/;
       if (!hoursRegex.test(input)) {
@@ -615,8 +624,8 @@ class TelegramBotService {
     return alert;
   }
 
-  sendMessage(text) {
-    this.bot.sendMessage(this.chatId, text).catch(error => {
+  sendMessage(text, options) {
+    this.bot.sendMessage(this.chatId, text, options).catch(error => {
       logger.error(`Failed to send Telegram message: ${error.message}`);
     });
   }
