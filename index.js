@@ -1713,7 +1713,7 @@ async function processOrderInternal(orderLink) {
           const counterStatus = CONFIG.TEST_MODE ? "info" : "warning";
           const counterMsg = CONFIG.TEST_MODE
             ? `TEST: Counter suggested: $${co.baseAmount} + $${co.travelExpense} travel`
-            : `Sent WM Counter Offer: $${co.baseAmount}`;
+            : `Attempting WM Counter Offer: $${co.baseAmount}`;
           pushEvent({
             platform: normalizedData.platform,
             id: normalizedData.id,
@@ -1734,6 +1734,7 @@ async function processOrderInternal(orderLink) {
                 travelExpense: co.travelExpense,
               }
             );
+            telegramBot.sendMessage(`✅ WorkMarket #${normalizedData.id}: counter confirmed — $${Number(co.baseAmount).toFixed(2)} + $${Number(co.travelExpense).toFixed(2)} travel.`);
           }
 
           playSound("applied");
@@ -1799,7 +1800,7 @@ async function processOrderInternal(orderLink) {
         CONFIG.TEST_MODE
           ? "<b>🧪 TEST MODE — no application will be submitted</b>"
           : "",
-        `<b>📅 COUNTER DATE</b> · ${escapeHTML(normalizedData.platform)} ${orderIdLink}`,
+        `<b>📅 COUNTER DATE${isRealWorkMarketSubmission ? ' — ATTEMPT' : ''}</b> · ${escapeHTML(normalizedData.platform)} ${orderIdLink}`,
         `<b>${escapeHTML(normalizedData.company)}</b> — ${escapeHTML(normalizedData.title)}`,
         `⏱ ${escapeHTML(normalizedData.estLaborHours)}h labor`,
         `💵 ${escapeHTML(payText)} · 📍 ${escapeHTML(normalizedData.distance)} mi`,
@@ -1871,6 +1872,7 @@ async function processOrderInternal(orderLink) {
             normalizedData.platform,
             normalizedData.id
           );
+          telegramBot.sendMessage(`✅ WorkMarket #${normalizedData.id}: counter confirmed — ${counterDateLabel}.`);
         } catch (error) {
           pushEvent({
             platform: normalizedData.platform,
@@ -1885,7 +1887,7 @@ async function processOrderInternal(orderLink) {
             normalizedData.id
           );
           telegramBot.sendMessage(
-            `❌ Failed to send WorkMarket counter date: ${error.message}`
+            `❌ WorkMarket #${normalizedData.id}: counter NOT confirmed. ${error.message}`
           );
           playSound("error");
           return;

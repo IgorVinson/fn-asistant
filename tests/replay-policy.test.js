@@ -370,8 +370,9 @@ test("WorkMarket counter-offer payload includes alternate date fields", () => {
   assert.equal(formData.get("to"), "04/08/2026");
   assert.equal(formData.get("totime"), "4:30pm");
   assert.equal(formData.get("priceType"), "1");
-  assert.equal(formData.get("per_hour_price"), "65");
-  assert.equal(formData.get("max_number_of_hours"), "3");
+  assert.equal(formData.get("pricing"), "1");
+  assert.equal(formData.get("per_hour_price"), "");
+  assert.equal(formData.get("max_number_of_hours"), "");
   assert.equal(
     formData.get("additional_expenses"),
     String(Math.round(42 * CONFIG.DISTANCE.TRAVEL_RATE_PER_MILE))
