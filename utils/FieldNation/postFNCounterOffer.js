@@ -63,7 +63,7 @@ export function buildFNCounterOfferRequestBody({
   const resolvedNotes =
     notes ||
     (counterDate?.start instanceof Date
-      ? `${COUNTER_INTRO} I have a scheduling conflict with the requested time — would ${counterDate.start.toLocaleString()} work instead?`
+      ? `${COUNTER_INTRO} I have a scheduling conflict with the requested time — would ${counterDate.start.toLocaleString()}${counterDate.mode === 'hours' ? ` – ${counterDate.end.toLocaleString()}` : ''} work instead?`
       : `${COUNTER_INTRO} Looking forward to working on this!`);
 
   const requestBody = {
@@ -80,10 +80,13 @@ export function buildFNCounterOfferRequestBody({
     const { date, time } = toLocalDateTimeParts(counterDate.start);
     requestBody.schedule = {
       service_window: {
-        mode: 'exact',
+        mode: counterDate.mode === 'hours' ? 'hours' : 'exact',
         start: {
           local: { date, time },
         },
+        ...(counterDate.mode === 'hours' ? {
+          end: { local: toLocalDateTimeParts(counterDate.end) },
+        } : {}),
       },
     };
   }

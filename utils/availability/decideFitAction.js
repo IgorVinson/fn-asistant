@@ -80,6 +80,7 @@ export function decideFitAction({
         start,
         end,
         durationMinutes,
+        ...(isRequestedWindow ? { mode: 'hours' } : {}),
       },
     };
   }
