@@ -124,6 +124,7 @@ export function parseFNWorkOrder(workOrder) {
         platform: 'FieldNation',
         company: workOrder.company?.name || 'Unknown Company',
         title: workOrder.title || 'No Title',
+        description: workOrder.description || '',
         isRequestedWindow,
         time: {
             start: serviceWindow.start?.local ?? null,

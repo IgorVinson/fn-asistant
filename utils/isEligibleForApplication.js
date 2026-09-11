@@ -1,5 +1,6 @@
 import { CONFIG } from "../config.js";
 import logger from "./logger.js";
+import { findBlockedKeyword } from "./blockedKeywords.js";
 import { getAvailableBlocks } from "./availability/getAvailableBlocks.js";
 import { findFitBlock } from "./availability/findFitBlock.js";
 import { decideFitAction } from "./availability/decideFitAction.js";
@@ -844,6 +845,15 @@ async function evaluateEligibilityInternal(workOrder, availabilityCtx) {
 // `_availabilitySnapshot` so callers (e.g. replay logging) can reuse them
 // instead of re-fetching the calendar.
 async function isEligibleForApplication(workOrder) {
+  const blocked = findBlockedKeyword(workOrder, CONFIG.BLOCKED_KEYWORDS);
+  if (blocked) {
+    return {
+      eligible: false,
+      counterOffer: null,
+      reason: "BLOCKED_KEYWORD",
+      rejectDetails: `Blocked keyword "${blocked.keyword}" in ${blocked.field}`,
+    };
+  }
   const availabilityCtx = {};
   const result = await evaluateEligibilityInternal(workOrder, availabilityCtx);
   if (availabilityCtx.computed) {

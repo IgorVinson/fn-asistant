@@ -5,6 +5,7 @@ export const CONFIG = {
   WORKMARKET_ENABLED: true, // Set to false to disable WorkMarket applications
   APPLICATION_MODE: "all_companies", // "granite_only" | "all_companies" | "disabled"
   ALLOW_ALL_COMPANIES_ON_DATES: [], // YYYY-MM-DD dates where non-Granite jobs are allowed
+  BLOCKED_KEYWORDS: ["TV", "starlink"], // Case-insensitive whole words in title/description; [] disables.
   IS_COUNTER_DATES: true, // If true, counter-offer with free calendar slots when job time conflicts; if false, just reject on conflict
   IS_COUNTER_DAYS: true, // If true, counter-offer with free calendar slots when job time conflicts; if false, just reject on conflict
   IS_COUNTER_RATES: true,

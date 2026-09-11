@@ -1946,6 +1946,9 @@ async function processOrderInternal(orderLink) {
       // Handle all other rejection cases
       let rejectReason = "Unknown reason";
       switch (eligibilityResult.reason) {
+        case "BLOCKED_KEYWORD":
+          rejectReason = eligibilityResult.rejectDetails;
+          break;
         case "PAYMENT_INSUFFICIENT":
           rejectReason = `Payment below minimum threshold${
             eligibilityResult.rejectDetails
