@@ -1954,13 +1954,7 @@ async function processOrderInternal(orderLink) {
           }`;
           break;
         case "PAYMENT_BELOW_MINIMUM":
-          rejectReason = CONFIG.STRATEGY?.ENABLED
-            ? "💸 Below lead-time threshold — not worth booking at this horizon"
-            : `Payment below minimum threshold${
-                eligibilityResult.rejectDetails
-                  ? `\nReason: ${eligibilityResult.rejectDetails}`
-                  : ""
-              }`;
+          rejectReason = eligibilityResult.rejectDetails || "Payment below minimum threshold";
           break;
         case "SLOT_UNAVAILABLE":
           rejectReason = "Time slot unavailable";
@@ -1995,7 +1989,8 @@ async function processOrderInternal(orderLink) {
         normalizedData,
         "❌ REJECTED",
         rejectReason,
-        orderLink
+        orderLink,
+        { showStrategy: !["PAYMENT_BELOW_MINIMUM", "PAYMENT_INSUFFICIENT"].includes(eligibilityResult.reason) }
       );
 
       pushEvent({

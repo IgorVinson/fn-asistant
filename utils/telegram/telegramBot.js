@@ -638,8 +638,8 @@ class TelegramBotService {
       .replaceAll('"', "&quot;");
   }
 
-  sendOrderNotification(orderData, action, details = "", orderLink = "") {
-    const strategyLine = describeStrategy(orderData);
+  sendOrderNotification(orderData, action, details = "", orderLink = "", { showStrategy = true } = {}) {
+    const strategyLine = showStrategy ? describeStrategy(orderData) : "";
     const escapeHTML = value => this.escapeHTML(value);
     const modeBanner = CONFIG.TEST_MODE
       ? "<b>🧪 TEST MODE — no application will be submitted</b>"
