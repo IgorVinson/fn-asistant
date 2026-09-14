@@ -1,6 +1,7 @@
 import TelegramBot from "node-telegram-bot-api";
 import { CONFIG } from "../../config.js";
 import logger from "../logger.js";
+import { appendRejectedTicket } from "../notion/rejectedTickets.js";
 import { persistLeadTimeTierMinPay } from "../configPersistence.js";
 import { arrivalWindowLabel, setupArrivalWindowSettings, updateArrivalWindow } from './arrivalWindowSettings.js';
 import {
@@ -664,7 +665,20 @@ class TelegramBotService {
       .filter(Boolean)
       .join("\n");
 
-    this.bot
+    if (action === "❌ REJECTED") {
+      return appendRejectedTicket(message).catch(error => {
+        // Keep the complete message in the local log if Notion is unavailable.
+        // Never fall back to Telegram for rejected tickets.
+        logger.error(`Failed to save rejected ticket to Notion: ${error.message}\n${message}`,
+          orderData.platform, orderData.id);
+      });
+    }
+
+    if (!["✅ APPLIED", "💰 COUNTER OFFER", "📅 COUNTER DATE"].includes(action)) {
+      return;
+    }
+
+    return this.bot
       .sendMessage(this.chatId, message, {
         parse_mode: "HTML",
         disable_web_page_preview: true,

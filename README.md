@@ -42,7 +42,12 @@ It listens for incoming work order emails via the Gmail API, checks schedule ava
 * **Automated Travel Compensation**:
   * Adds 10 miles to reported distance, then uses $1.25/mile when that distance exceeds 20 miles. The amount is rounded to whole dollars and then up to a $5 increment.
 * **Telegram Remote Control**:
-  * Real-time notifications and remote commands: `/start`, `/stop`, `/status`, `/relogin`, and `/process <link>`.
+  * Ticket notifications for applications and counteroffers; rejected tickets go to Notion instead. Remote commands and operational alerts remain available.
+  * Commands: `/start`, `/stop`, `/status`, `/relogin`, and `/process <link>`.
+* **Notion Rejection Log**:
+  * Set `NOTION_TOKEN` and `NOTION_PAGE_ID` in `.env`, and grant the integration access to that page with insert-content permission.
+  * Each new rejection appends the existing Telegram message content, including the reason and ticket link. Test-mode rejections retain their TEST banner. Existing rejections are not backfilled.
+  * Uses the [Notion append-block API](https://developers.notion.com/reference/patch-block-children). Rate limits are retried; failed writes retain the full message in local logs without sending a Telegram rejection. Restart the bot after changing environment variables or code.
 
 ---
 
