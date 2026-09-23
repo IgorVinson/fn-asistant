@@ -1,6 +1,6 @@
 export const CONFIG = {
   // Platform configuration
-  TEST_MODE: true, // Manual validation branch: do not perform destructive/real actions
+  TEST_MODE: false, // Live operation: real applications enabled
   FIELDNATION_ENABLED: true, // Set to false to disable FieldNation applications
   WORKMARKET_ENABLED: true, // Set to false to disable WorkMarket applications
   APPLICATION_MODE: "all_companies", // "granite_only" | "all_companies" | "disabled"
@@ -27,9 +27,9 @@ export const CONFIG = {
     // Minimum total pay by booking horizon, sorted ascending by maxLeadHours.
     // Last entry (maxLeadHours: null) = "everything else / far in advance".
     LEAD_TIME_TIERS: [
-      { maxLeadHours: 36, minPay: 180 }, // same-day + tomorrow: 
-      { maxLeadHours: 168, minPay: 250 }, // this week (7 days): $200+
-      { maxLeadHours: null, minPay: 260 }, // 7+ days out: $260+
+      { maxLeadHours: 36, minPay: 180 }, // same-day + tomorrow: $250
+      { maxLeadHours: 168, minPay: 300 }, // this week (7 days): $400+
+      { maxLeadHours: null, minPay: 450 }, // 7+ days out: $350+
     ],
     BIG_TICKET_MIN: 210, // "big" ticket — used for same-day morning reserve
     SAME_DAY_SMALL_EARLIEST_START: "12:00", // small same-day jobs only from this time
@@ -72,7 +72,7 @@ export const CONFIG = {
     WORK_START_TIME: "9:00", // Earliest time to accept jobs
     WORK_END_TIME: "20:00", // Latest time to accept jobs
     BUFFER_MINUTES: 0, // Buffer time between jobs
-    ARRIVAL_WINDOW_AFTER_JOB_MINUTES: 90, // Arrival flexibility after a same-day busy event; 0 disables. Replaces estimated travel time, not travel fees.
+    ARRIVAL_WINDOW_AFTER_JOB_MINUTES: 60, // Arrival flexibility after a same-day busy event; 0 disables. Replaces estimated travel time, not travel fees.
     LATEST_COUNTER_START_TIME: "15:00", // Latest same-day counter slot start time
     PREFERRED_SLOTS: [
       { start: "10:00", end: "12:00", label: "Morning" },

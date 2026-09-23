@@ -98,7 +98,7 @@ FieldOps Automator is an autonomous bot built using Node.js to monitor, analyze,
 2.  **No Extra Worktrees**: Never create or use an additional Git worktree unless explicitly requested. Work in the main checkout so local dependencies and credentials remain available.
 3.  **Preserve Working Changes**: Inspect the worktree before creating the branch. Preserve all existing user changes and never stage, commit, or discard unrelated files.
 4.  **Rigorous Testing**: Test every change in proportion to its risk. Run `npm test` before presenting work; use `CONFIG.TEST_MODE` whenever a test could submit data.
-5.  **Focused Commits**: Create a focused commit once the task reaches a coherent, validated state. Stage only task-related files with a clear, descriptive commit message.
+5.  **No commit**: Do not do commit until user ask you about it
 6.  **User Review Before Push**: Present completed changes and test results for user review. Do NOT push the branch or create a pull request until the user explicitly approves.
 7.  **PR Targets `dev`**: After approval, push the task branch and create a PR targeting `dev` as the base branch.
 8.  **No Merging**: Never merge branches locally and never merge a pull request. Leave all merge decisions to the repository owner.

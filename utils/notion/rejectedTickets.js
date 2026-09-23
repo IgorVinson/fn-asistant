@@ -63,23 +63,78 @@ export function createRejectionWriter({
   env = process.env,
   fetchImpl = notionFetch,
   sleep = ms => new Promise(resolve => setTimeout(resolve, ms)),
+  now = () => new Date(),
 } = {}) {
   let queue = Promise.resolve();
   return function appendRejectedTicket(html) {
+    // Capture when the log is created, before queue delays or API retries.
+    const loggedAt = now().toLocaleString('en-US', {
+      timeZone: 'America/New_York', timeZoneName: 'short',
+    });
     const operation = queue.then(async () => {
       const token = env.NOTION_TOKEN?.trim();
       const pageId = env.NOTION_PAGE_ID?.trim().replaceAll('-', '');
       if (!token || !/^[a-f\d]{32}$/i.test(pageId || '')) {
         throw new Error('Set NOTION_TOKEN and a valid NOTION_PAGE_ID in .env');
       }
-      const children = rejectionBlocks(html);
+
+      let insertAfterId = undefined;
+      try {
+        const topRes = await fetchImpl(`https://api.notion.com/v1/blocks/${pageId}/children?page_size=1`, {
+          method: 'GET',
+          headers: { Authorization: `Bearer ${token}`, 'Notion-Version': '2022-06-28' },
+          signal: AbortSignal.timeout(10000),
+        });
+        if (topRes.ok) {
+          const topData = await topRes.json();
+          if (topData.results && topData.results.length > 0) {
+            insertAfterId = topData.results[0].id;
+          } else {
+            // Page is completely empty. Create the anchor block first.
+            const anchorPayload = {
+              children: [{
+                object: 'block',
+                type: 'paragraph',
+                paragraph: {
+                  rich_text: [{ type: 'text', text: { content: '🔽 Newest rejected tickets appear below 🔽' }, annotations: { bold: true, color: 'gray' } }]
+                }
+              }]
+            };
+            const anchorRes = await fetchImpl(`https://api.notion.com/v1/blocks/${pageId}/children`, {
+              method: 'PATCH',
+              headers: { Authorization: `Bearer ${token}`, 'Notion-Version': '2022-06-28', 'Content-Type': 'application/json' },
+              body: JSON.stringify(anchorPayload),
+              signal: AbortSignal.timeout(10000),
+            });
+            if (anchorRes.ok) {
+              const anchorData = await anchorRes.json();
+              if (anchorData.results && anchorData.results.length > 0) {
+                insertAfterId = anchorData.results[0].id;
+              }
+            } else {
+              await anchorRes.arrayBuffer();
+            }
+          }
+        } else {
+          await topRes.arrayBuffer(); // consume body
+        }
+      } catch (err) {
+        // Ignore fetch errors, fallback to appending at the bottom
+      }
+
+      const children = rejectionBlocks(`${html}\n🕒 Logged at: ${loggedAt}`);
       for (let offset = 0; offset < children.length; offset += 100) {
         for (let attempt = 0; ; attempt++) {
+          const bodyPayload = { children: children.slice(offset, offset + 100) };
+          if (insertAfterId) {
+            bodyPayload.after = insertAfterId;
+          }
+
           const response = await fetchImpl(`https://api.notion.com/v1/blocks/${pageId}/children`, {
             method: 'PATCH',
             headers: { Authorization: `Bearer ${token}`, 'Notion-Version': '2022-06-28',
               'Content-Type': 'application/json' },
-            body: JSON.stringify({ children: children.slice(offset, offset + 100) }),
+            body: JSON.stringify(bodyPayload),
             signal: AbortSignal.timeout(15000),
           });
           if (response.status === 429 && attempt < 2) {
@@ -89,16 +144,17 @@ export function createRejectionWriter({
             continue;
           }
           if (!response.ok) {
-            // Do not log API response bodies or credentials. Ambiguous failures
-            // are not retried automatically, which could duplicate an append.
             throw new Error(`Notion append failed (HTTP ${response.status})`);
           }
-          await response.arrayBuffer();
+          
+          const responseData = await response.json();
+          if (responseData.results && responseData.results.length > 0) {
+            insertAfterId = responseData.results[responseData.results.length - 1].id;
+          }
           break;
         }
       }
     });
-    // A failed write must not block subsequent tickets.
     queue = operation.catch(() => {});
     return operation;
   };
