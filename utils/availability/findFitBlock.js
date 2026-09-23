@@ -1,4 +1,4 @@
-export function findFitBlock(availableBlocks, woTimeWindow, travelMinutes = 0) {
+export function findFitBlock(availableBlocks, woTimeWindow, travelMinutes = 0, options = {}) {
   if (!availableBlocks || availableBlocks.length === 0) {
     return noFitResult();
   }
@@ -13,13 +13,24 @@ export function findFitBlock(availableBlocks, woTimeWindow, travelMinutes = 0) {
     const daysBlocks = blocksByDate.get(blockDate);
     const isLastBlockOfDay = daysBlocks && daysBlocks[daysBlocks.length - 1] === block;
 
-    const effectiveDurationMs = durationMs + travelMs + (isLastBlockOfDay ? 0 : travelMs);
-
     const candidateStart = new Date(Math.max(earliestStart.getTime(), block.start.getTime()));
+    const configuredWindow = Number(options.arrivalWindowMinutes);
+    const followsBusyEvent = (options.busyBlocks || []).some(b =>
+      b.end > b.start && b.end <= candidateStart &&
+      toDateString(b.end) === toDateString(candidateStart)
+    );
+    const arrivalWindowMinutes = followsBusyEvent && Number.isFinite(configuredWindow)
+      ? Math.max(0, configuredWindow) : 0;
+    const arrivalWindowMs = arrivalWindowMinutes * 60 * 1000;
+    // Reserve labor from the latest arrival. The configurable window replaces
+    // the distance-based travel estimate for this booking (fees are unchanged).
+    const effectiveDurationMs = durationMs + (arrivalWindowMs ||
+      travelMs + (isLastBlockOfDay ? 0 : travelMs));
     const candidateEnd = new Date(candidateStart.getTime() + effectiveDurationMs);
 
     const fitsInBlock = candidateStart >= block.start && candidateEnd <= block.end;
-    const withinLatestStart = candidateStart.getTime() <= latestStart.getTime();
+    const withinLatestStart = candidateStart.getTime() +
+      (options.preserveRequestedWindow ? arrivalWindowMs : 0) <= latestStart.getTime();
 
     if (fitsInBlock && withinLatestStart) {
       return {
@@ -29,6 +40,7 @@ export function findFitBlock(availableBlocks, woTimeWindow, travelMinutes = 0) {
         end: candidateEnd,
         effectiveDurationMinutes: Math.round(effectiveDurationMs / 60 / 1000),
         isLastBlockOfDay,
+        arrivalWindowMinutes,
       };
     }
   }

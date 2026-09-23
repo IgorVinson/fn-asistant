@@ -76,6 +76,9 @@ export function parseFNWorkOrder(workOrder) {
     const pay = workOrder.pay ?? {};
     const schedule = workOrder.schedule ?? {};
     const serviceWindow = schedule.service_window ?? {};
+    // `hours` describes daily arrival hours, not labor start/end. Keep the
+    // latest arrival on the first requested day even for a multi-day posting.
+    const isRequestedWindow = serviceWindow.mode === 'hours';
     const estLaborHours = Number(schedule.est_labor_hours) || 2;
     let payRange = { min: 0, max: 0 };
     let payType = 'fixed';
@@ -121,9 +124,17 @@ export function parseFNWorkOrder(workOrder) {
         platform: 'FieldNation',
         company: workOrder.company?.name || 'Unknown Company',
         title: workOrder.title || 'No Title',
+        description: workOrder.description || '',
+        isRequestedWindow,
         time: {
             start: serviceWindow.start?.local ?? null,
             end: serviceWindow.end?.local ?? null,
+            ...(isRequestedWindow && serviceWindow.end?.local?.time ? {
+                latestStart: {
+                    date: serviceWindow.start?.local?.date,
+                    time: serviceWindow.end.local.time,
+                },
+            } : {}),
         },
         payRange,
         payType,

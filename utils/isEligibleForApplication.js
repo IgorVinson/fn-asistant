@@ -1,5 +1,6 @@
 import { CONFIG } from "../config.js";
 import logger from "./logger.js";
+import { findBlockedKeyword } from "./blockedKeywords.js";
 import { getAvailableBlocks } from "./availability/getAvailableBlocks.js";
 import { findFitBlock } from "./availability/findFitBlock.js";
 import { decideFitAction } from "./availability/decideFitAction.js";
@@ -14,7 +15,7 @@ import {
   getSameDaySmallEarliestStart,
   getBookingCapacity,
   shouldSkipAdvanceCounter,
-  getWorkOrderTotalPay,
+  describeAdvanceCounterRejection,
 } from "./strategy/leadTimeStrategy.js";
 
 function getWorkOrderLocalDate(workOrder) {
@@ -179,14 +180,14 @@ function getOfferedPaymentMetrics(workOrder, estHours) {
 
   const isHourly = workOrder.payType === "hourly" || workOrder.hourlyRate > 0;
   if (isHourly) {
-    const rate = workOrder.hourlyRate || workOrder.payRange.min || 0;
+    const rate = workOrder.hourlyRate || workOrder.payRange?.min || 0;
     return {
-      total: workOrder.payRange.max || rate * estHours,
+      total: workOrder.payRange?.max || rate * estHours,
       rate,
     };
   }
 
-  const total = workOrder.payRange.max || 0;
+  const total = workOrder.payRange?.max || 0;
   return {
     total,
     rate: total / (estHours || 1),
@@ -225,9 +226,20 @@ function isPaymentEligible(workOrder) {
     ? `Travel required (${workOrder.distance}mi reported + ${CONFIG.DISTANCE.DISTANCE_PADDING_MILES}mi padding = ${effectiveDistance}mi > ${TRAVEL_THRESHOLD}mi)`
     : null;
 
+  const isHourly = workOrder.payType === "hourly" || workOrder.hourlyRate > 0;
+  const potentialRate = (isHourly && CONFIG.IS_COUNTER_RATES)
+    ? Math.max(theirRate, MIN_HOURLY_RATE)
+    : theirRate;
+  const potentialTotal = isHourly
+    ? Math.round(potentialRate * estHours)
+    : theirTotal;
+
   // RULE 1: If total pay is less than minimum -> ALWAYS REJECT (no counter)
-  if (CONFIG.ENFORCE_MIN_PAYMENT && theirTotal < minTotal) {
-    const details = `Total pay $${theirTotal} is below minimum threshold $${minTotal}`;
+  // When IS_COUNTER_RATES is enabled, evaluate against potentialTotal at our base
+  // rate so orders whose counter meets the threshold (e.g. 3h @ $50 -> 3h @ $65 = $195 >= $180)
+  // are not prematurely rejected before Rule 2 can generate the rate counter.
+  if (CONFIG.ENFORCE_MIN_PAYMENT && potentialTotal < minTotal) {
+    const details = `Total pay $${theirTotal}${isHourly && CONFIG.IS_COUNTER_RATES ? ` (countered: $${potentialTotal})` : ""} is below minimum threshold $${minTotal}`;
     logger.info(
       `Payment Analysis: ${details} -> REJECT`,
       workOrder.platform,
@@ -289,9 +301,9 @@ function isSameDay(a, b) {
   );
 }
 
-async function checkAvailabilityNew(workOrder) {
+export async function checkAvailabilityNew(workOrder, loadBlocks = getAvailableBlocks) {
   const woDateString = getWorkOrderLocalDate(workOrder);
-  const { free: availableBlocks, busy: busyBlocks } = await getAvailableBlocks({
+  const { free: availableBlocks, busy: busyBlocks } = await loadBlocks({
     date: woDateString,
     daysToCheck: AVAILABILITY_LOOKAHEAD_DAYS,
     withBusy: true,
@@ -299,6 +311,10 @@ async function checkAvailabilityNew(workOrder) {
   });
 
   const travelMin = calculateTravelMinutes(workOrder);
+  const arrivalOptions = {
+    busyBlocks,
+    arrivalWindowMinutes: CONFIG.TIME.ARRIVAL_WINDOW_AFTER_JOB_MINUTES,
+  };
   const durationMs = getJobDurationMs(workOrder);
   const estHours = workOrder.estLaborHours || CONFIG.TIME.DEFAULT_LABOR_HOURS;
 
@@ -339,7 +355,8 @@ async function checkAvailabilityNew(workOrder) {
       latestStart: woLatestStart,
       durationMs,
     },
-    travelMin
+    travelMin,
+    { ...arrivalOptions, preserveRequestedWindow: Boolean(workOrder.isRequestedWindow) }
   );
 
   const shiftedSameDay = findFitBlock(
@@ -349,7 +366,8 @@ async function checkAvailabilityNew(workOrder) {
       latestStart: latestCounterStart,
       durationMs,
     },
-    travelMin
+    travelMin,
+    arrivalOptions
   );
 
   let shiftedResult = shiftedSameDay;
@@ -365,7 +383,8 @@ async function checkAvailabilityNew(workOrder) {
         latestStart: new Date(2099, 0, 1),
         durationMs,
       },
-      travelMin
+      travelMin,
+      arrivalOptions
     );
   }
 
@@ -711,7 +730,7 @@ async function evaluateEligibilityInternal(workOrder, availabilityCtx) {
         // no-op when the strategy is disabled or the slot is same-day.
         const counterStart = availabilityFitDecision.counterDate?.start;
         if (shouldSkipAdvanceCounter(workOrder, counterStart)) {
-          const details = `Counter slot ${counterStart.toLocaleDateString()} is a later day; pay $${Math.round(getWorkOrderTotalPay(workOrder))} does not clear the advance threshold`;
+          const details = describeAdvanceCounterRejection(workOrder, counterStart);
           logger.info(
             `Job rejected: ${details}`,
             workOrder.platform,
@@ -826,6 +845,15 @@ async function evaluateEligibilityInternal(workOrder, availabilityCtx) {
 // `_availabilitySnapshot` so callers (e.g. replay logging) can reuse them
 // instead of re-fetching the calendar.
 async function isEligibleForApplication(workOrder) {
+  const blocked = findBlockedKeyword(workOrder, CONFIG.BLOCKED_KEYWORDS);
+  if (blocked) {
+    return {
+      eligible: false,
+      counterOffer: null,
+      reason: "BLOCKED_KEYWORD",
+      rejectDetails: `Blocked keyword "${blocked.keyword}" in ${blocked.field}`,
+    };
+  }
   const availabilityCtx = {};
   const result = await evaluateEligibilityInternal(workOrder, availabilityCtx);
   if (availabilityCtx.computed) {

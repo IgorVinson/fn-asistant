@@ -1,6 +1,18 @@
 import logger from "../logger.js";
+import { load } from "cheerio";
 import { getCookieHeader } from "../cookieStore.js";
 import { inspectWMBody, dumpWMBody } from "./wmSession.js";
+
+export function extractWMDescription(body) {
+  const $ = load(body);
+  const description = $("#desc-text").text().trim();
+  if (description) return description;
+  const rendered = $("#description_div").html();
+  if (rendered?.trim()) return rendered;
+  // Some pages populate the description from embedded workEncoded JSON.
+  const encoded = body.match(/workEncoded\s*:\s*\{[^\r\n]*?"description"\s*:\s*("(?:\\.|[^"\\])*")/);
+  return encoded ? JSON.parse(encoded[1]) : "";
+}
 
 function getCookies() {
   try {
@@ -277,6 +289,7 @@ export async function getWMorderData(url) {
       id: workOrderId,
       platform: "WorkMarket",
       company: companyName,
+      description: extractWMDescription(body),
       title: titleMatch
         ? titleMatch[1].trim().replace(" - Work Market", "")
         : "No Title",

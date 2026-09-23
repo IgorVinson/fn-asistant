@@ -1,5 +1,6 @@
 import { CONFIG } from "../../config.js";
 import { getCookieHeader } from "../cookieStore.js";
+import { counterError, readCounterForm, verifyCounterDetails } from './wmCounterVerification.js';
 
 function getCookies(targetUrl) {
   try {
@@ -29,11 +30,6 @@ function formatWorkMarketTime(date) {
     .toLowerCase();
 }
 
-function extractAssignmentStatusCode(html) {
-  const match = html.match(/"status"\s*:\s*{\s*"code"\s*:\s*"([^"]+)"/);
-  return match ? match[1] : null;
-}
-
 function buildWMCounterOfferFormData({
   csrfToken,
   hourlyRate,
@@ -50,7 +46,7 @@ function buildWMCounterOfferFormData({
   const priceType = options.priceType ?? (isHourlyCounter ? "2" : "1");
   const rescheduleOption =
     options.rescheduleOption ??
-    (options.isRequestedWindow ? "window" : "time");
+    (options.counterDate?.mode === 'hours' || options.isRequestedWindow ? "window" : "time");
 
   const formData = new URLSearchParams({
     _tk: csrfToken,
@@ -58,15 +54,15 @@ function buildWMCounterOfferFormData({
     has_tiered_pricing: "false",
     priceType,
     price_negotiation: "on",
-    pricing: "2",
+    pricing: priceType,
     initial_per_hour_price: "",
     initial_number_of_hours: "",
     additional_per_hour_price: "",
     max_blended_number_of_hours: "",
     per_unit_price: "",
     max_number_of_units: "",
-    per_hour_price: hourlyRate.toString(),
-    max_number_of_hours: hours.toString(),
+    per_hour_price: isHourlyCounter ? hourlyRate.toString() : "",
+    max_number_of_hours: isHourlyCounter ? hours.toString() : "",
     flat_price:
       options.flatPrice ??
       (isHourlyCounter ? "" : Number(options.baseAmount ?? 0).toFixed(2)),
@@ -105,23 +101,36 @@ export async function postWMCounterOffer(
   hourlyRate,
   hours,
   distance,
-  options = {}
+  options = {},
+  dependencies = {}
 ) {
+  if (CONFIG.TEST_MODE) {
+    const result = { status: 'test', message: 'TEST: WM counter simulated; no submission', workOrderId,
+      formData: buildWMCounterOfferFormData({ csrfToken: 'test', hourlyRate, hours, distance, options }).toString() };
+    console.log(result);
+    return result;
+  }
   try {
+    const fetchPage = dependencies.fetch || fetch;
     const requestUrl = `https://www.workmarket.com/assignments/negotiate/${workOrderId}`;
-    const cookies = getCookies(requestUrl);
+    const detailsUrl = `https://www.workmarket.com/assignments/details/${workOrderId}`;
+    const cookies = (dependencies.getCookies || getCookies)(requestUrl);
 
     if (!cookies) {
       throw new Error("Failed to retrieve cookies");
     }
 
-    const csrfCookie = cookies
-      .split(";")
-      .find(cookie => cookie.trim().startsWith("CSRFToken="));
-    if (!csrfCookie) {
-      throw new Error("CSRFToken cookie not found");
+    // WorkMarket serves the modal only for AJAX GETs. Read its actual token
+    // and availability before attempting a mutation; never treat a 404 as a form.
+    const formResponse = await fetchPage(requestUrl, {
+      headers: { cookie: cookies, 'X-Requested-With': 'XMLHttpRequest', Referer: detailsUrl },
+      redirect: 'manual', signal: AbortSignal.timeout(30000),
+    });
+    if (!formResponse.ok) throw counterError(`WorkMarket counter form HTTP ${formResponse.status}; nothing was submitted.`, 'WM_COUNTER_FORM_UNAVAILABLE');
+    const { token: CSRFToken, form } = readCounterForm(await formResponse.text(), workOrderId);
+    if (options.counterDate && !form.find('input[name="schedule_negotiation"]:not([disabled])').length) {
+      throw counterError('WorkMarket does not allow schedule negotiation for this ticket; nothing was submitted.');
     }
-    const CSRFToken = csrfCookie.trim().slice("CSRFToken=".length);
 
     const formData = buildWMCounterOfferFormData({
       csrfToken: CSRFToken,
@@ -143,11 +152,12 @@ export async function postWMCounterOffer(
     };
     const requestBody = formData.toString();
 
-    const response = await fetch(requestUrl, {
+    const response = await fetchPage(requestUrl, {
       method: "POST",
       headers,
       body: requestBody,
       redirect: "manual",
+      signal: AbortSignal.timeout(30000),
     });
 
     const responseText = await response.text();
@@ -155,38 +165,29 @@ export async function postWMCounterOffer(
 
     if (!response.ok && response.status !== 302) {
       throw new Error(
-        `Counter offer request failed with status ${response.status}: ${responseText}`
+        `Counter offer request failed with status ${response.status}; acceptance is not confirmed. Check the ticket before retrying.`
       );
     }
 
-    if (response.status === 302) {
-      console.log(
-        `Counter offer redirect received for work order ${workOrderId}: ${responseLocation || "(no location header)"}`
-      );
-      return {
-        ok: true,
-        status: response.status,
-        location: responseLocation,
-        responseUrl: response.url,
-      };
+    if (response.status === 302 && new URL(responseLocation || '/', requestUrl).href !== detailsUrl) {
+      throw counterError('WorkMarket redirected away from the expected ticket; counter not confirmed.');
     }
-
-    if (
-      responseText.includes("Page Not Found") ||
-      responseText.includes('class="negotiate_action button"') ||
-      extractAssignmentStatusCode(responseText) === "sent"
-    ) {
-      const errorCode = responseLocation?.match(/error=(\d+)/)?.[1] ?? null;
-      throw new Error(
-        `Counter offer POST returned ${response.status} but WorkMarket appears to have kept the assignment in the original state${errorCode ? ` (error=${errorCode})` : ""}`
-      );
-    }
+    if (responseText.includes('Page Not Found')) throw counterError('WorkMarket returned Page Not Found; counter not confirmed.');
+    // A redirect or HTTP 200 alone is not acceptance. Never retry the POST:
+    // read back the proposal and check schedule, price and travel instead.
+    const verification = await fetchPage(detailsUrl, {
+      headers: { cookie: (dependencies.getCookies || getCookies)(detailsUrl), 'cache-control': 'no-cache' },
+      redirect: 'manual', signal: AbortSignal.timeout(30000),
+    });
+    if (!verification.ok) throw counterError(`WorkMarket verification HTTP ${verification.status}; check the ticket before retrying.`);
+    verifyCounterDetails(await verification.text(), formData, options);
 
     console.log(
       `Counter offer sent successfully for work order ${workOrderId}`
     );
     return {
       ok: true,
+      verified: true,
       status: response.status,
       location: responseLocation,
       responseUrl: response.url,

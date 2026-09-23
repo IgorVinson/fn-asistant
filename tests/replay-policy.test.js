@@ -6,6 +6,8 @@ import { CONFIG } from "../config.js";
 import {
   evaluateApplicationPolicy,
   getWorkOrderLocalDate,
+  isPaymentEligible,
+  calculateCounterOffer,
 } from "../utils/isEligibleForApplication.js";
 import {
   isStrategyEnabled,
@@ -370,8 +372,9 @@ test("WorkMarket counter-offer payload includes alternate date fields", () => {
   assert.equal(formData.get("to"), "04/08/2026");
   assert.equal(formData.get("totime"), "4:30pm");
   assert.equal(formData.get("priceType"), "1");
-  assert.equal(formData.get("per_hour_price"), "65");
-  assert.equal(formData.get("max_number_of_hours"), "3");
+  assert.equal(formData.get("pricing"), "1");
+  assert.equal(formData.get("per_hour_price"), "");
+  assert.equal(formData.get("max_number_of_hours"), "");
   assert.equal(
     formData.get("additional_expenses"),
     String(Math.round(42 * CONFIG.DISTANCE.TRAVEL_RATE_PER_MILE))
@@ -408,4 +411,83 @@ test("WorkMarket hourly hard-start payload can submit a slot window", () => {
   assert.equal(formData.get("totime"), "1:00pm");
   assert.equal(formData.get("additional_expenses"), "0");
   assert.equal(formData.get("flat_price"), "");
+});
+
+test("WorkMarket 3h @ $50 ticket is countered at $65/hr instead of rejected by Rule 1", () => {
+  withConfig(
+    {
+      IS_COUNTER_RATES: true,
+      RATES: {
+        ...CONFIG.RATES,
+        BASE_HOURLY_RATE_WORKMARKET: 65,
+        MIN_PAY_THRESHOLD_WORKMARKET: 180,
+      },
+      STRATEGY: {
+        ...CONFIG.STRATEGY,
+        LEAD_TIME_TIERS: [
+          { maxLeadHours: 36, minPay: 180 },
+          { maxLeadHours: 168, minPay: 250 },
+          { maxLeadHours: null, minPay: 350 },
+        ],
+      },
+    },
+    () => {
+      const wmGranite3h = {
+        platform: "WorkMarket",
+        company: "Granite Telecommunications",
+        title: "Equipment Install | Priority 3",
+        payType: "hourly",
+        hourlyRate: 50,
+        estLaborHours: 3,
+        distance: 10,
+        time: { start: new Date(Date.now() + 10 * 3600 * 1000).toISOString() },
+      };
+
+      const result = isPaymentEligible(wmGranite3h);
+      assert.equal(result.isAcceptable, false);
+      assert.equal(result.issue, "LOW_RATE");
+
+      const counter = calculateCounterOffer(wmGranite3h);
+      assert.equal(counter.shouldCounterOffer, true);
+      assert.equal(counter.counterRate, 65);
+      assert.equal(counter.baseAmount, 195);
+    }
+  );
+});
+
+test("Low-ball short ticket (1h @ $45) is still rejected as below minimum", () => {
+  withConfig(
+    {
+      IS_COUNTER_RATES: true,
+      RATES: {
+        ...CONFIG.RATES,
+        BASE_HOURLY_RATE_WORKMARKET: 65,
+        MIN_PAY_THRESHOLD_WORKMARKET: 180,
+      },
+      STRATEGY: {
+        ...CONFIG.STRATEGY,
+        LEAD_TIME_TIERS: [
+          { maxLeadHours: 36, minPay: 180 },
+          { maxLeadHours: 168, minPay: 250 },
+          { maxLeadHours: null, minPay: 350 },
+        ],
+      },
+    },
+    () => {
+      const wmShortJunk = {
+        platform: "WorkMarket",
+        company: "Tekumo",
+        title: "Quick Router Reboot",
+        payType: "hourly",
+        hourlyRate: 45,
+        estLaborHours: 1,
+        distance: 10,
+        time: { start: new Date(Date.now() + 10 * 3600 * 1000).toISOString() },
+      };
+
+      const result = isPaymentEligible(wmShortJunk);
+      assert.equal(result.isAcceptable, false);
+      assert.equal(result.issue, "BELOW_MINIMUM");
+    }
+  );
 });

@@ -44,6 +44,25 @@ export function decideFitAction({
   isRequestedWindow = false,
   requestedWindowMs = 0,
 }) {
+  // Even a fitting hard start needs buyer agreement when we request flexibility.
+  // An existing arrival window that fits can be kept without a schedule counter.
+  const arrivalFit = exactFit?.fits && !isRequestedWindow && exactFit.arrivalWindowMinutes > 0
+    ? exactFit
+    : !exactFit?.fits && shiftedFit?.fits && shiftedFit.arrivalWindowMinutes > 0
+      ? shiftedFit : null;
+  if (arrivalFit) {
+    return {
+      action: "COUNTER_DATES",
+      source: "arrival_window",
+      counterDate: {
+        start: new Date(arrivalFit.start),
+        end: new Date(arrivalFit.start.getTime() + arrivalFit.arrivalWindowMinutes * 60000),
+        durationMinutes: arrivalFit.arrivalWindowMinutes,
+        mode: 'hours',
+        reason: 'arrival_window',
+      },
+    };
+  }
   if (exactFit?.fits) {
     return {
       action: "APPLY",
@@ -80,6 +99,7 @@ export function decideFitAction({
         start,
         end,
         durationMinutes,
+        ...(isRequestedWindow ? { mode: 'hours' } : {}),
       },
     };
   }
