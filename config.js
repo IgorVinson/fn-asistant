@@ -5,9 +5,9 @@ export const CONFIG = {
   WORKMARKET_ENABLED: true, // Set to false to disable WorkMarket applications
   APPLICATION_MODE: "all_companies", // "granite_only" | "all_companies" | "disabled"
   ALLOW_ALL_COMPANIES_ON_DATES: [], // YYYY-MM-DD dates where non-Granite jobs are allowed
-  BLOCKED_KEYWORDS: ["TV", "starlink"], // Case-insensitive whole words in title/description; [] disables.
+  BLOCKED_KEYWORDS: ["TV", "TVs", "television", "televisions", "display", "displays", "monitor", "monitors", "starlink", "menu board", "menu boards", "menu-board", "menu-boards"], // Case-insensitive whole words in title/description; [] disables.
   IS_COUNTER_DATES: true, // If true, counter-offer with free calendar slots when job time conflicts; if false, just reject on conflict
-  IS_COUNTER_DAYS: true, // If true, counter-offer with free calendar slots when job time conflicts; if false, just reject on conflict
+  IS_COUNTER_DAYS: false, // If true, counter-offer with free calendar slots when job time conflicts; if false, just reject on conflict
   IS_COUNTER_RATES: true,
   ENFORCE_MIN_PAYMENT: true, // If true, reject jobs below platform minimum threshold
   WORKMARKET_SCHEDULE_CHECK_ENABLED: true, // Include WorkMarket assignments as busy blocks during schedule checks.
@@ -52,6 +52,7 @@ export const CONFIG = {
 
   // Distance and Travel Settings
   DISTANCE: {
+    MAX_APPLICATION_DISTANCE_MILES: 100, // Reject tickets above this reported one-way distance before applying or countering
     TRAVEL_THRESHOLD_MILES: 20, // Miles before charging travel expenses (applied to padded distance)
     TRAVEL_RATE_PER_MILE: 1.25, // Amount to charge per mile over threshold
     FREE_TRAVEL_LIMIT: 30 / 60, // Free travel time in hours (30 minutes)

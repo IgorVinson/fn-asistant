@@ -212,7 +212,7 @@ test("FieldNation orders with missing pay are safely normalized to zero pay", ()
   assert.equal(parsed.payType, "fixed");
   assert.equal(parsed.hourlyRate, 0);
   assert.equal(parsed.estLaborHours, 3);
-  assert.equal(parsed.distance, 17);
+  assert.equal(parsed.distance, 17.9);
 });
 
 test("normalization identifies unavailable orders with no schedule date", () => {

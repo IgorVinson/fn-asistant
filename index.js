@@ -22,6 +22,7 @@ import isEligibleForApplication from "./utils/isEligibleForApplication.js";
 import { isTransientNetworkError } from "./utils/isTransientNetworkError.js";
 import { createLogThrottle } from "./utils/logThrottle.js";
 import logger from "./utils/logger.js";
+import { serverHealth } from "./utils/serverHealth.js";
 import normalizeDateFromWO from "./utils/normalizedDateFromWO.js";
 import { PersistentOrderDeduper } from "./utils/orderDedup.js";
 import playSound from "./utils/playSound.js";
@@ -72,6 +73,18 @@ const pushEvent = async event => {
 };
 
 // --- API Endpoints ---
+
+// Liveness and progress without exposing config credentials.
+app.get("/api/health", (req, res) => {
+  res.json({
+    ...serverHealth,
+    pid: process.pid,
+    uptimeSeconds: process.uptime(),
+    monitoring: telegramBot.isMonitoring,
+    monitoringReady: Boolean(monitoringInterval),
+    memory: process.memoryUsage(),
+  });
+});
 
 // Get current system status and config
 app.get("/api/status", (req, res) => {
@@ -845,9 +858,11 @@ function refreshCookies(reason = "unspecified") {
   }
 
   isRefreshingCookies = true;
+  serverHealth.cookieRefreshStartedAt = Date.now();
   lastReloginAt = Date.now();
   cookieRefreshPromise = saveCookies().finally(() => {
     isRefreshingCookies = false;
+    serverHealth.cookieRefreshStartedAt = null;
     cookieRefreshPromise = null;
   });
   return cookieRefreshPromise;
@@ -911,6 +926,7 @@ async function periodicCheck() {
     }
 
     isCheckingEmail = true;
+    serverHealth.emailCheckStartedAt = Date.now();
 
     try {
       const lastEmailBody = await getLastUnreadEmail(auth, gmail);
@@ -971,11 +987,14 @@ async function periodicCheck() {
       }
     } finally {
       isCheckingEmail = false;
+      serverHealth.emailCheckStartedAt = null;
+      serverHealth.lastEmailCheckCompletedAt = Date.now();
     }
   }, 1000); // Check every sec
 }
 
 function startMonitoring() {
+  serverHealth.monitoringRequestedAt = Date.now();
   telegramBot.isMonitoring = true;
 
   if (monitoringInterval || monitoringStartPromise) return;
@@ -991,6 +1010,7 @@ function startMonitoring() {
 }
 
 function stopMonitoring() {
+  serverHealth.monitoringRequestedAt = null;
   if (monitoringInterval) {
     clearInterval(monitoringInterval);
     monitoringInterval = null;
@@ -1949,6 +1969,9 @@ async function processOrderInternal(orderLink) {
         case "BLOCKED_KEYWORD":
           rejectReason = eligibilityResult.rejectDetails;
           break;
+        case "DISTANCE_TOO_FAR":
+          rejectReason = eligibilityResult.rejectDetails;
+          break;
         case "PAYMENT_INSUFFICIENT":
           rejectReason = `Payment below minimum threshold${
             eligibilityResult.rejectDetails
@@ -2139,6 +2162,7 @@ app.listen(port, async () => {
   startMonitoring();
 
   // Start the 4-hour rotation timer after the initial refresh
+  serverHealth.startupComplete = true;
   scheduleRelogin();
 
   // The WM session dies well before the 4-hour rotation; the probe closes that
