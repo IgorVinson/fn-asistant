@@ -118,7 +118,7 @@ async function authorizeUncached() {
 
   if (!INTERACTIVE_AUTH_ALLOWED) {
     throw new Error(
-      "Gmail refresh token is invalid or missing. Re-auth required: run `GMAIL_ALLOW_INTERACTIVE_AUTH=1 node utils/gmail/script.js` interactively to refresh config/token.json."
+      "Gmail refresh token is invalid or missing. Re-auth required: run `GMAIL_ALLOW_INTERACTIVE_AUTH=1 node --use-system-ca utils/gmail/script.js` interactively to refresh config/token.json."
     );
   }
 

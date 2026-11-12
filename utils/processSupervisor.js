@@ -35,7 +35,7 @@ export function startSupervisor({
     const outputFile = path.join(logDir, `server-console-${new Date().toISOString().replace(/[:.]/g, "-")}.log`);
     const output = openSync(outputFile, "a");
     try {
-      child = spawn(process.execPath, ["--inspect=127.0.0.1:0", entry], {
+      child = spawn(process.execPath, ["--use-system-ca", "--inspect=127.0.0.1:0", entry], {
         cwd, env: { ...env, FN_ASSISTANT_SUPERVISED: "1" },
         stdio: ["ignore", output, output], windowsHide: true,
       });

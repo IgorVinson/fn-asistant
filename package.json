@@ -4,10 +4,10 @@
   "description": "",
   "main": "other/oldIndex.js",
   "scripts": {
-    "start": "node index.js",
-    "dev": "node index.js",
-    "supervised": "node scripts/watchdog.js",
-    "test": "node --test tests/*.test.js"
+    "start": "node --use-system-ca index.js",
+    "dev": "node --use-system-ca index.js",
+    "supervised": "node --use-system-ca scripts/watchdog.js",
+    "test": "node --use-system-ca --test tests/*.test.js"
   },
   "private": true,
   "dependencies": {
