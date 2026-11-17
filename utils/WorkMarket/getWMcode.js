@@ -1,4 +1,4 @@
-import { google } from "googleapis";
+import { google } from "../googleApis.js";
 
 /**
  * Get the WorkMarket verification code from the latest email from hi@myworkmarket.com

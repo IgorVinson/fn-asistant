@@ -1,4 +1,4 @@
-import { google } from "googleapis";
+import { google } from "../googleApis.js";
 import logger from "../logger.js";
 import { authorize } from "./login.js";
 

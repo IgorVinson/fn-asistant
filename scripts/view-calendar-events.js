@@ -1,4 +1,4 @@
-import { google } from "googleapis";
+import { google } from "../utils/googleApis.js";
 import { authorize } from "../utils/gmail/login.js";
 import { CONFIG } from "../config.js";
 

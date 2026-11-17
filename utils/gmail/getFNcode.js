@@ -1,4 +1,4 @@
-import { google } from 'googleapis';
+import { google } from '../googleApis.js';
 
 /**
  * Get the Field Nation verification code from the latest email from donotreply@fieldnation.com

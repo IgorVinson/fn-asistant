@@ -1,9 +1,10 @@
+import "./utils/bootLog.js";
 import cors from "cors";
 import "dotenv/config";
 import express from "express";
 import fs from "fs/promises";
 import fsSync from "fs";
-import { google } from "googleapis";
+import { google } from "./utils/googleApis.js";
 import path from "path";
 import puppeteer from "puppeteer";
 import { CONFIG } from "./config.js";

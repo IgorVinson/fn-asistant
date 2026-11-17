@@ -1,5 +1,5 @@
 import { promises as fs } from "fs";
-import { google } from "googleapis";
+import { google } from "../utils/googleApis.js";
 import path from "path";
 
 const TOKEN_PATH = path.join(process.cwd(), "config", "token.json");
