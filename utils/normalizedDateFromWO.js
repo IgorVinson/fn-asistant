@@ -3,8 +3,8 @@ export default function normalizeDateFromWO(data) {
   function convertTo24Hour(timeStr) {
     if (!timeStr) return timeStr;
 
-    // Remove trailing timezone indicators before parsing.
-    timeStr = timeStr.replace(/\s+[A-Z]{2,4}$/i, "").trim();
+    // Remove trailing timezone indicators, but keep AM/PM (also two letters).
+    timeStr = timeStr.replace(/\s+(?!(?:AM|PM)$)[A-Z]{2,4}$/i, "").trim();
 
     // Parse the time
     const [time, period] = timeStr.split(/\s*([AP]M)/i);

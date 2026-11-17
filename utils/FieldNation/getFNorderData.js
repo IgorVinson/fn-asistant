@@ -141,7 +141,7 @@ export function parseFNWorkOrder(workOrder) {
         payStructure,
         hourlyRate,
         estLaborHours,
-        distance: Number.isFinite(distance) ? Math.floor(distance) : 0,
+        distance: Number.isFinite(distance) ? distance : 0,
     };
 }
 

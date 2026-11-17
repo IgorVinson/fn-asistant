@@ -1,6 +1,13 @@
 import { load } from "cheerio";
 
 export function plainText(value) {
+  // FieldNation v2 descriptions can contain separate HTML and Markdown fields.
+  if (value && typeof value === "object") {
+    return [value.html, value.markdown, value.text]
+      .filter((part) => typeof part === "string")
+      .map(plainText)
+      .join(" ");
+  }
   if (typeof value !== "string") return "";
   const $ = load(value);
   $("script, style").remove();

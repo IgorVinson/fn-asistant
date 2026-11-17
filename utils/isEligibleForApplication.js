@@ -36,6 +36,12 @@ function isGraniteCompany(companyName) {
   );
 }
 
+function isBeyondMaxApplicationDistance(distance) {
+  const miles = Number(distance);
+  return Number.isFinite(miles) &&
+    miles > CONFIG.DISTANCE.MAX_APPLICATION_DISTANCE_MILES;
+}
+
 function getEtMinutes(dateLike) {
   const formatter = new Intl.DateTimeFormat("en-US", {
     timeZone: "America/New_York",
@@ -854,6 +860,15 @@ async function isEligibleForApplication(workOrder) {
       rejectDetails: `Blocked keyword "${blocked.keyword}" in ${blocked.field}`,
     };
   }
+  const maxDistance = CONFIG.DISTANCE.MAX_APPLICATION_DISTANCE_MILES;
+  if (isBeyondMaxApplicationDistance(workOrder.distance)) {
+    return {
+      eligible: false,
+      counterOffer: null,
+      reason: "DISTANCE_TOO_FAR",
+      rejectDetails: `Reported one-way distance ${workOrder.distance}mi exceeds ${maxDistance}mi limit`,
+    };
+  }
   const availabilityCtx = {};
   const result = await evaluateEligibilityInternal(workOrder, availabilityCtx);
   if (availabilityCtx.computed) {
@@ -873,4 +888,5 @@ export {
   isPaymentEligible,
   getWorkOrderLocalDate,
   isGraniteCompany,
+  isBeyondMaxApplicationDistance,
 };

@@ -1,7 +1,7 @@
 import puppeteer from "puppeteer";
 import fs from "fs";
 import path from "path";
-import { google } from "googleapis";
+import { google } from "../utils/googleApis.js";
 import { authorize } from "../utils/gmail/login.js";
 import { CONFIG } from "../config.js";
 import { findFreeSlots } from "../utils/isEligibleForApplication.js";
